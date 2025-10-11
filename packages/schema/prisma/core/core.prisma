@@ -1,0 +1,268 @@
+// ==========================================
+// CORE SCHEMA - Users, Auth, Workspaces
+// ==========================================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  image     String?
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  accounts                 Account[]
+  workspaces               WorkspaceUser[]
+  refreshTokens            RefreshToken[]
+  canvasCollaborations     CanvasCollaborator[]
+  sentWorkspaceInvites     WorkspaceInvitation[]   @relation("InvitedBy")
+  receivedWorkspaceInvites WorkspaceInvitation[]   @relation("InvitedUser")
+  sentCanvasInvites        CanvasInvitation[]      @relation("CanvasInvitedBy")
+  receivedCanvasInvites    CanvasInvitation[]      @relation("CanvasInvitedUser")
+
+  @@index([email])
+  @@schema("core")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  deviceId  String   @db.VarChar(255)
+  userId    String
+  expiresAt DateTime @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, deviceId])
+  @@index([userId, expiresAt])
+  @@index([token, expiresAt])
+  @@schema("core")
+}
+
+model Account {
+  id                String       @id @default(cuid())
+  userId            String
+  provider          AuthProvider
+  providerAccountId String
+  accessToken       String?      @db.Text
+  refreshToken      String?      @db.Text
+  expiresAt         DateTime?    @db.Timestamptz(6)
+  createdAt         DateTime     @default(now()) @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@schema("core")
+}
+
+model Workspace {
+  id        String        @id @default(cuid())
+  name      String        @db.VarChar(255)
+  type      WorkspaceType @default(PERSONAL)
+  createdAt DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime      @updatedAt @db.Timestamptz(6)
+
+  members        WorkspaceUser[]
+  canvases       Canvas[]
+  documents      Document[]
+  subscription   Subscription?
+  contextModules ContextModule[]
+  shareLinks     ShareLink[]
+  apiKeys        ProviderAPIKey[]
+  invitations    WorkspaceInvitation[]
+
+  @@index([type, createdAt])
+  @@schema("core")
+}
+
+model WorkspaceUser {
+  id          String        @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        WorkspaceRole @default(MEMBER)
+
+  // Granular permissions
+  canCreateCanvas  Boolean @default(true)
+  canDeleteCanvas  Boolean @default(false)
+  canManageBilling Boolean @default(false)
+  canInviteMembers Boolean @default(false) // Requires PAID plan
+  canManageMembers Boolean @default(false)
+  canManageApiKeys Boolean @default(false)
+
+  joinedAt  DateTime @default(now()) @db.Timestamptz(6)
+  invitedBy String? // userId who invited
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@index([workspaceId, role])
+  @@index([userId])
+  @@schema("core")
+}
+
+model WorkspaceInvitation {
+  id            String           @id @default(cuid())
+  workspaceId   String
+  email         String           @db.VarChar(255)
+  role          WorkspaceRole    @default(MEMBER)
+  permissions   Json? // Custom permissions override
+
+  invitedBy     String
+  invitedUserId String? // If user exists in system
+
+  token  String           @unique @db.VarChar(255)
+  status InvitationStatus @default(PENDING)
+
+  createdAt  DateTime  @default(now()) @db.Timestamptz(6)
+  expiresAt  DateTime  @db.Timestamptz(6)
+  acceptedAt DateTime? @db.Timestamptz(6)
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  inviter     User      @relation("InvitedBy", fields: [invitedBy], references: [id], onDelete: Cascade)
+  invitedUser User?     @relation("InvitedUser", fields: [invitedUserId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, status])
+  @@index([email, status])
+  @@index([token, expiresAt])
+  @@schema("core")
+}
+
+model ProviderAPIKey {
+  id          String      @id @default(cuid())
+  workspaceId String
+  provider    LLMProvider
+  displayName String      @db.VarChar(100)
+
+  keyHash String @db.VarChar(255) // Encrypted
+
+  providerConfig Json? // Provider-specific config
+  endpoint       String? @db.VarChar(500)
+  authType       AuthType @default(BEARER_TOKEN)
+
+  isActive   Boolean   @default(true)
+  lastUsedAt DateTime? @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(6)
+  expiresAt  DateTime? @db.Timestamptz(6)
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, provider, displayName])
+  @@index([workspaceId, isActive])
+  @@index([provider, isActive])
+  @@schema("core")
+}
+
+model ShareLink {
+  id          String             @id @default(cuid())
+  publicToken String             @unique @default(cuid())
+  assetType   ShareableAssetType
+  assetId     String
+  workspaceId String
+  createdBy   String
+
+  accessLevel ShareAccessLevel @default(VIEW_ONLY)
+  password    String? @db.VarChar(255) // Optional password protection (bcrypt hash)
+
+  // Usage tracking
+  viewCount    Int       @default(0)
+  lastViewedAt DateTime? @db.Timestamptz(6)
+
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
+  expiresAt DateTime? @db.Timestamptz(6)
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([assetType, assetId])
+  @@index([publicToken, expiresAt])
+  @@index([workspaceId, assetType])
+  @@index([createdBy, createdAt])
+  @@schema("core")
+}
+
+enum AuthProvider {
+  GOOGLE
+  GITHUB
+  EMAIL
+
+  @@schema("core")
+}
+
+enum WorkspaceType {
+  PERSONAL
+  TEAM
+
+  @@schema("core")
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+
+  @@schema("core")
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  REVOKED
+
+  @@schema("core")
+}
+
+enum ShareAccessLevel {
+  VIEW_ONLY // FREE
+  COMMENT   // FREE
+  EDIT      // PAID (requires collaborator)
+
+  @@schema("core")
+}
+
+enum LLMProvider {
+  OPENAI
+  ANTHROPIC
+  GOOGLE_GEMINI
+  PERPLEXITY
+  MISTRAL
+  META_AI
+  XAI
+  DEEPSEEK
+  COHERE
+  GROQ
+  TOGETHER
+  REPLICATE
+  HUGGINGFACE
+  OPENROUTER
+  BEDROCK
+  OLLAMA
+  VLLM
+  LLAMACPP
+  TEXTGEN_WEBUI
+  CUSTOM
+
+  @@schema("core")
+}
+
+enum AuthType {
+  BEARER_TOKEN
+  API_KEY_HEADER
+  BASIC_AUTH
+  OAUTH2
+  AWS_SIGV4
+  CUSTOM_HEADER
+
+  @@schema("core")
+}
+
+enum ShareableAssetType {
+  CANVAS
+  CONTEXT_MODULE
+
+  @@schema("core")
+}

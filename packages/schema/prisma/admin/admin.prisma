@@ -1,0 +1,295 @@
+// ==========================================
+// ADMIN SCHEMA - Admin Panel & Security
+// ==========================================
+
+model Admin {
+  id           String @id @default(cuid())
+  email        String @unique
+  username     String @unique @db.VarChar(50)
+  passwordHash String @db.VarChar(255)
+
+  role         AdminRole   @default(SUPPORT)
+  status       AdminStatus @default(PENDING)
+  isSuperAdmin Boolean     @default(false)
+
+  // MFA
+  requiresMfa    Boolean   @default(true)
+  mfaSecret      String?   @db.VarChar(255)
+  mfaBackupCodes Json?
+  mfaVerifiedAt  DateTime? @db.Timestamptz(6)
+
+  // IP whitelisting
+  allowedIpAddresses Json?
+
+  // Session tracking
+  lastLoginAt         DateTime? @db.Timestamptz(6)
+  lastLoginIp         String?   @db.VarChar(45)
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime? @db.Timestamptz(6)
+
+  // Password management
+  passwordChangedAt   DateTime? @db.Timestamptz(6)
+  passwordResetToken  String?   @unique @db.VarChar(255)
+  passwordResetExpiry DateTime? @db.Timestamptz(6)
+
+  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @db.Timestamptz(6)
+  createdBy     String?
+  deactivatedAt DateTime? @db.Timestamptz(6)
+  deactivatedBy String?
+
+  sessions    AdminSession[]
+  auditLogs   AdminAuditLog[]
+  permissions AdminPermission[]
+  apiKeys     AdminAPIKey[]
+  invitations AdminInvitation[] @relation("InvitedBy")
+
+  @@index([email, status])
+  @@index([username])
+  @@index([status, role])
+  @@index([lastLoginAt])
+  @@schema("admin")
+}
+
+model AdminSession {
+  id                String  @id @default(cuid())
+  adminId           String
+  token             String  @unique @db.VarChar(255)
+  refreshToken      String? @unique @db.VarChar(255)
+  ipAddress         String  @db.VarChar(45)
+  userAgent         String  @db.VarChar(500)
+  deviceFingerprint String? @db.VarChar(255)
+
+  createdAt      DateTime  @default(now()) @db.Timestamptz(6)
+  expiresAt      DateTime  @db.Timestamptz(6)
+  lastActivityAt DateTime  @default(now()) @db.Timestamptz(6)
+  revokedAt      DateTime? @db.Timestamptz(6)
+  revokedReason  String?   @db.VarChar(255)
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId, revokedAt, expiresAt])
+  @@index([token])
+  @@index([expiresAt])
+  @@index([ipAddress, createdAt])
+  @@schema("admin")
+}
+
+model AdminAuditLog {
+  id          String         @id @default(cuid())
+  adminId     String?
+  action      AdminAction
+  resource    AdminResource
+  resourceId  String?        @db.VarChar(255)
+  method      String         @db.VarChar(10)
+  endpoint    String         @db.VarChar(500)
+  ipAddress   String         @db.VarChar(45)
+  userAgent   String?        @db.VarChar(500)
+  changesBefore Json?
+  changesAfter  Json?
+  status      Int
+  errorMessage String?       @db.Text
+  metadata    Json?
+  executionTimeMs Int?
+  createdAt   DateTime       @default(now()) @db.Timestamptz(6)
+
+  admin Admin? @relation(fields: [adminId], references: [id], onDelete: SetNull)
+
+  @@index([adminId, createdAt(sort: Desc)])
+  @@index([action, createdAt(sort: Desc)])
+  @@index([resource, resourceId])
+  @@index([ipAddress, createdAt(sort: Desc)])
+  @@index([createdAt(sort: Desc)])
+  @@schema("admin")
+}
+
+model AdminPermission {
+  id         String             @id @default(cuid())
+  adminId    String
+  permission SpecificPermission
+  resource   AdminResource?
+  grantedAt  DateTime           @default(now()) @db.Timestamptz(6)
+  grantedBy  String?
+  expiresAt  DateTime?          @db.Timestamptz(6)
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@unique([adminId, permission, resource])
+  @@index([adminId])
+  @@index([permission, resource])
+  @@index([expiresAt])
+  @@schema("admin")
+}
+
+model AdminAPIKey {
+  id        String  @id @default(cuid())
+  adminId   String
+  name      String  @db.VarChar(100)
+  keyHash   String  @unique @db.VarChar(255)
+  keyPrefix String  @db.VarChar(20)
+  scopes    Json
+  rateLimit Int?
+  allowedIps Json?
+
+  createdAt  DateTime  @default(now()) @db.Timestamptz(6)
+  lastUsedAt DateTime? @db.Timestamptz(6)
+  expiresAt  DateTime? @db.Timestamptz(6)
+  revokedAt  DateTime? @db.Timestamptz(6)
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([keyHash])
+  @@index([expiresAt, revokedAt])
+  @@schema("admin")
+}
+
+model AdminInvitation {
+  id         String    @id @default(cuid())
+  email      String    @db.VarChar(255)
+  role       AdminRole
+  token      String    @unique @db.VarChar(255)
+  invitedBy  String
+  createdAt  DateTime  @default(now()) @db.Timestamptz(6)
+  expiresAt  DateTime  @db.Timestamptz(6)
+  acceptedAt DateTime? @db.Timestamptz(6)
+
+  inviter Admin @relation("InvitedBy", fields: [invitedBy], references: [id])
+
+  @@index([token, expiresAt])
+  @@index([email])
+  @@schema("admin")
+}
+
+model AdminSecurityEvent {
+  id          String            @id @default(cuid())
+  eventType   SecurityEventType
+  severity    SecuritySeverity
+  adminId     String?
+  ipAddress   String            @db.VarChar(45)
+  userAgent   String?           @db.VarChar(500)
+  description String            @db.Text
+  metadata    Json?
+  resolved    Boolean           @default(false)
+  resolvedAt  DateTime?         @db.Timestamptz(6)
+  resolvedBy  String?
+  createdAt   DateTime          @default(now()) @db.Timestamptz(6)
+
+  @@index([eventType, severity, createdAt(sort: Desc)])
+  @@index([adminId, createdAt(sort: Desc)])
+  @@index([resolved, severity])
+  @@index([ipAddress, createdAt(sort: Desc)])
+  @@schema("admin")
+}
+
+enum AdminRole {
+  SUPER_ADMIN
+  ADMIN
+  FINANCE
+  SUPPORT
+  DEVELOPER
+  ANALYST
+
+  @@schema("admin")
+}
+
+enum AdminStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  DEACTIVATED
+  LOCKED
+
+  @@schema("admin")
+}
+
+enum AdminAction {
+  USER_CREATED
+  USER_UPDATED
+  USER_DELETED
+  USER_SUSPENDED
+  WORKSPACE_DELETED
+  SUBSCRIPTION_UPDATED
+  SUBSCRIPTION_CANCELLED
+  CREDITS_ADDED
+  CREDITS_REMOVED
+  REFUND_ISSUED
+  MODEL_ADDED
+  MODEL_UPDATED
+  PRICING_CHANGED
+  ADMIN_INVITED
+  ADMIN_CREATED
+  ADMIN_ROLE_CHANGED
+  PERMISSION_GRANTED
+  SESSION_REVOKED
+  CONFIG_CHANGED
+  DATA_EXPORTED
+
+  @@schema("admin")
+}
+
+enum AdminResource {
+  USER
+  WORKSPACE
+  SUBSCRIPTION
+  CREDIT
+  MODEL
+  ADMIN
+  PERMISSION
+  SESSION
+  API_KEY
+  CANVAS
+  ACTION_POD
+  DOCUMENT
+  AUDIT_LOG
+  SYSTEM_CONFIG
+
+  @@schema("admin")
+}
+
+enum SpecificPermission {
+  USER_VIEW
+  USER_UPDATE
+  USER_DELETE
+  USER_SUSPEND
+  WORKSPACE_VIEW
+  WORKSPACE_DELETE
+  BILLING_VIEW
+  BILLING_MANAGE
+  CREDITS_MANAGE
+  REFUND_ISSUE
+  MODEL_VIEW
+  MODEL_MANAGE
+  PRICING_MANAGE
+  ADMIN_VIEW
+  ADMIN_INVITE
+  ADMIN_MANAGE
+  SYSTEM_CONFIG_VIEW
+  SYSTEM_CONFIG_MANAGE
+  AUDIT_LOG_VIEW
+  AUDIT_LOG_EXPORT
+  DATA_EXPORT
+  DATA_DELETE
+
+  @@schema("admin")
+}
+
+enum SecurityEventType {
+  FAILED_LOGIN
+  MULTIPLE_FAILED_LOGINS
+  SUSPICIOUS_IP
+  ACCOUNT_LOCKED
+  MFA_FAILED
+  UNAUTHORIZED_ACCESS_ATTEMPT
+
+  @@schema("admin")
+}
+
+enum SecuritySeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+
+  @@schema("admin")
+}

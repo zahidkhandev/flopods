@@ -1,0 +1,9 @@
+{
+  "extends": "@actopod/tsconfig/nestjs.json",
+  "compilerOptions": {
+    "outDir": "./dist"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test"],
+  "references": [{ "path": "../../packages/schema" }]
+}

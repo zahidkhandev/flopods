@@ -1,0 +1,11 @@
+{
+  "extends": "@actopod/tsconfig/react.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"],
+      "@actopod/schema": ["../../packages/schema/src"]
+    }
+  },
+  "include": ["src"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}

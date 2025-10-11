@@ -1,0 +1,70 @@
+// ==========================================
+// DOCUMENTS SCHEMA - File Storage & Embeddings
+// ==========================================
+
+model Document {
+  id          String @id @default(cuid())
+  workspaceId String
+  name        String @db.VarChar(255)
+
+  // S3 storage
+  storageKey String @unique @db.VarChar(512)
+  s3Bucket   String @db.VarChar(255)
+
+  fileType    String         @db.VarChar(100)
+  mimeType    String?        @db.VarChar(255)
+  sizeInBytes BigInt
+  status      DocumentStatus @default(UPLOADING)
+  uploadedBy  String?
+
+  metadata Json?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  workspace  Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  embeddings Embedding[]
+  actionPods ActionPod[]
+
+  @@index([workspaceId, status, createdAt(sort: Desc)])
+  @@index([storageKey])
+  @@index([status, updatedAt])
+  @@index([fileType, workspaceId])
+  @@schema("documents")
+}
+
+model Embedding {
+  id         String @id @default(cuid())
+  documentId String
+  model      String @db.VarChar(100)
+  chunkIndex Int
+  chunkText  String @db.Text
+
+  // S3 Vectors ONLY (NO pgvector)
+  s3VectorBucket  String @db.VarChar(255)
+  s3VectorKey     String @db.VarChar(512)
+  vectorDimension Int    @default(1536)
+
+  metadata Json?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, chunkIndex])
+  @@unique([s3VectorBucket, s3VectorKey])
+  @@index([documentId, createdAt(sort: Desc)])
+  @@index([model, createdAt(sort: Desc)])
+  @@index([s3VectorBucket])
+  @@schema("documents")
+}
+
+enum DocumentStatus {
+  UPLOADING
+  PROCESSING
+  READY
+  ERROR
+  ARCHIVED
+
+  @@schema("documents")
+}

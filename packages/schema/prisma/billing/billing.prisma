@@ -1,0 +1,179 @@
+// ==========================================
+// BILLING SCHEMA - Subscriptions & Pricing
+// ==========================================
+
+model Subscription {
+  id          String             @id @default(cuid())
+  workspaceId String             @unique
+  tier        SubscriptionTier   @default(HOBBYIST)
+  status      SubscriptionStatus @default(ACTIVE)
+
+  // Stripe integration
+  stripeCustomerId     String? @unique
+  stripeSubscriptionId String? @unique
+
+  // Canvas Credits
+  credits            Int       @default(0)
+  monthlyCreditQuota Int       @default(0)
+  creditResetDate    DateTime? @db.Timestamptz(6)
+
+  // Usage limits per tier
+  maxCanvases                Int  @default(3) // HOBBYIST: 3, PRO: 999
+  maxActionPodsPerCanvas     Int  @default(50) // HOBBYIST: 50, PRO: 999
+  maxDocumentSizeInMB        Int  @default(10) // HOBBYIST: 10MB, PRO: 100MB
+  maxCollaboratorsPerCanvas  Int  @default(0) // HOBBYIST: 0, PRO: 10, TEAM: 999
+
+  // Feature flags
+  canInviteToWorkspace Boolean @default(false) // PRO/TEAM only
+  canInviteToCanvas    Boolean @default(false) // PRO/TEAM only
+  canCreatePublicLinks Boolean @default(true) // All tiers
+  canUseAdvancedModels Boolean @default(false) // HOBBYIST: BYOK only
+  canAccessAnalytics   Boolean @default(false) // PRO/TEAM only
+  canExportData        Boolean @default(false) // PRO/TEAM only
+
+  // Billing cycle
+  nextBillingDate    DateTime? @db.Timestamptz(6)
+  currentPeriodStart DateTime? @db.Timestamptz(6)
+  currentPeriodEnd   DateTime? @db.Timestamptz(6)
+  cancelAtPeriodEnd  Boolean   @default(false)
+
+  // BYOK mode
+  isByokMode Boolean @default(false)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  workspace       Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  usageLogs       PodUsageLog[]
+  creditPurchases CreditPurchase[]
+  creditUsage     CreditUsageLog[]
+
+  @@index([status, nextBillingDate])
+  @@index([tier, status])
+  @@index([creditResetDate])
+  @@schema("billing")
+}
+
+model CreditPurchase {
+  id               String   @id @default(cuid())
+  subscriptionId   String
+  creditsPurchased Int
+  amountPaid       Decimal  @db.Decimal(10, 2)
+  currency         String   @default("USD") @db.VarChar(3)
+  stripeChargeId   String   @unique
+  status           String   @default("succeeded") @db.VarChar(50)
+  purchasedAt      DateTime @default(now()) @db.Timestamptz(6)
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId, purchasedAt(sort: Desc)])
+  @@index([stripeChargeId])
+  @@schema("billing")
+}
+
+model CreditUsageLog {
+  id             String @id @default(cuid())
+  subscriptionId String
+  workspaceId    String
+  canvasId       String
+  podId          String
+  executionId    String
+
+  creditsUsed   Int @default(0)
+  balanceBefore Int
+  balanceAfter  Int
+
+  provider  LLMProvider
+  modelId   String @db.VarChar(255)
+  modelName String? @db.VarChar(255)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId, createdAt(sort: Desc)])
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([executionId])
+  @@index([provider, modelId, createdAt(sort: Desc)])
+  @@schema("billing")
+}
+
+model ModelPricingTier {
+  id       String        @id @default(cuid())
+  provider LLMProvider
+  modelId  String        @db.VarChar(255)
+  category ModelCategory
+
+  displayName String  @db.VarChar(255)
+  description String? @db.VarChar(500)
+
+  inputTokenCost     Decimal @db.Decimal(12, 8)
+  outputTokenCost    Decimal @db.Decimal(12, 8)
+  reasoningTokenCost Decimal @default(0) @db.Decimal(12, 8)
+
+  creditsPerMillionInputTokens     Int
+  creditsPerMillionOutputTokens    Int
+  creditsPerMillionReasoningTokens Int @default(0)
+
+  maxTokens            Int?
+  maxOutputTokens      Int?
+  supportsStreaming    Boolean @default(true)
+  supportsVision       Boolean @default(false)
+  supportsAudio        Boolean @default(false)
+  supportsVideo        Boolean @default(false)
+  supportsFunctions    Boolean @default(false)
+  supportsJsonMode     Boolean @default(false)
+  supportsSystemPrompt Boolean @default(true)
+
+  providerConfig Json?
+
+  isActive       Boolean   @default(true)
+  effectiveFrom  DateTime  @db.Timestamptz(6)
+  effectiveUntil DateTime? @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  @@unique([provider, modelId, effectiveFrom])
+  @@index([provider, modelId, isActive, effectiveFrom])
+  @@index([provider, category, isActive])
+  @@index([isActive, effectiveFrom])
+  @@index([category, isActive])
+  @@schema("billing")
+}
+
+enum SubscriptionTier {
+  HOBBYIST // FREE
+  PRO      // $20/month
+  TEAM     // $50/user/month
+
+  @@schema("billing")
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  TRIALING
+  INCOMPLETE
+  PAUSED
+
+  @@schema("billing")
+}
+
+enum ModelCategory {
+  WORKHORSE
+  POWERHOUSE
+  REASONING
+  SPECIALIST
+  IMAGE_GEN
+  VIDEO_GEN
+  AUDIO_GEN
+  EMBEDDING
+  RERANKING
+  MODERATION
+  SEARCH
+  TRANSLATION
+
+  @@schema("billing")
+}

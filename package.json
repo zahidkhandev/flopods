@@ -1,0 +1,42 @@
+{
+  "name": "actopod",
+  "version": "0.0.1",
+  "private": true,
+  "license": "MIT",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "start": "turbo run start",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix",
+    "type-check": "turbo run type-check",
+    "clean": "turbo run clean && rimraf node_modules",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md,yaml,yml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md,yaml,yml}\"",
+    "db:generate": "turbo run db:generate",
+    "db:migrate": "yarn workspace @actopod/schema db:migrate",
+    "db:push": "yarn workspace @actopod/schema db:push",
+    "db:studio": "yarn workspace @actopod/schema db:studio",
+    "db:seed": "yarn workspace @actopod/schema db:seed",
+    "docker:db:up": "docker compose -f docker/db-docker-compose.yaml up -d",
+    "docker:db:down": "docker compose -f docker/db-docker-compose.yaml down",
+    "postinstall": "turbo run db:generate"
+  },
+  "devDependencies": {
+    "@actopod/eslint-config": "*",
+    "@types/node": "^22.10.2",
+    "prettier": "^3.4.2",
+    "rimraf": "^6.0.1",
+    "turbo": "^2.5.8",
+    "typescript": "^5.7.2"
+  },
+  "packageManager": "yarn@4.0.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "yarn": ">=4.0.0"
+  }
+}

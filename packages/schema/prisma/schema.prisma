@@ -1,0 +1,17 @@
+// /prisma/schema.prisma
+
+// This is your main Prisma schema file.
+// It defines the database connection and the Prisma Client generator.
+// Models are organized into separate files for better maintainability.
+
+generator client {
+  provider      = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["core", "canvas", "billing", "documents", "admin"]
+}
