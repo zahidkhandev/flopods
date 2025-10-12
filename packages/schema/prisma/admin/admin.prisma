@@ -76,22 +76,22 @@ model AdminSession {
 }
 
 model AdminAuditLog {
-  id          String         @id @default(cuid())
-  adminId     String?
-  action      AdminAction
-  resource    AdminResource
-  resourceId  String?        @db.VarChar(255)
-  method      String         @db.VarChar(10)
-  endpoint    String         @db.VarChar(500)
-  ipAddress   String         @db.VarChar(45)
-  userAgent   String?        @db.VarChar(500)
-  changesBefore Json?
-  changesAfter  Json?
-  status      Int
-  errorMessage String?       @db.Text
-  metadata    Json?
+  id              String        @id @default(cuid())
+  adminId         String?
+  action          AdminAction
+  resource        AdminResource
+  resourceId      String?       @db.VarChar(255)
+  method          String        @db.VarChar(10)
+  endpoint        String        @db.VarChar(500)
+  ipAddress       String        @db.VarChar(45)
+  userAgent       String?       @db.VarChar(500)
+  changesBefore   Json?
+  changesAfter    Json?
+  status          Int
+  errorMessage    String?       @db.Text
+  metadata        Json?
   executionTimeMs Int?
-  createdAt   DateTime       @default(now()) @db.Timestamptz(6)
+  createdAt       DateTime      @default(now()) @db.Timestamptz(6)
 
   admin Admin? @relation(fields: [adminId], references: [id], onDelete: SetNull)
 
@@ -122,13 +122,13 @@ model AdminPermission {
 }
 
 model AdminAPIKey {
-  id        String  @id @default(cuid())
-  adminId   String
-  name      String  @db.VarChar(100)
-  keyHash   String  @unique @db.VarChar(255)
-  keyPrefix String  @db.VarChar(20)
-  scopes    Json
-  rateLimit Int?
+  id         String @id @default(cuid())
+  adminId    String
+  name       String @db.VarChar(100)
+  keyHash    String @unique @db.VarChar(255)
+  keyPrefix  String @db.VarChar(20)
+  scopes     Json
+  rateLimit  Int?
   allowedIps Json?
 
   createdAt  DateTime  @default(now()) @db.Timestamptz(6)

@@ -1,3 +1,4 @@
+import 'tsconfig-paths/register';
 import { NestFactory, Reflector } from '@nestjs/core';
 import {
   ClassSerializerInterceptor,
@@ -14,6 +15,10 @@ import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/exception.filters';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import { PrismaService } from './prisma/prisma.service';
+import { config } from 'dotenv';
+import { join } from 'path';
+
+config({ path: join(__dirname, '../../..', '.env') });
 
 function flattenValidationErrors(
   errors: ValidationError[],
@@ -135,7 +140,7 @@ async function bootstrap() {
   });
 
   // Start server
-  const port = parseInt(process.env.BACKEND_PORT || '8000', 10);
+  const port = parseInt(process.env.BACKEND_PORT || '3000', 10);
   await app.listen(port, '0.0.0.0');
 
   logger.log(`🚀 Actopod Backend running on: http://localhost:${port}`);

@@ -17,6 +17,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
+    // CRITICAL: Don't try to send response if headers already sent
+    if (response.headersSent) {
+      this.logger.error('Headers already sent. Cannot send error response.');
+      this.logger.error('Exception details:', exception);
+      return;
+    }
+
     let status: number;
     let message: string;
     let errors: any[] = [];
@@ -37,12 +44,17 @@ export class AllExceptionsFilter implements ExceptionFilter {
       this.logger.error('Unhandled exception:', exception);
     }
 
-    response.status(status).json({
-      statusCode: status,
-      message,
-      errors,
-      timestamp: new Date().toISOString(),
-      path: request.url,
-    });
+    try {
+      response.status(status).json({
+        statusCode: status,
+        message,
+        errors,
+        timestamp: new Date().toISOString(),
+        path: request.url,
+      });
+    } catch (error) {
+      // If we still can't send response, log it
+      this.logger.error('Failed to send error response:', error);
+    }
   }
 }

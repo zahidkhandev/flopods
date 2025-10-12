@@ -1,12 +1,22 @@
+// {
+//   "extends": "@actopod/tsconfig/nestjs.json",
+//   "compilerOptions": {
+//     "outDir": "./dist",
+//     "paths": {
+//       "@actopod/schema": ["../../packages/schema/src"]
+//     }
+//   },
+//   "include": ["src/**/*"],
+//   "exclude": ["node_modules", "dist", "test"],
+//   "references": [{ "path": "../../packages/schema" }]
+// }
+
+
 {
   "extends": "@actopod/tsconfig/nestjs.json",
   "compilerOptions": {
-    "outDir": "./dist",
-    "paths": {
-      "@actopod/schema": ["../../packages/schema/src"]
-    }
+    "outDir": "./dist"
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "test"],
-  "references": [{ "path": "../../packages/schema" }]
+  "exclude": ["node_modules", "dist", "test"]
 }

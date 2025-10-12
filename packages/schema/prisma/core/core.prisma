@@ -7,6 +7,7 @@ model User {
   email     String   @unique
   name      String?
   image     String?
+  hash      String?  @db.VarChar(255) // For email authS
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
@@ -14,10 +15,10 @@ model User {
   workspaces               WorkspaceUser[]
   refreshTokens            RefreshToken[]
   canvasCollaborations     CanvasCollaborator[]
-  sentWorkspaceInvites     WorkspaceInvitation[]   @relation("InvitedBy")
-  receivedWorkspaceInvites WorkspaceInvitation[]   @relation("InvitedUser")
-  sentCanvasInvites        CanvasInvitation[]      @relation("CanvasInvitedBy")
-  receivedCanvasInvites    CanvasInvitation[]      @relation("CanvasInvitedUser")
+  sentWorkspaceInvites     WorkspaceInvitation[] @relation("InvitedBy")
+  receivedWorkspaceInvites WorkspaceInvitation[] @relation("InvitedUser")
+  sentCanvasInvites        CanvasInvitation[]    @relation("CanvasInvitedBy")
+  receivedCanvasInvites    CanvasInvitation[]    @relation("CanvasInvitedUser")
 
   @@index([email])
   @@schema("core")
@@ -104,11 +105,11 @@ model WorkspaceUser {
 }
 
 model WorkspaceInvitation {
-  id            String           @id @default(cuid())
-  workspaceId   String
-  email         String           @db.VarChar(255)
-  role          WorkspaceRole    @default(MEMBER)
-  permissions   Json? // Custom permissions override
+  id          String        @id @default(cuid())
+  workspaceId String
+  email       String        @db.VarChar(255)
+  role        WorkspaceRole @default(MEMBER)
+  permissions Json? // Custom permissions override
 
   invitedBy     String
   invitedUserId String? // If user exists in system
@@ -139,7 +140,7 @@ model ProviderAPIKey {
   keyHash String @db.VarChar(255) // Encrypted
 
   providerConfig Json? // Provider-specific config
-  endpoint       String? @db.VarChar(500)
+  endpoint       String?  @db.VarChar(500)
   authType       AuthType @default(BEARER_TOKEN)
 
   isActive   Boolean   @default(true)
@@ -164,7 +165,7 @@ model ShareLink {
   createdBy   String
 
   accessLevel ShareAccessLevel @default(VIEW_ONLY)
-  password    String? @db.VarChar(255) // Optional password protection (bcrypt hash)
+  password    String?          @db.VarChar(255) // Optional password protection (bcrypt hash)
 
   // Usage tracking
   viewCount    Int       @default(0)
@@ -218,8 +219,8 @@ enum InvitationStatus {
 
 enum ShareAccessLevel {
   VIEW_ONLY // FREE
-  COMMENT   // FREE
-  EDIT      // PAID (requires collaborator)
+  COMMENT // FREE
+  EDIT // PAID (requires collaborator)
 
   @@schema("core")
 }

@@ -9,6 +9,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Reflector } from '@nestjs/core';
 import { PAGINATE_METADATA_KEY, PaginateOptions } from '../decorators/common';
+import { Response } from 'express';
 
 interface ApiResponse<T> {
   statusCode: number;
@@ -38,10 +39,16 @@ interface PaginationResult {
 export class ResponseInterceptor<T> implements NestInterceptor<T, ApiResponse<T>> {
   constructor(private readonly reflector: Reflector) {}
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<ApiResponse<T>> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<ApiResponse<T> | any> {
     const ctx = context.switchToHttp();
-    const response = ctx.getResponse();
+    const response = ctx.getResponse<Response>();
     const request = ctx.getRequest();
+
+    // CRITICAL: Skip if headers already sent (OAuth redirects)
+    if (response.headersSent) {
+      return next.handle();
+    }
+
     const paginateOptions = this.reflector.get<PaginateOptions>(
       PAGINATE_METADATA_KEY,
       context.getHandler(),
@@ -49,6 +56,16 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, ApiResponse<T>
 
     return next.handle().pipe(
       map((data: any) => {
+        // Double-check after handler execution
+        if (response.headersSent) {
+          return data;
+        }
+
+        // Don't wrap null/undefined or redirects
+        if (!data || response.statusCode === 302 || response.statusCode === 301) {
+          return data;
+        }
+
         const statusCode = data.statusCode || response.statusCode || HttpStatus.OK;
         const message = data.message || response.locals.customMessage || 'Success';
         const errors = data.errors || response.locals.errors || [];

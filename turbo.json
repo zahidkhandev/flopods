@@ -3,18 +3,94 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", ".next/**", "build/**", "node_modules/.prisma/**"],
-      "env": ["DATABASE_URL", "NODE_ENV"]
+      "outputs": [
+        "dist/**",
+        ".next/**",
+        "build/**",
+        "node_modules/.prisma/**",
+        "node_modules/@prisma/**",
+        "tsconfig.tsbuildinfo"
+      ],
+      "env": [
+        "DATABASE_URL",
+        "NODE_ENV",
+        "JWT_ACCESS_TOKEN_SECRET",
+        "JWT_REFRESH_TOKEN_SECRET",
+        "JWT_ACCESS_TOKEN_EXPIRATION",
+        "JWT_REFRESH_TOKEN_EXPIRATION",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "GOOGLE_CALLBACK_URL",
+        "GITHUB_CLIENT_ID",
+        "GITHUB_CLIENT_SECRET",
+        "GITHUB_CALLBACK_URL",
+        "AWS_REGION",
+        "AWS_SES_ACCESS_KEY_ID",
+        "AWS_SES_SECRET_ACCESS_KEY",
+        "AWS_SES_NO_REPLY_EMAIL",
+        "AWS_SES_SUPPORT_EMAIL",
+        "AWS_S3_ACCESS_KEY_ID",
+        "AWS_S3_SECRET_ACCESS_KEY",
+        "AWS_S3_BUCKET_NAME",
+        "AWS_SNS_ACCESS_KEY_ID",
+        "AWS_SNS_SECRET_ACCESS_KEY",
+        "AWS_DYNAMODB_ACCESS_KEY_ID",
+        "AWS_DYNAMODB_SECRET_ACCESS_KEY"
+      ]
     },
     "dev": {
       "cache": false,
       "persistent": true,
       "dependsOn": ["^db:generate"],
-      "env": ["BACKEND_PORT", "FRONTEND_PORT", "FRONTEND_URL", "VITE_*"]
+      "env": [
+        "DATABASE_URL",
+        "NODE_ENV",
+        "BACKEND_PORT",
+        "FRONTEND_PORT",
+        "FRONTEND_URL",
+        "JWT_ACCESS_TOKEN_SECRET",
+        "JWT_REFRESH_TOKEN_SECRET",
+        "JWT_ACCESS_TOKEN_EXPIRATION",
+        "JWT_REFRESH_TOKEN_EXPIRATION",
+        "GOOGLE_CLIENT_ID",
+        "GOOGLE_CLIENT_SECRET",
+        "GOOGLE_CALLBACK_URL",
+        "GITHUB_CLIENT_ID",
+        "GITHUB_CLIENT_SECRET",
+        "GITHUB_CALLBACK_URL",
+        "AWS_REGION",
+        "AWS_SES_ACCESS_KEY_ID",
+        "AWS_SES_SECRET_ACCESS_KEY",
+        "AWS_SES_NO_REPLY_EMAIL",
+        "AWS_SES_SUPPORT_EMAIL",
+        "AWS_S3_ACCESS_KEY_ID",
+        "AWS_S3_SECRET_ACCESS_KEY",
+        "AWS_S3_BUCKET_NAME",
+        "AWS_SNS_ACCESS_KEY_ID",
+        "AWS_SNS_SECRET_ACCESS_KEY",
+        "AWS_DYNAMODB_ACCESS_KEY_ID",
+        "AWS_DYNAMODB_SECRET_ACCESS_KEY",
+        "VITE_*"
+      ]
     },
     "db:generate": {
       "cache": false,
-      "outputs": ["node_modules/.prisma/**"]
+      "outputs": ["node_modules/.prisma/**", "node_modules/@prisma/**"],
+      "env": ["DATABASE_URL"]
+    },
+    "db:migrate": {
+      "cache": false,
+      "dependsOn": ["^db:generate"],
+      "env": ["DATABASE_URL"]
+    },
+    "db:push": {
+      "cache": false,
+      "env": ["DATABASE_URL"]
+    },
+    "db:studio": {
+      "cache": false,
+      "persistent": true,
+      "env": ["DATABASE_URL"]
     },
     "lint": {
       "dependsOn": ["^build"]
@@ -24,7 +100,8 @@
       "cache": false
     },
     "type-check": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "env": ["NODE_ENV"]
     },
     "format": {
       "cache": false
@@ -34,12 +111,13 @@
     },
     "test": {
       "dependsOn": ["^build"],
-      "outputs": ["coverage/**"]
+      "outputs": ["coverage/**"],
+      "env": ["DATABASE_URL", "NODE_ENV", "JWT_ACCESS_TOKEN_SECRET", "JWT_REFRESH_TOKEN_SECRET"]
     },
     "clean": {
       "cache": false
     }
   },
-  "globalEnv": ["NODE_ENV", "DATABASE_URL"],
-  "globalPassThroughEnv": ["CI"]
+  "globalEnv": ["NODE_ENV", "DATABASE_URL", "CI"],
+  "globalPassThroughEnv": ["CI", "VERCEL", "VERCEL_ENV", "VERCEL_URL"]
 }

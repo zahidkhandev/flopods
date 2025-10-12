@@ -18,10 +18,10 @@ model Subscription {
   creditResetDate    DateTime? @db.Timestamptz(6)
 
   // Usage limits per tier
-  maxCanvases                Int  @default(3) // HOBBYIST: 3, PRO: 999
-  maxActionPodsPerCanvas     Int  @default(50) // HOBBYIST: 50, PRO: 999
-  maxDocumentSizeInMB        Int  @default(10) // HOBBYIST: 10MB, PRO: 100MB
-  maxCollaboratorsPerCanvas  Int  @default(0) // HOBBYIST: 0, PRO: 10, TEAM: 999
+  maxCanvases               Int @default(3) // HOBBYIST: 3, PRO: 999
+  maxActionPodsPerCanvas    Int @default(50) // HOBBYIST: 50, PRO: 999
+  maxDocumentSizeInMB       Int @default(10) // HOBBYIST: 10MB, PRO: 100MB
+  maxCollaboratorsPerCanvas Int @default(0) // HOBBYIST: 0, PRO: 10, TEAM: 999
 
   // Feature flags
   canInviteToWorkspace Boolean @default(false) // PRO/TEAM only
@@ -84,8 +84,8 @@ model CreditUsageLog {
   balanceAfter  Int
 
   provider  LLMProvider
-  modelId   String @db.VarChar(255)
-  modelName String? @db.VarChar(255)
+  modelId   String      @db.VarChar(255)
+  modelName String?     @db.VarChar(255)
 
   createdAt DateTime @default(now()) @db.Timestamptz(6)
 
@@ -144,8 +144,8 @@ model ModelPricingTier {
 
 enum SubscriptionTier {
   HOBBYIST // FREE
-  PRO      // $20/month
-  TEAM     // $50/user/month
+  PRO // $20/month
+  TEAM // $50/user/month
 
   @@schema("billing")
 }

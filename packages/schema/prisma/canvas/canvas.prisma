@@ -15,16 +15,16 @@ model Canvas {
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
-  workspace       Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  actionPods      ActionPod[]
-  edges           Edge[]
-  contextualPods  ActionPod[]          @relation("CanvasAsContext")
-  contextModules  ContextModule[]      @relation("CanvasOriginal")
-  collaborators   CanvasCollaborator[]
-  invitations     CanvasInvitation[]
-  sessions        CanvasSession[]
-  activityLog     CanvasActivityLog[]
-  comments        CanvasComment[]
+  workspace      Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  actionPods     ActionPod[]
+  edges          Edge[]
+  contextualPods ActionPod[]          @relation("CanvasAsContext")
+  contextModules ContextModule[]      @relation("CanvasOriginal")
+  collaborators  CanvasCollaborator[]
+  invitations    CanvasInvitation[]
+  sessions       CanvasSession[]
+  activityLog    CanvasActivityLog[]
+  comments       CanvasComment[]
 
   @@index([workspaceId, updatedAt(sort: Desc)])
   @@index([workspaceId, createdAt(sort: Desc)])
@@ -34,10 +34,10 @@ model Canvas {
 }
 
 model CanvasInvitation {
-  id        String              @id @default(cuid())
-  canvasId  String
-  email     String              @db.VarChar(255)
-  
+  id       String @id @default(cuid())
+  canvasId String
+  email    String @db.VarChar(255)
+
   accessLevel CanvasAccessLevel @default(EDITOR)
   permissions Json? // Custom permission overrides
 
@@ -62,10 +62,10 @@ model CanvasInvitation {
 }
 
 model CanvasCollaborator {
-  id        String              @id @default(cuid())
-  canvasId  String
-  userId    String
-  
+  id       String @id @default(cuid())
+  canvasId String
+  userId   String
+
   accessLevel CanvasAccessLevel @default(EDITOR)
 
   // Granular permissions
@@ -125,7 +125,7 @@ model CanvasSession {
 }
 
 model CanvasActivityLog {
-  id       String               @id @default(cuid())
+  id       String  @id @default(cuid())
   canvasId String
   userId   String? // null for anonymous
 
@@ -151,7 +151,7 @@ model CanvasComment {
   canvasId String
   userId   String?
 
-  content  String @db.Text
+  content  String  @db.Text
   position Json? // {x: number, y: number}
   podId    String? // Attached to specific pod
 
@@ -249,8 +249,8 @@ model ActionPodExecution {
   runtimeInMs Int?
 
   provider  LLMProvider
-  modelId   String @db.VarChar(255)
-  modelName String? @db.VarChar(255)
+  modelId   String      @db.VarChar(255)
+  modelName String?     @db.VarChar(255)
 
   providerMetadata Json?
   requestMetadata  Json?
@@ -287,8 +287,8 @@ model PodUsageLog {
   subscriptionId String
 
   provider  LLMProvider
-  modelId   String @db.VarChar(255)
-  modelName String? @db.VarChar(255)
+  modelId   String      @db.VarChar(255)
+  modelName String?     @db.VarChar(255)
 
   providerMetadata Json?
 
@@ -319,10 +319,10 @@ model PodUsageLog {
 }
 
 model ContextModule {
-  id               String @id @default(cuid())
+  id               String   @id @default(cuid())
   workspaceId      String
-  name             String @db.VarChar(255)
-  description      String? @db.VarChar(1000)
+  name             String   @db.VarChar(255)
+  description      String?  @db.VarChar(1000)
   definitionJson   Json
   originalCanvasId String?
   version          Int      @default(1)
