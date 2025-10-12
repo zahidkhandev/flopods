@@ -921,17 +921,17 @@ model User {
 }
 
 model RefreshToken {
-  id        String   @id @default(cuid())
-  token     String   @unique
-  deviceId  String   @db.VarChar(255)
-  userId    String
-  expiresAt DateTime @db.Timestamptz(6)
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  id         String   @id @default(cuid())
+  token      String   @unique
+  deviceName String   @db.VarChar(255)
+  userId     String
+  expiresAt  DateTime @db.Timestamptz(6)
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, deviceId])
+  @@unique([userId, deviceName])
   @@index([userId, expiresAt])
   @@index([token, expiresAt])
   @@schema("core")

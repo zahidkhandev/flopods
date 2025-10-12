@@ -13,10 +13,10 @@ import { AuthUserType, GoogleUserData, GitHubUserData, JwtPayload } from './type
 import { AuthProvider } from '@actopod/schema';
 import { randomBytes, createHash } from 'crypto';
 import * as bcrypt from 'bcrypt';
-import { magicLinkTemplate } from '../../common/aws/ses/templates/magic-link.template';
-import { resetPasswordTemplate } from '../../common/aws/ses/templates/reset-password.template';
-import { verifyEmailTemplate } from '../../common/aws/ses/templates/verify-email.template';
-import { welcomeEmailTemplate } from '../../common/aws/ses/templates/welcome.template';
+import { magicLinkTemplate } from '../../common/aws/ses/templates/auth/magic-link.template';
+import { resetPasswordTemplate } from '../../common/aws/ses/templates/auth/reset-password.template';
+import { verifyEmailTemplate } from '../../common/aws/ses/templates/auth/verify-email.template';
+import { welcomeEmailTemplate } from '../../common/aws/ses/templates/auth/welcome.template';
 
 @Injectable()
 export class V1AuthService {
@@ -235,7 +235,7 @@ export class V1AuthService {
 
     // Check if user already has a token for this device
     const existingToken = await this.prisma.refreshToken.findFirst({
-      where: { userId: user.id, deviceId: deviceName },
+      where: { userId: user.id, deviceName: deviceName },
     });
 
     this.logger.log(`User logged in: ${user.email}`);
@@ -438,7 +438,7 @@ export class V1AuthService {
 
     // Check for existing device
     const existingToken = await this.prisma.refreshToken.findFirst({
-      where: { userId: account.user.id, deviceId: deviceName },
+      where: { userId: account.user.id, deviceName: deviceName },
     });
 
     return this.generateTokens(account.user.id, account.user.email, deviceName, existingToken?.id);
@@ -506,7 +506,7 @@ export class V1AuthService {
     });
 
     const existingToken = await this.prisma.refreshToken.findFirst({
-      where: { userId: user.id, deviceId: deviceName },
+      where: { userId: user.id, deviceName: deviceName },
     });
 
     return this.generateTokens(user.id, user.email, deviceName, existingToken?.id);
@@ -570,7 +570,7 @@ export class V1AuthService {
     });
 
     const existingToken = await this.prisma.refreshToken.findFirst({
-      where: { userId: user.id, deviceId: deviceName },
+      where: { userId: user.id, deviceName: deviceName },
     });
 
     return this.generateTokens(user.id, user.email, deviceName, existingToken?.id);
@@ -590,7 +590,7 @@ export class V1AuthService {
       throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
-    const deviceName = storedToken.deviceId;
+    const deviceName = storedToken.deviceName;
 
     return this.generateTokens(storedToken.user.id, storedToken.user.email, deviceName, deviceId);
   }
@@ -647,7 +647,7 @@ export class V1AuthService {
         data: {
           token: refreshToken,
           expiresAt,
-          deviceId: deviceName,
+          deviceName: deviceName,
         },
       });
     } else {
@@ -655,7 +655,7 @@ export class V1AuthService {
       tokenRecord = await this.prisma.refreshToken.create({
         data: {
           userId,
-          deviceId: deviceName, // Store deviceName in deviceId column
+          deviceName: deviceName, // Store deviceName in deviceId column
           token: refreshToken,
           expiresAt,
         },

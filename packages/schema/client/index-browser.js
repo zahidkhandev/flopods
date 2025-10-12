@@ -508,7 +508,7 @@ exports.Prisma.UserScalarFieldEnum = {
 exports.Prisma.RefreshTokenScalarFieldEnum = {
   id: 'id',
   token: 'token',
-  deviceId: 'deviceId',
+  deviceName: 'deviceName',
   userId: 'userId',
   expiresAt: 'expiresAt',
   createdAt: 'createdAt',
@@ -868,7 +868,7 @@ exports.Prisma.UserOrderByRelevanceFieldEnum = {
 exports.Prisma.RefreshTokenOrderByRelevanceFieldEnum = {
   id: 'id',
   token: 'token',
-  deviceId: 'deviceId',
+  deviceName: 'deviceName',
   userId: 'userId'
 };
 

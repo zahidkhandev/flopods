@@ -32813,7 +32813,7 @@ export namespace Prisma {
   export type RefreshTokenMinAggregateOutputType = {
     id: string | null
     token: string | null
-    deviceId: string | null
+    deviceName: string | null
     userId: string | null
     expiresAt: Date | null
     createdAt: Date | null
@@ -32823,7 +32823,7 @@ export namespace Prisma {
   export type RefreshTokenMaxAggregateOutputType = {
     id: string | null
     token: string | null
-    deviceId: string | null
+    deviceName: string | null
     userId: string | null
     expiresAt: Date | null
     createdAt: Date | null
@@ -32833,7 +32833,7 @@ export namespace Prisma {
   export type RefreshTokenCountAggregateOutputType = {
     id: number
     token: number
-    deviceId: number
+    deviceName: number
     userId: number
     expiresAt: number
     createdAt: number
@@ -32845,7 +32845,7 @@ export namespace Prisma {
   export type RefreshTokenMinAggregateInputType = {
     id?: true
     token?: true
-    deviceId?: true
+    deviceName?: true
     userId?: true
     expiresAt?: true
     createdAt?: true
@@ -32855,7 +32855,7 @@ export namespace Prisma {
   export type RefreshTokenMaxAggregateInputType = {
     id?: true
     token?: true
-    deviceId?: true
+    deviceName?: true
     userId?: true
     expiresAt?: true
     createdAt?: true
@@ -32865,7 +32865,7 @@ export namespace Prisma {
   export type RefreshTokenCountAggregateInputType = {
     id?: true
     token?: true
-    deviceId?: true
+    deviceName?: true
     userId?: true
     expiresAt?: true
     createdAt?: true
@@ -32948,7 +32948,7 @@ export namespace Prisma {
   export type RefreshTokenGroupByOutputType = {
     id: string
     token: string
-    deviceId: string
+    deviceName: string
     userId: string
     expiresAt: Date
     createdAt: Date
@@ -32975,7 +32975,7 @@ export namespace Prisma {
   export type RefreshTokenSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     token?: boolean
-    deviceId?: boolean
+    deviceName?: boolean
     userId?: boolean
     expiresAt?: boolean
     createdAt?: boolean
@@ -32986,7 +32986,7 @@ export namespace Prisma {
   export type RefreshTokenSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     token?: boolean
-    deviceId?: boolean
+    deviceName?: boolean
     userId?: boolean
     expiresAt?: boolean
     createdAt?: boolean
@@ -32997,7 +32997,7 @@ export namespace Prisma {
   export type RefreshTokenSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
     token?: boolean
-    deviceId?: boolean
+    deviceName?: boolean
     userId?: boolean
     expiresAt?: boolean
     createdAt?: boolean
@@ -33008,14 +33008,14 @@ export namespace Prisma {
   export type RefreshTokenSelectScalar = {
     id?: boolean
     token?: boolean
-    deviceId?: boolean
+    deviceName?: boolean
     userId?: boolean
     expiresAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type RefreshTokenOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "token" | "deviceId" | "userId" | "expiresAt" | "createdAt" | "updatedAt", ExtArgs["result"]["refreshToken"]>
+  export type RefreshTokenOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "token" | "deviceName" | "userId" | "expiresAt" | "createdAt" | "updatedAt", ExtArgs["result"]["refreshToken"]>
   export type RefreshTokenInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     user?: boolean | UserDefaultArgs<ExtArgs>
   }
@@ -33034,7 +33034,7 @@ export namespace Prisma {
     scalars: $Extensions.GetPayloadResult<{
       id: string
       token: string
-      deviceId: string
+      deviceName: string
       userId: string
       expiresAt: Date
       createdAt: Date
@@ -33465,7 +33465,7 @@ export namespace Prisma {
   interface RefreshTokenFieldRefs {
     readonly id: FieldRef<"RefreshToken", 'String'>
     readonly token: FieldRef<"RefreshToken", 'String'>
-    readonly deviceId: FieldRef<"RefreshToken", 'String'>
+    readonly deviceName: FieldRef<"RefreshToken", 'String'>
     readonly userId: FieldRef<"RefreshToken", 'String'>
     readonly expiresAt: FieldRef<"RefreshToken", 'DateTime'>
     readonly createdAt: FieldRef<"RefreshToken", 'DateTime'>
@@ -43785,7 +43785,7 @@ export namespace Prisma {
   export const RefreshTokenScalarFieldEnum: {
     id: 'id',
     token: 'token',
-    deviceId: 'deviceId',
+    deviceName: 'deviceName',
     userId: 'userId',
     expiresAt: 'expiresAt',
     createdAt: 'createdAt',
@@ -44259,7 +44259,7 @@ export namespace Prisma {
   export const RefreshTokenOrderByRelevanceFieldEnum: {
     id: 'id',
     token: 'token',
-    deviceId: 'deviceId',
+    deviceName: 'deviceName',
     userId: 'userId'
   };
 
@@ -47233,7 +47233,7 @@ export namespace Prisma {
     NOT?: RefreshTokenWhereInput | RefreshTokenWhereInput[]
     id?: StringFilter<"RefreshToken"> | string
     token?: StringFilter<"RefreshToken"> | string
-    deviceId?: StringFilter<"RefreshToken"> | string
+    deviceName?: StringFilter<"RefreshToken"> | string
     userId?: StringFilter<"RefreshToken"> | string
     expiresAt?: DateTimeFilter<"RefreshToken"> | Date | string
     createdAt?: DateTimeFilter<"RefreshToken"> | Date | string
@@ -47244,7 +47244,7 @@ export namespace Prisma {
   export type RefreshTokenOrderByWithRelationInput = {
     id?: SortOrder
     token?: SortOrder
-    deviceId?: SortOrder
+    deviceName?: SortOrder
     userId?: SortOrder
     expiresAt?: SortOrder
     createdAt?: SortOrder
@@ -47256,22 +47256,22 @@ export namespace Prisma {
   export type RefreshTokenWhereUniqueInput = Prisma.AtLeast<{
     id?: string
     token?: string
-    userId_deviceId?: RefreshTokenUserIdDeviceIdCompoundUniqueInput
+    userId_deviceName?: RefreshTokenUserIdDeviceNameCompoundUniqueInput
     AND?: RefreshTokenWhereInput | RefreshTokenWhereInput[]
     OR?: RefreshTokenWhereInput[]
     NOT?: RefreshTokenWhereInput | RefreshTokenWhereInput[]
-    deviceId?: StringFilter<"RefreshToken"> | string
+    deviceName?: StringFilter<"RefreshToken"> | string
     userId?: StringFilter<"RefreshToken"> | string
     expiresAt?: DateTimeFilter<"RefreshToken"> | Date | string
     createdAt?: DateTimeFilter<"RefreshToken"> | Date | string
     updatedAt?: DateTimeFilter<"RefreshToken"> | Date | string
     user?: XOR<UserScalarRelationFilter, UserWhereInput>
-  }, "id" | "token" | "userId_deviceId">
+  }, "id" | "token" | "userId_deviceName">
 
   export type RefreshTokenOrderByWithAggregationInput = {
     id?: SortOrder
     token?: SortOrder
-    deviceId?: SortOrder
+    deviceName?: SortOrder
     userId?: SortOrder
     expiresAt?: SortOrder
     createdAt?: SortOrder
@@ -47287,7 +47287,7 @@ export namespace Prisma {
     NOT?: RefreshTokenScalarWhereWithAggregatesInput | RefreshTokenScalarWhereWithAggregatesInput[]
     id?: StringWithAggregatesFilter<"RefreshToken"> | string
     token?: StringWithAggregatesFilter<"RefreshToken"> | string
-    deviceId?: StringWithAggregatesFilter<"RefreshToken"> | string
+    deviceName?: StringWithAggregatesFilter<"RefreshToken"> | string
     userId?: StringWithAggregatesFilter<"RefreshToken"> | string
     expiresAt?: DateTimeWithAggregatesFilter<"RefreshToken"> | Date | string
     createdAt?: DateTimeWithAggregatesFilter<"RefreshToken"> | Date | string
@@ -50796,7 +50796,7 @@ export namespace Prisma {
   export type RefreshTokenCreateInput = {
     id?: string
     token: string
-    deviceId: string
+    deviceName: string
     expiresAt: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -50806,7 +50806,7 @@ export namespace Prisma {
   export type RefreshTokenUncheckedCreateInput = {
     id?: string
     token: string
-    deviceId: string
+    deviceName: string
     userId: string
     expiresAt: Date | string
     createdAt?: Date | string
@@ -50816,7 +50816,7 @@ export namespace Prisma {
   export type RefreshTokenUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
     token?: StringFieldUpdateOperationsInput | string
-    deviceId?: StringFieldUpdateOperationsInput | string
+    deviceName?: StringFieldUpdateOperationsInput | string
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -50826,7 +50826,7 @@ export namespace Prisma {
   export type RefreshTokenUncheckedUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
     token?: StringFieldUpdateOperationsInput | string
-    deviceId?: StringFieldUpdateOperationsInput | string
+    deviceName?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -50836,7 +50836,7 @@ export namespace Prisma {
   export type RefreshTokenCreateManyInput = {
     id?: string
     token: string
-    deviceId: string
+    deviceName: string
     userId: string
     expiresAt: Date | string
     createdAt?: Date | string
@@ -50846,7 +50846,7 @@ export namespace Prisma {
   export type RefreshTokenUpdateManyMutationInput = {
     id?: StringFieldUpdateOperationsInput | string
     token?: StringFieldUpdateOperationsInput | string
-    deviceId?: StringFieldUpdateOperationsInput | string
+    deviceName?: StringFieldUpdateOperationsInput | string
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -50855,7 +50855,7 @@ export namespace Prisma {
   export type RefreshTokenUncheckedUpdateManyInput = {
     id?: StringFieldUpdateOperationsInput | string
     token?: StringFieldUpdateOperationsInput | string
-    deviceId?: StringFieldUpdateOperationsInput | string
+    deviceName?: StringFieldUpdateOperationsInput | string
     userId?: StringFieldUpdateOperationsInput | string
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -53991,15 +53991,15 @@ export namespace Prisma {
     search: string
   }
 
-  export type RefreshTokenUserIdDeviceIdCompoundUniqueInput = {
+  export type RefreshTokenUserIdDeviceNameCompoundUniqueInput = {
     userId: string
-    deviceId: string
+    deviceName: string
   }
 
   export type RefreshTokenCountOrderByAggregateInput = {
     id?: SortOrder
     token?: SortOrder
-    deviceId?: SortOrder
+    deviceName?: SortOrder
     userId?: SortOrder
     expiresAt?: SortOrder
     createdAt?: SortOrder
@@ -54009,7 +54009,7 @@ export namespace Prisma {
   export type RefreshTokenMaxOrderByAggregateInput = {
     id?: SortOrder
     token?: SortOrder
-    deviceId?: SortOrder
+    deviceName?: SortOrder
     userId?: SortOrder
     expiresAt?: SortOrder
     createdAt?: SortOrder
@@ -54019,7 +54019,7 @@ export namespace Prisma {
   export type RefreshTokenMinOrderByAggregateInput = {
     id?: SortOrder
     token?: SortOrder
-    deviceId?: SortOrder
+    deviceName?: SortOrder
     userId?: SortOrder
     expiresAt?: SortOrder
     createdAt?: SortOrder
@@ -62342,7 +62342,7 @@ export namespace Prisma {
   export type RefreshTokenCreateWithoutUserInput = {
     id?: string
     token: string
-    deviceId: string
+    deviceName: string
     expiresAt: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -62351,7 +62351,7 @@ export namespace Prisma {
   export type RefreshTokenUncheckedCreateWithoutUserInput = {
     id?: string
     token: string
-    deviceId: string
+    deviceName: string
     expiresAt: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -62643,7 +62643,7 @@ export namespace Prisma {
     NOT?: RefreshTokenScalarWhereInput | RefreshTokenScalarWhereInput[]
     id?: StringFilter<"RefreshToken"> | string
     token?: StringFilter<"RefreshToken"> | string
-    deviceId?: StringFilter<"RefreshToken"> | string
+    deviceName?: StringFilter<"RefreshToken"> | string
     userId?: StringFilter<"RefreshToken"> | string
     expiresAt?: DateTimeFilter<"RefreshToken"> | Date | string
     createdAt?: DateTimeFilter<"RefreshToken"> | Date | string
@@ -65629,7 +65629,7 @@ export namespace Prisma {
   export type RefreshTokenCreateManyUserInput = {
     id?: string
     token: string
-    deviceId: string
+    deviceName: string
     expiresAt: Date | string
     createdAt?: Date | string
     updatedAt?: Date | string
@@ -65780,7 +65780,7 @@ export namespace Prisma {
   export type RefreshTokenUpdateWithoutUserInput = {
     id?: StringFieldUpdateOperationsInput | string
     token?: StringFieldUpdateOperationsInput | string
-    deviceId?: StringFieldUpdateOperationsInput | string
+    deviceName?: StringFieldUpdateOperationsInput | string
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -65789,7 +65789,7 @@ export namespace Prisma {
   export type RefreshTokenUncheckedUpdateWithoutUserInput = {
     id?: StringFieldUpdateOperationsInput | string
     token?: StringFieldUpdateOperationsInput | string
-    deviceId?: StringFieldUpdateOperationsInput | string
+    deviceName?: StringFieldUpdateOperationsInput | string
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -65798,7 +65798,7 @@ export namespace Prisma {
   export type RefreshTokenUncheckedUpdateManyWithoutUserInput = {
     id?: StringFieldUpdateOperationsInput | string
     token?: StringFieldUpdateOperationsInput | string
-    deviceId?: StringFieldUpdateOperationsInput | string
+    deviceName?: StringFieldUpdateOperationsInput | string
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
