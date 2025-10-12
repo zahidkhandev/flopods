@@ -9,7 +9,8 @@
     "dev": {
       "cache": false,
       "persistent": true,
-      "dependsOn": ["^db:generate"]
+      "dependsOn": ["^db:generate"],
+      "env": ["BACKEND_PORT", "FRONTEND_PORT", "FRONTEND_URL", "VITE_*"]
     },
     "db:generate": {
       "cache": false,
