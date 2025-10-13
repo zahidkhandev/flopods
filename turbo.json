@@ -36,7 +36,8 @@
         "AWS_SNS_SECRET_ACCESS_KEY",
         "AWS_DYNAMODB_ACCESS_KEY_ID",
         "AWS_DYNAMODB_SECRET_ACCESS_KEY",
-        "API_KEY_ENCRYPTION_SECRET"
+        "API_KEY_ENCRYPTION_SECRET",
+        "VITE_*"
       ]
     },
     "dev": {

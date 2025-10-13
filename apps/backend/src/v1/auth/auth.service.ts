@@ -427,7 +427,9 @@ export class V1AuthService {
       if (metadata.ipAddress !== _ipAddress) {
         this.logger.warn(`IP mismatch for magic link: ${normalizedEmail}`);
       }
-    } catch {}
+    } catch {
+      /* empty */
+    }
 
     await this.prisma.account.update({
       where: { id: account.id },

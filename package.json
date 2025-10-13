@@ -60,7 +60,7 @@
   },
   "devDependencies": {
     "@actopod/eslint-config": "*",
-    "@types/node": "^22.10.2",
+    "@types/node": "^24.7.2",
     "prettier": "^3.4.2",
     "rimraf": "^6.0.1",
     "turbo": "^2.5.8",
@@ -70,5 +70,9 @@
   "engines": {
     "node": ">=20.0.0",
     "yarn": ">=4.0.0"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.1.14",
+    "tailwindcss": "^4.1.14"
   }
 }
