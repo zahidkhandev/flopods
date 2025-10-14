@@ -23,7 +23,7 @@ export interface WorkspaceListItem {
     canManageApiKeys: boolean;
   };
   memberCount: number;
-  canvasCount: number;
+  canvasCount: number; // Keep as canvasCount (user-facing name)
   joinedAt: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -58,7 +58,7 @@ export interface WorkspaceDetails {
     };
   }>;
   _count: {
-    canvases: number;
+    flows: number; // FIXED: canvases → flows
     documents: number;
     apiKeys: number;
   };

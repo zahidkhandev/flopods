@@ -73,7 +73,7 @@ export class V1WorkspaceService {
             _count: {
               select: {
                 members: true,
-                canvases: true,
+                flows: true, // FIXED: canvases → flows
               },
             },
           },
@@ -98,7 +98,7 @@ export class V1WorkspaceService {
         canManageApiKeys: wu.canManageApiKeys,
       },
       memberCount: wu.workspace._count.members,
-      canvasCount: wu.workspace._count.canvases,
+      canvasCount: wu.workspace._count.flows, // FIXED: canvases → flows
       joinedAt: wu.joinedAt,
       createdAt: wu.workspace.createdAt,
       updatedAt: wu.workspace.updatedAt,
@@ -149,7 +149,7 @@ export class V1WorkspaceService {
         },
         _count: {
           select: {
-            canvases: true,
+            flows: true, // FIXED: canvases → flows
             documents: true,
             apiKeys: true,
           },
@@ -162,7 +162,13 @@ export class V1WorkspaceService {
     }
 
     return {
-      ...workspace,
+      id: workspace.id,
+      name: workspace.name,
+      type: workspace.type,
+      createdAt: workspace.createdAt,
+      updatedAt: workspace.updatedAt,
+      members: workspace.members,
+      _count: workspace._count,
       currentUserRole: member.role,
       currentUserPermissions: {
         canCreateCanvas: member.canCreateCanvas,
@@ -407,6 +413,19 @@ export class V1WorkspaceService {
       },
     });
 
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      include: { _count: { select: { members: true } } },
+    });
+
+    if (workspace && workspace.type === WorkspaceType.PERSONAL && workspace._count.members > 1) {
+      await this.prisma.workspace.update({
+        where: { id: workspaceId },
+        data: { type: WorkspaceType.TEAM },
+      });
+      this.logger.log(`🔄 Workspace ${workspaceId} auto-converted from PERSONAL to TEAM`);
+    }
+
     this.logger.log(`Member added to workspace ${workspaceId}: ${targetUser.email}`);
     return member as WorkspaceMemberResponse;
   }
@@ -509,6 +528,22 @@ export class V1WorkspaceService {
         userId_workspaceId: { userId: targetUserId, workspaceId },
       },
     });
+
+    const remainingMembers = await this.prisma.workspaceUser.count({
+      where: { workspaceId },
+    });
+
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+    });
+
+    if (workspace && workspace.type === WorkspaceType.TEAM && remainingMembers === 1) {
+      await this.prisma.workspace.update({
+        where: { id: workspaceId },
+        data: { type: WorkspaceType.PERSONAL },
+      });
+      this.logger.log(`🔄 Workspace ${workspaceId} auto-converted from TEAM to PERSONAL`);
+    }
 
     this.logger.log(`Member removed from workspace ${workspaceId}: ${targetUserId}`);
     return { message: 'Member removed successfully' };
@@ -1027,5 +1062,86 @@ export class V1WorkspaceService {
     const authTag = cipher.getAuthTag();
 
     return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
+  }
+
+  async transferOwnership(
+    workspaceId: string,
+    currentOwnerId: string,
+    newOwnerId: string,
+  ): Promise<MessageResponse> {
+    const currentOwner = await this.prisma.workspaceUser.findUnique({
+      where: { userId_workspaceId: { userId: currentOwnerId, workspaceId } },
+    });
+
+    if (!currentOwner || currentOwner.role !== WorkspaceRole.OWNER) {
+      throw new ForbiddenException('Only the workspace owner can transfer ownership');
+    }
+
+    const newOwner = await this.prisma.workspaceUser.findUnique({
+      where: { userId_workspaceId: { userId: newOwnerId, workspaceId } },
+    });
+
+    if (!newOwner) {
+      throw new NotFoundException('Target user is not a member of this workspace');
+    }
+
+    await this.prisma.$transaction([
+      // Demote current owner to admin
+      this.prisma.workspaceUser.update({
+        where: { userId_workspaceId: { userId: currentOwnerId, workspaceId } },
+        data: { role: WorkspaceRole.ADMIN },
+      }),
+      // Promote new owner
+      this.prisma.workspaceUser.update({
+        where: { userId_workspaceId: { userId: newOwnerId, workspaceId } },
+        data: {
+          role: WorkspaceRole.OWNER,
+          canCreateCanvas: true,
+          canDeleteCanvas: true,
+          canManageBilling: true,
+          canInviteMembers: true,
+          canManageMembers: true,
+          canManageApiKeys: true,
+        },
+      }),
+    ]);
+
+    this.logger.log(
+      `Ownership transferred in workspace ${workspaceId}: ${currentOwnerId} → ${newOwnerId}`,
+    );
+    return { message: 'Ownership transferred successfully' };
+  }
+
+  async getWorkspaceStats(workspaceId: string, userId: string) {
+    await this.verifyMembership(workspaceId, userId);
+
+    const stats = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      include: {
+        _count: {
+          select: {
+            members: true,
+            flows: true,
+            documents: true,
+            apiKeys: true,
+          },
+        },
+        members: {
+          select: { role: true },
+        },
+      },
+    });
+
+    return {
+      totalMembers: stats!._count.members,
+      totalFlows: stats!._count.flows,
+      totalDocuments: stats!._count.documents,
+      totalApiKeys: stats!._count.apiKeys,
+      roleDistribution: {
+        owners: stats!.members.filter((m) => m.role === WorkspaceRole.OWNER).length,
+        admins: stats!.members.filter((m) => m.role === WorkspaceRole.ADMIN).length,
+        members: stats!.members.filter((m) => m.role === WorkspaceRole.MEMBER).length,
+      },
+    };
   }
 }

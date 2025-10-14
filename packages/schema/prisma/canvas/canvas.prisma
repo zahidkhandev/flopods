@@ -1,31 +1,64 @@
-model Canvas {
-  id          String           @id @default(cuid())
+// /prisma/schemas/canvas.prisma
+
+// ==========================================
+// CANVAS SCHEMA - Spaces, Flows (Canvases), Pods
+// ==========================================
+
+model Space {
+  id          String  @id @default(cuid())
   workspaceId String
-  name        String           @db.VarChar(255)
-  description String?          @db.VarChar(500)
-  version     Int              @default(1)
-  visibility  CanvasVisibility @default(PRIVATE)
+  name        String  @db.VarChar(255)
+  description String? @db.VarChar(1000)
+
+  customInstructions String? @db.Text
+
+  icon  String? @db.VarChar(50)
+  color String? @db.VarChar(7)
+
+  createdBy String
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  flows     Flow[]
+
+  @@unique([workspaceId, name])
+  @@index([workspaceId, updatedAt(sort: Desc)])
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@schema("canvas")
+}
+
+model Flow {
+  id          String         @id @default(cuid())
+  workspaceId String
+  spaceId     String? // OPTIONAL - Flow can exist without a Space
+  name        String         @db.VarChar(255)
+  description String?        @db.VarChar(500)
+  version     Int            @default(1)
+  visibility  FlowVisibility @default(PRIVATE)
 
   createdBy String
 
-  // Thumbnail for sharing (S3 key)
   thumbnailS3Key       String?   @db.VarChar(512)
   thumbnailGeneratedAt DateTime? @db.Timestamptz(6)
 
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
-  workspace      Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  actionPods     ActionPod[]
+  workspace      Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  space          Space?             @relation(fields: [spaceId], references: [id], onDelete: SetNull)
+  pods           Pod[]
   edges          Edge[]
-  contextualPods ActionPod[]          @relation("CanvasAsContext")
-  contextModules ContextModule[]      @relation("CanvasOriginal")
-  collaborators  CanvasCollaborator[]
-  invitations    CanvasInvitation[]
-  sessions       CanvasSession[]
-  activityLog    CanvasActivityLog[]
-  comments       CanvasComment[]
+  contextualPods Pod[]              @relation("FlowAsContext")
+  contextModules ContextModule[]    @relation("FlowOriginal")
+  collaborators  FlowCollaborator[]
+  invitations    FlowInvitation[]
+  sessions       FlowSession[]
+  activityLog    FlowActivityLog[]
+  comments       FlowComment[]
 
+  @@index([spaceId, updatedAt(sort: Desc)])
+  @@index([spaceId, createdAt(sort: Desc)])
   @@index([workspaceId, updatedAt(sort: Desc)])
   @@index([workspaceId, createdAt(sort: Desc)])
   @@index([workspaceId, visibility])
@@ -33,13 +66,13 @@ model Canvas {
   @@schema("canvas")
 }
 
-model CanvasInvitation {
-  id       String @id @default(cuid())
-  canvasId String
-  email    String @db.VarChar(255)
+model FlowInvitation {
+  id     String @id @default(cuid())
+  flowId String
+  email  String @db.VarChar(255)
 
-  accessLevel CanvasAccessLevel @default(EDITOR)
-  permissions Json? // Custom permission overrides
+  accessLevel FlowAccessLevel @default(EDITOR)
+  permissions Json?
 
   invitedBy     String
   invitedUserId String?
@@ -51,111 +84,106 @@ model CanvasInvitation {
   expiresAt  DateTime  @db.Timestamptz(6)
   acceptedAt DateTime? @db.Timestamptz(6)
 
-  canvas      Canvas @relation(fields: [canvasId], references: [id], onDelete: Cascade)
-  inviter     User   @relation("CanvasInvitedBy", fields: [invitedBy], references: [id], onDelete: Cascade)
-  invitedUser User?  @relation("CanvasInvitedUser", fields: [invitedUserId], references: [id], onDelete: SetNull)
+  flow        Flow  @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  inviter     User  @relation("FlowInvitedBy", fields: [invitedBy], references: [id], onDelete: Cascade)
+  invitedUser User? @relation("FlowInvitedUser", fields: [invitedUserId], references: [id], onDelete: SetNull)
 
-  @@index([canvasId, status])
+  @@index([flowId, status])
   @@index([email, status])
   @@index([token, expiresAt])
   @@schema("canvas")
 }
 
-model CanvasCollaborator {
-  id       String @id @default(cuid())
-  canvasId String
-  userId   String
+model FlowCollaborator {
+  id     String @id @default(cuid())
+  flowId String
+  userId String
 
-  accessLevel CanvasAccessLevel @default(EDITOR)
+  accessLevel FlowAccessLevel @default(EDITOR)
 
-  // Granular permissions
   canEdit    Boolean @default(true)
   canExecute Boolean @default(true)
   canDelete  Boolean @default(false)
-  canShare   Boolean @default(false) // Can create public links (FREE)
-  canInvite  Boolean @default(false) // Can invite collaborators (PAID)
+  canShare   Boolean @default(false)
+  canInvite  Boolean @default(false)
 
   invitedBy    String?
   invitedAt    DateTime  @default(now()) @db.Timestamptz(6)
   lastViewedAt DateTime? @db.Timestamptz(6)
 
-  canvas Canvas @relation(fields: [canvasId], references: [id], onDelete: Cascade)
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flow Flow @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([canvasId, userId])
+  @@unique([flowId, userId])
   @@index([userId])
-  @@index([canvasId, accessLevel])
+  @@index([flowId, accessLevel])
   @@schema("canvas")
 }
 
-model CanvasSession {
-  id       String  @id @default(cuid())
-  canvasId String
-  userId   String? // null for anonymous viewers
+model FlowSession {
+  id     String  @id @default(cuid())
+  flowId String
+  userId String?
 
-  // Anonymous session support
   anonymousName String? @db.VarChar(100)
   sessionToken  String? @unique @db.VarChar(255)
 
-  // Real-time presence
   socketId       String? @db.VarChar(255)
-  cursorPosition Json? // {x: number, y: number}
-  selectedPodIds Json? // Array of selected action pod IDs
-  viewportState  Json? // {zoom: number, x: number, y: number}
+  cursorPosition Json?
+  selectedPodIds Json?
+  viewportState  Json?
 
-  userColor String? @db.VarChar(7) // Hex color for cursor
+  userColor String? @db.VarChar(7)
 
-  // Session metadata
   userAgent String? @db.VarChar(500)
   ipAddress String? @db.VarChar(45)
 
-  // Lifecycle
   connectedAt     DateTime  @default(now()) @db.Timestamptz(6)
   lastHeartbeatAt DateTime  @default(now()) @db.Timestamptz(6)
   disconnectedAt  DateTime? @db.Timestamptz(6)
 
-  canvas Canvas @relation(fields: [canvasId], references: [id], onDelete: Cascade)
+  flow Flow @relation(fields: [flowId], references: [id], onDelete: Cascade)
 
-  @@index([canvasId, disconnectedAt])
+  @@index([flowId, disconnectedAt])
   @@index([socketId])
-  @@index([canvasId, userId, disconnectedAt])
-  @@index([lastHeartbeatAt]) // For stale session cleanup
+  @@index([flowId, userId, disconnectedAt])
+  @@index([lastHeartbeatAt])
   @@index([sessionToken])
   @@schema("canvas")
 }
 
-model CanvasActivityLog {
-  id       String  @id @default(cuid())
-  canvasId String
-  userId   String? // null for anonymous
+model FlowActivityLog {
+  id     String  @id @default(cuid())
+  flowId String
+  userId String?
 
-  action CanvasActivityAction
+  action FlowActivityAction
 
-  entityType String? @db.VarChar(50) // 'action_pod', 'edge', 'canvas'
+  entityType String? @db.VarChar(50)
   entityId   String? @db.VarChar(255)
 
-  changeData Json? // {before: {...}, after: {...}}
+  changeData Json?
 
   createdAt DateTime @default(now()) @db.Timestamptz(6)
 
-  canvas Canvas @relation(fields: [canvasId], references: [id], onDelete: Cascade)
+  flow Flow @relation(fields: [flowId], references: [id], onDelete: Cascade)
 
-  @@index([canvasId, createdAt(sort: Desc)])
+  @@index([flowId, createdAt(sort: Desc)])
   @@index([userId, createdAt(sort: Desc)])
   @@index([action, createdAt(sort: Desc)])
   @@schema("canvas")
 }
 
-model CanvasComment {
-  id       String  @id @default(cuid())
-  canvasId String
-  userId   String?
+model FlowComment {
+  id     String  @id @default(cuid())
+  flowId String
+  userId String?
 
   content  String  @db.Text
-  position Json? // {x: number, y: number}
-  podId    String? // Attached to specific pod
+  position Json?
+  podId    String?
 
-  parentId String? // Thread support
+  parentId String?
 
   isResolved Boolean   @default(false)
   resolvedBy String?
@@ -164,9 +192,9 @@ model CanvasComment {
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
-  canvas Canvas @relation(fields: [canvasId], references: [id], onDelete: Cascade)
+  flow Flow @relation(fields: [flowId], references: [id], onDelete: Cascade)
 
-  @@index([canvasId, createdAt(sort: Desc)])
+  @@index([flowId, createdAt(sort: Desc)])
   @@index([userId, createdAt(sort: Desc)])
   @@index([podId])
   @@index([parentId])
@@ -174,42 +202,39 @@ model CanvasComment {
   @@schema("canvas")
 }
 
-model ActionPod {
-  id              String                   @id @default(cuid())
-  canvasId        String
-  type            ActionPodType
+model Pod {
+  id              String             @id @default(cuid())
+  flowId          String
+  type            PodType
   position        Json
-  executionStatus ActionPodExecutionStatus @default(IDLE)
+  executionStatus PodExecutionStatus @default(IDLE)
   lastExecutionId String?
-  contextCanvasId String?
+  contextFlowId   String?
   documentId      String?
 
-  // Real-time collaboration lock
-  lockedBy String? // userId or sessionToken
+  lockedBy String?
   lockedAt DateTime? @db.Timestamptz(6)
 
-  // DynamoDB keys for pod content
-  dynamoPartitionKey String @db.VarChar(255) // "WORKSPACE#{workspaceId}"
-  dynamoSortKey      String @db.VarChar(255) // "CANVAS#{canvasId}#POD#{podId}#{ts}"
+  dynamoPartitionKey String @db.VarChar(255)
+  dynamoSortKey      String @db.VarChar(255)
 
-  // S3 Vectors for embeddings
   s3VectorBucket String? @db.VarChar(255)
   s3VectorKey    String? @db.VarChar(512)
 
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
-  canvas        Canvas               @relation(fields: [canvasId], references: [id], onDelete: Cascade)
-  contextCanvas Canvas?              @relation("CanvasAsContext", fields: [contextCanvasId], references: [id], onDelete: SetNull)
-  document      Document?            @relation(fields: [documentId], references: [id], onDelete: SetNull)
-  sourceEdges   Edge[]               @relation("SourcePod")
-  targetEdges   Edge[]               @relation("TargetPod")
-  executions    ActionPodExecution[]
-  usageLogs     PodUsageLog[]
+  flow        Flow           @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  contextFlow Flow?          @relation("FlowAsContext", fields: [contextFlowId], references: [id], onDelete: SetNull)
+  document    Document?      @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  sourceEdges Edge[]         @relation("SourcePod")
+  targetEdges Edge[]         @relation("TargetPod")
+  executions  PodExecution[]
+  usageLogs   PodUsageLog[]
 
   @@unique([dynamoPartitionKey, dynamoSortKey])
-  @@index([canvasId, type, executionStatus])
-  @@index([contextCanvasId])
+  @@index([flowId, type, executionStatus])
+  @@index([contextFlowId])
   @@index([documentId])
   @@index([executionStatus, updatedAt])
   @@index([s3VectorBucket, s3VectorKey])
@@ -219,7 +244,7 @@ model ActionPod {
 
 model Edge {
   id           String   @id @default(cuid())
-  canvasId     String
+  flowId       String
   sourcePodId  String
   targetPodId  String
   sourceHandle String?  @db.VarChar(100)
@@ -227,25 +252,25 @@ model Edge {
   animated     Boolean  @default(false)
   createdAt    DateTime @default(now()) @db.Timestamptz(6)
 
-  canvas    Canvas    @relation(fields: [canvasId], references: [id], onDelete: Cascade)
-  sourcePod ActionPod @relation("SourcePod", fields: [sourcePodId], references: [id], onDelete: Cascade)
-  targetPod ActionPod @relation("TargetPod", fields: [targetPodId], references: [id], onDelete: Cascade)
+  flow      Flow @relation(fields: [flowId], references: [id], onDelete: Cascade)
+  sourcePod Pod  @relation("SourcePod", fields: [sourcePodId], references: [id], onDelete: Cascade)
+  targetPod Pod  @relation("TargetPod", fields: [targetPodId], references: [id], onDelete: Cascade)
 
-  @@unique([canvasId, sourcePodId, sourceHandle, targetPodId, targetHandle])
-  @@index([canvasId])
+  @@unique([flowId, sourcePodId, sourceHandle, targetPodId, targetHandle])
+  @@index([flowId])
   @@index([sourcePodId])
   @@index([targetPodId])
   @@schema("canvas")
 }
 
-model ActionPodExecution {
-  id          String                   @id @default(cuid())
+model PodExecution {
+  id          String             @id @default(cuid())
   podId       String
-  canvasId    String
+  flowId      String
   workspaceId String
-  status      ActionPodExecutionStatus @default(RUNNING)
-  startedAt   DateTime                 @default(now()) @db.Timestamptz(6)
-  finishedAt  DateTime?                @db.Timestamptz(6)
+  status      PodExecutionStatus @default(RUNNING)
+  startedAt   DateTime           @default(now()) @db.Timestamptz(6)
+  finishedAt  DateTime?          @db.Timestamptz(6)
   runtimeInMs Int?
 
   provider  LLMProvider
@@ -267,11 +292,11 @@ model ActionPodExecution {
 
   costInUsd Decimal? @db.Decimal(12, 8)
 
-  pod ActionPod @relation(fields: [podId], references: [id], onDelete: Cascade)
+  pod Pod @relation(fields: [podId], references: [id], onDelete: Cascade)
 
   @@index([podId, startedAt(sort: Desc)])
   @@index([workspaceId, status, startedAt(sort: Desc)])
-  @@index([canvasId, status, startedAt(sort: Desc)])
+  @@index([flowId, status, startedAt(sort: Desc)])
   @@index([status, startedAt])
   @@index([provider, modelId, startedAt(sort: Desc)])
   @@index([provider, status])
@@ -282,7 +307,7 @@ model PodUsageLog {
   id             String @id @default(cuid())
   podId          String
   executionId    String
-  canvasId       String
+  flowId         String
   workspaceId    String
   subscriptionId String
 
@@ -305,39 +330,39 @@ model PodUsageLog {
 
   executedAt DateTime @default(now()) @db.Timestamptz(6)
 
-  pod          ActionPod    @relation(fields: [podId], references: [id], onDelete: Cascade)
+  pod          Pod          @relation(fields: [podId], references: [id], onDelete: Cascade)
   subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId, executedAt(sort: Desc)])
   @@index([subscriptionId, executedAt(sort: Desc)])
   @@index([executionId])
   @@index([podId, executedAt(sort: Desc)])
-  @@index([canvasId, executedAt(sort: Desc)])
+  @@index([flowId, executedAt(sort: Desc)])
   @@index([provider, modelId, executedAt(sort: Desc)])
   @@index([provider, executedAt(sort: Desc)])
   @@schema("canvas")
 }
 
 model ContextModule {
-  id               String   @id @default(cuid())
-  workspaceId      String
-  name             String   @db.VarChar(255)
-  description      String?  @db.VarChar(1000)
-  definitionJson   Json
-  originalCanvasId String?
-  version          Int      @default(1)
-  createdAt        DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt        DateTime @updatedAt @db.Timestamptz(6)
+  id             String   @id @default(cuid())
+  workspaceId    String
+  name           String   @db.VarChar(255)
+  description    String?  @db.VarChar(1000)
+  definitionJson Json
+  originalFlowId String?
+  version        Int      @default(1)
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(6)
 
-  workspace      Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  originalCanvas Canvas?   @relation("CanvasOriginal", fields: [originalCanvasId], references: [id], onDelete: SetNull)
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  originalFlow Flow?     @relation("FlowOriginal", fields: [originalFlowId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, updatedAt(sort: Desc)])
-  @@index([originalCanvasId])
+  @@index([originalFlowId])
   @@schema("canvas")
 }
 
-enum ActionPodType {
+enum PodType {
   TEXT_INPUT
   DOCUMENT_INPUT
   URL_INPUT
@@ -352,13 +377,13 @@ enum ActionPodType {
   VIDEO_OUTPUT
   AUDIO_OUTPUT
   CONTEXT_MODULE
-  CANVAS_CONTEXT_INPUT
+  FLOW_CONTEXT_INPUT
   CODE_EXECUTION
 
   @@schema("canvas")
 }
 
-enum ActionPodExecutionStatus {
+enum PodExecutionStatus {
   IDLE
   QUEUED
   RUNNING
@@ -370,15 +395,15 @@ enum ActionPodExecutionStatus {
   @@schema("canvas")
 }
 
-enum CanvasVisibility {
+enum FlowVisibility {
   PRIVATE
   WORKSPACE
-  PUBLIC // FREE FEATURE
+  PUBLIC
 
   @@schema("canvas")
 }
 
-enum CanvasAccessLevel {
+enum FlowAccessLevel {
   VIEWER
   COMMENTER
   EDITOR
@@ -387,13 +412,12 @@ enum CanvasAccessLevel {
   @@schema("canvas")
 }
 
-enum CanvasActivityAction {
-  CANVAS_CREATED
-  CANVAS_UPDATED
-  CANVAS_DELETED
-  CANVAS_SHARED
-  CANVAS_VISIBILITY_CHANGED
-
+enum FlowActivityAction {
+  FLOW_CREATED
+  FLOW_UPDATED
+  FLOW_DELETED
+  FLOW_SHARED
+  FLOW_VISIBILITY_CHANGED
   POD_CREATED
   POD_UPDATED
   POD_DELETED
@@ -401,17 +425,13 @@ enum CanvasActivityAction {
   POD_EXECUTED
   POD_LOCKED
   POD_UNLOCKED
-
   EDGE_CREATED
   EDGE_DELETED
-
   COLLABORATOR_ADDED
   COLLABORATOR_REMOVED
   COLLABORATOR_PERMISSIONS_CHANGED
-
   COMMENT_ADDED
   COMMENT_RESOLVED
-
   USER_JOINED
   USER_LEFT
 

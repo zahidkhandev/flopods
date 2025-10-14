@@ -44,19 +44,19 @@ CREATE TYPE "billing"."SubscriptionStatus" AS ENUM ('ACTIVE', 'CANCELED', 'PAST_
 CREATE TYPE "billing"."ModelCategory" AS ENUM ('WORKHORSE', 'POWERHOUSE', 'REASONING', 'SPECIALIST', 'IMAGE_GEN', 'VIDEO_GEN', 'AUDIO_GEN', 'EMBEDDING', 'RERANKING', 'MODERATION', 'SEARCH', 'TRANSLATION');
 
 -- CreateEnum
-CREATE TYPE "canvas"."ActionPodType" AS ENUM ('TEXT_INPUT', 'DOCUMENT_INPUT', 'URL_INPUT', 'IMAGE_INPUT', 'VIDEO_INPUT', 'AUDIO_INPUT', 'LLM_PROMPT', 'EMBEDDING_POD', 'TOOL_POD', 'TEXT_OUTPUT', 'IMAGE_OUTPUT', 'VIDEO_OUTPUT', 'AUDIO_OUTPUT', 'CONTEXT_MODULE', 'CANVAS_CONTEXT_INPUT', 'CODE_EXECUTION');
+CREATE TYPE "canvas"."PodType" AS ENUM ('TEXT_INPUT', 'DOCUMENT_INPUT', 'URL_INPUT', 'IMAGE_INPUT', 'VIDEO_INPUT', 'AUDIO_INPUT', 'LLM_PROMPT', 'EMBEDDING_POD', 'TOOL_POD', 'TEXT_OUTPUT', 'IMAGE_OUTPUT', 'VIDEO_OUTPUT', 'AUDIO_OUTPUT', 'CONTEXT_MODULE', 'FLOW_CONTEXT_INPUT', 'CODE_EXECUTION');
 
 -- CreateEnum
-CREATE TYPE "canvas"."ActionPodExecutionStatus" AS ENUM ('IDLE', 'QUEUED', 'RUNNING', 'PAUSED', 'COMPLETED', 'ERROR', 'CANCELLED');
+CREATE TYPE "canvas"."PodExecutionStatus" AS ENUM ('IDLE', 'QUEUED', 'RUNNING', 'PAUSED', 'COMPLETED', 'ERROR', 'CANCELLED');
 
 -- CreateEnum
-CREATE TYPE "canvas"."CanvasVisibility" AS ENUM ('PRIVATE', 'WORKSPACE', 'PUBLIC');
+CREATE TYPE "canvas"."FlowVisibility" AS ENUM ('PRIVATE', 'WORKSPACE', 'PUBLIC');
 
 -- CreateEnum
-CREATE TYPE "canvas"."CanvasAccessLevel" AS ENUM ('VIEWER', 'COMMENTER', 'EDITOR', 'OWNER');
+CREATE TYPE "canvas"."FlowAccessLevel" AS ENUM ('VIEWER', 'COMMENTER', 'EDITOR', 'OWNER');
 
 -- CreateEnum
-CREATE TYPE "canvas"."CanvasActivityAction" AS ENUM ('CANVAS_CREATED', 'CANVAS_UPDATED', 'CANVAS_DELETED', 'CANVAS_SHARED', 'CANVAS_VISIBILITY_CHANGED', 'POD_CREATED', 'POD_UPDATED', 'POD_DELETED', 'POD_MOVED', 'POD_EXECUTED', 'POD_LOCKED', 'POD_UNLOCKED', 'EDGE_CREATED', 'EDGE_DELETED', 'COLLABORATOR_ADDED', 'COLLABORATOR_REMOVED', 'COLLABORATOR_PERMISSIONS_CHANGED', 'COMMENT_ADDED', 'COMMENT_RESOLVED', 'USER_JOINED', 'USER_LEFT');
+CREATE TYPE "canvas"."FlowActivityAction" AS ENUM ('FLOW_CREATED', 'FLOW_UPDATED', 'FLOW_DELETED', 'FLOW_SHARED', 'FLOW_VISIBILITY_CHANGED', 'POD_CREATED', 'POD_UPDATED', 'POD_DELETED', 'POD_MOVED', 'POD_EXECUTED', 'POD_LOCKED', 'POD_UNLOCKED', 'EDGE_CREATED', 'EDGE_DELETED', 'COLLABORATOR_ADDED', 'COLLABORATOR_REMOVED', 'COLLABORATOR_PERMISSIONS_CHANGED', 'COMMENT_ADDED', 'COMMENT_RESOLVED', 'USER_JOINED', 'USER_LEFT');
 
 -- CreateEnum
 CREATE TYPE "core"."AuthProvider" AS ENUM ('GOOGLE', 'GITHUB', 'EMAIL');
@@ -80,10 +80,16 @@ CREATE TYPE "core"."LLMProvider" AS ENUM ('OPENAI', 'ANTHROPIC', 'GOOGLE_GEMINI'
 CREATE TYPE "core"."AuthType" AS ENUM ('BEARER_TOKEN', 'API_KEY_HEADER', 'BASIC_AUTH', 'OAUTH2', 'AWS_SIGV4', 'CUSTOM_HEADER');
 
 -- CreateEnum
-CREATE TYPE "core"."ShareableAssetType" AS ENUM ('CANVAS', 'CONTEXT_MODULE');
+CREATE TYPE "core"."ShareableAssetType" AS ENUM ('FLOW', 'CONTEXT_MODULE');
 
 -- CreateEnum
 CREATE TYPE "documents"."DocumentStatus" AS ENUM ('UPLOADING', 'PROCESSING', 'READY', 'ERROR', 'ARCHIVED');
+
+-- CreateEnum
+CREATE TYPE "documents"."DocumentSourceType" AS ENUM ('INTERNAL', 'GOOGLE_DRIVE', 'YOUTUBE', 'VIMEO', 'LOOM', 'URL');
+
+-- CreateEnum
+CREATE TYPE "documents"."DocumentProcessingType" AS ENUM ('PDF_TEXT_EXTRACTION', 'IMAGE_OCR', 'VIDEO_TRANSCRIPT', 'AUDIO_TRANSCRIPT', 'DOCUMENT_EMBEDDING', 'URL_SCRAPING', 'VISION_EXTRACTION');
 
 -- CreateTable
 CREATE TABLE "admin"."Admin" (
@@ -317,28 +323,45 @@ CREATE TABLE "billing"."ModelPricingTier" (
 );
 
 -- CreateTable
-CREATE TABLE "canvas"."Canvas" (
+CREATE TABLE "canvas"."Space" (
     "id" TEXT NOT NULL,
     "workspaceId" TEXT NOT NULL,
     "name" VARCHAR(255) NOT NULL,
+    "description" VARCHAR(1000),
+    "customInstructions" TEXT,
+    "icon" VARCHAR(50),
+    "color" VARCHAR(7),
+    "createdBy" TEXT NOT NULL,
+    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+
+    CONSTRAINT "Space_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "canvas"."Flow" (
+    "id" TEXT NOT NULL,
+    "workspaceId" TEXT NOT NULL,
+    "spaceId" TEXT,
+    "name" VARCHAR(255) NOT NULL,
     "description" VARCHAR(500),
     "version" INTEGER NOT NULL DEFAULT 1,
-    "visibility" "canvas"."CanvasVisibility" NOT NULL DEFAULT 'PRIVATE',
+    "visibility" "canvas"."FlowVisibility" NOT NULL DEFAULT 'PRIVATE',
     "createdBy" TEXT NOT NULL,
     "thumbnailS3Key" VARCHAR(512),
     "thumbnailGeneratedAt" TIMESTAMPTZ(6),
     "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMPTZ(6) NOT NULL,
 
-    CONSTRAINT "Canvas_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "Flow_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "canvas"."CanvasInvitation" (
+CREATE TABLE "canvas"."FlowInvitation" (
     "id" TEXT NOT NULL,
-    "canvasId" TEXT NOT NULL,
+    "flowId" TEXT NOT NULL,
     "email" VARCHAR(255) NOT NULL,
-    "accessLevel" "canvas"."CanvasAccessLevel" NOT NULL DEFAULT 'EDITOR',
+    "accessLevel" "canvas"."FlowAccessLevel" NOT NULL DEFAULT 'EDITOR',
     "permissions" JSONB,
     "invitedBy" TEXT NOT NULL,
     "invitedUserId" TEXT,
@@ -348,15 +371,15 @@ CREATE TABLE "canvas"."CanvasInvitation" (
     "expiresAt" TIMESTAMPTZ(6) NOT NULL,
     "acceptedAt" TIMESTAMPTZ(6),
 
-    CONSTRAINT "CanvasInvitation_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "FlowInvitation_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "canvas"."CanvasCollaborator" (
+CREATE TABLE "canvas"."FlowCollaborator" (
     "id" TEXT NOT NULL,
-    "canvasId" TEXT NOT NULL,
+    "flowId" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
-    "accessLevel" "canvas"."CanvasAccessLevel" NOT NULL DEFAULT 'EDITOR',
+    "accessLevel" "canvas"."FlowAccessLevel" NOT NULL DEFAULT 'EDITOR',
     "canEdit" BOOLEAN NOT NULL DEFAULT true,
     "canExecute" BOOLEAN NOT NULL DEFAULT true,
     "canDelete" BOOLEAN NOT NULL DEFAULT false,
@@ -366,13 +389,13 @@ CREATE TABLE "canvas"."CanvasCollaborator" (
     "invitedAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "lastViewedAt" TIMESTAMPTZ(6),
 
-    CONSTRAINT "CanvasCollaborator_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "FlowCollaborator_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "canvas"."CanvasSession" (
+CREATE TABLE "canvas"."FlowSession" (
     "id" TEXT NOT NULL,
-    "canvasId" TEXT NOT NULL,
+    "flowId" TEXT NOT NULL,
     "userId" TEXT,
     "anonymousName" VARCHAR(100),
     "sessionToken" VARCHAR(255),
@@ -387,27 +410,27 @@ CREATE TABLE "canvas"."CanvasSession" (
     "lastHeartbeatAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "disconnectedAt" TIMESTAMPTZ(6),
 
-    CONSTRAINT "CanvasSession_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "FlowSession_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "canvas"."CanvasActivityLog" (
+CREATE TABLE "canvas"."FlowActivityLog" (
     "id" TEXT NOT NULL,
-    "canvasId" TEXT NOT NULL,
+    "flowId" TEXT NOT NULL,
     "userId" TEXT,
-    "action" "canvas"."CanvasActivityAction" NOT NULL,
+    "action" "canvas"."FlowActivityAction" NOT NULL,
     "entityType" VARCHAR(50),
     "entityId" VARCHAR(255),
     "changeData" JSONB,
     "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT "CanvasActivityLog_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "FlowActivityLog_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "canvas"."CanvasComment" (
+CREATE TABLE "canvas"."FlowComment" (
     "id" TEXT NOT NULL,
-    "canvasId" TEXT NOT NULL,
+    "flowId" TEXT NOT NULL,
     "userId" TEXT,
     "content" TEXT NOT NULL,
     "position" JSONB,
@@ -419,18 +442,18 @@ CREATE TABLE "canvas"."CanvasComment" (
     "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMPTZ(6) NOT NULL,
 
-    CONSTRAINT "CanvasComment_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "FlowComment_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "canvas"."ActionPod" (
+CREATE TABLE "canvas"."Pod" (
     "id" TEXT NOT NULL,
-    "canvasId" TEXT NOT NULL,
-    "type" "canvas"."ActionPodType" NOT NULL,
+    "flowId" TEXT NOT NULL,
+    "type" "canvas"."PodType" NOT NULL,
     "position" JSONB NOT NULL,
-    "executionStatus" "canvas"."ActionPodExecutionStatus" NOT NULL DEFAULT 'IDLE',
+    "executionStatus" "canvas"."PodExecutionStatus" NOT NULL DEFAULT 'IDLE',
     "lastExecutionId" TEXT,
-    "contextCanvasId" TEXT,
+    "contextFlowId" TEXT,
     "documentId" TEXT,
     "lockedBy" TEXT,
     "lockedAt" TIMESTAMPTZ(6),
@@ -441,13 +464,13 @@ CREATE TABLE "canvas"."ActionPod" (
     "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMPTZ(6) NOT NULL,
 
-    CONSTRAINT "ActionPod_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "Pod_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "canvas"."Edge" (
     "id" TEXT NOT NULL,
-    "canvasId" TEXT NOT NULL,
+    "flowId" TEXT NOT NULL,
     "sourcePodId" TEXT NOT NULL,
     "targetPodId" TEXT NOT NULL,
     "sourceHandle" VARCHAR(100),
@@ -459,12 +482,12 @@ CREATE TABLE "canvas"."Edge" (
 );
 
 -- CreateTable
-CREATE TABLE "canvas"."ActionPodExecution" (
+CREATE TABLE "canvas"."PodExecution" (
     "id" TEXT NOT NULL,
     "podId" TEXT NOT NULL,
-    "canvasId" TEXT NOT NULL,
+    "flowId" TEXT NOT NULL,
     "workspaceId" TEXT NOT NULL,
-    "status" "canvas"."ActionPodExecutionStatus" NOT NULL DEFAULT 'RUNNING',
+    "status" "canvas"."PodExecutionStatus" NOT NULL DEFAULT 'RUNNING',
     "startedAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "finishedAt" TIMESTAMPTZ(6),
     "runtimeInMs" INTEGER,
@@ -482,7 +505,7 @@ CREATE TABLE "canvas"."ActionPodExecution" (
     "creditsConsumed" INTEGER NOT NULL DEFAULT 0,
     "costInUsd" DECIMAL(12,8),
 
-    CONSTRAINT "ActionPodExecution_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "PodExecution_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -490,7 +513,7 @@ CREATE TABLE "canvas"."PodUsageLog" (
     "id" TEXT NOT NULL,
     "podId" TEXT NOT NULL,
     "executionId" TEXT NOT NULL,
-    "canvasId" TEXT NOT NULL,
+    "flowId" TEXT NOT NULL,
     "workspaceId" TEXT NOT NULL,
     "subscriptionId" TEXT NOT NULL,
     "provider" "core"."LLMProvider" NOT NULL,
@@ -518,7 +541,7 @@ CREATE TABLE "canvas"."ContextModule" (
     "name" VARCHAR(255) NOT NULL,
     "description" VARCHAR(1000),
     "definitionJson" JSONB NOT NULL,
-    "originalCanvasId" TEXT,
+    "originalFlowId" TEXT,
     "version" INTEGER NOT NULL DEFAULT 1,
     "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMPTZ(6) NOT NULL,
@@ -650,15 +673,36 @@ CREATE TABLE "core"."ShareLink" (
 );
 
 -- CreateTable
-CREATE TABLE "documents"."Document" (
+CREATE TABLE "documents"."DocumentFolder" (
     "id" TEXT NOT NULL,
     "workspaceId" TEXT NOT NULL,
     "name" VARCHAR(255) NOT NULL,
-    "storageKey" VARCHAR(512) NOT NULL,
-    "s3Bucket" VARCHAR(255) NOT NULL,
+    "parentId" TEXT,
+    "icon" VARCHAR(50),
+    "color" VARCHAR(7),
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "createdBy" TEXT NOT NULL,
+    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+
+    CONSTRAINT "DocumentFolder_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "documents"."Document" (
+    "id" TEXT NOT NULL,
+    "workspaceId" TEXT NOT NULL,
+    "folderId" TEXT,
+    "name" VARCHAR(255) NOT NULL,
+    "sourceType" "documents"."DocumentSourceType" NOT NULL DEFAULT 'INTERNAL',
+    "storageKey" VARCHAR(512),
+    "s3Bucket" VARCHAR(255),
+    "externalUrl" VARCHAR(2048),
+    "externalProvider" VARCHAR(50),
+    "externalFileId" VARCHAR(512),
     "fileType" VARCHAR(100) NOT NULL,
     "mimeType" VARCHAR(255),
-    "sizeInBytes" BIGINT NOT NULL,
+    "sizeInBytes" BIGINT,
     "status" "documents"."DocumentStatus" NOT NULL DEFAULT 'UPLOADING',
     "uploadedBy" TEXT,
     "metadata" JSONB,
@@ -682,6 +726,26 @@ CREATE TABLE "documents"."Embedding" (
     "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "Embedding_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "documents"."DocumentProcessingCost" (
+    "id" TEXT NOT NULL,
+    "documentId" TEXT NOT NULL,
+    "workspaceId" TEXT NOT NULL,
+    "subscriptionId" TEXT NOT NULL,
+    "processingType" "documents"."DocumentProcessingType" NOT NULL,
+    "creditsConsumed" INTEGER NOT NULL DEFAULT 0,
+    "extractionCost" DECIMAL(12,8) NOT NULL DEFAULT 0,
+    "embeddingCost" DECIMAL(12,8) NOT NULL DEFAULT 0,
+    "totalCostInUsd" DECIMAL(12,8) NOT NULL,
+    "chunkCount" INTEGER,
+    "embeddingModel" VARCHAR(100),
+    "processingTimeMs" INTEGER,
+    "tokensProcessed" INTEGER NOT NULL DEFAULT 0,
+    "processedAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "DocumentProcessingCost_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -838,103 +902,118 @@ CREATE INDEX "ModelPricingTier_category_isActive_idx" ON "billing"."ModelPricing
 CREATE UNIQUE INDEX "ModelPricingTier_provider_modelId_effectiveFrom_key" ON "billing"."ModelPricingTier"("provider", "modelId", "effectiveFrom");
 
 -- CreateIndex
-CREATE INDEX "Canvas_workspaceId_updatedAt_idx" ON "canvas"."Canvas"("workspaceId", "updatedAt" DESC);
+CREATE INDEX "Space_workspaceId_updatedAt_idx" ON "canvas"."Space"("workspaceId", "updatedAt" DESC);
 
 -- CreateIndex
-CREATE INDEX "Canvas_workspaceId_createdAt_idx" ON "canvas"."Canvas"("workspaceId", "createdAt" DESC);
+CREATE INDEX "Space_workspaceId_createdAt_idx" ON "canvas"."Space"("workspaceId", "createdAt" DESC);
 
 -- CreateIndex
-CREATE INDEX "Canvas_workspaceId_visibility_idx" ON "canvas"."Canvas"("workspaceId", "visibility");
+CREATE UNIQUE INDEX "Space_workspaceId_name_key" ON "canvas"."Space"("workspaceId", "name");
 
 -- CreateIndex
-CREATE INDEX "Canvas_createdBy_createdAt_idx" ON "canvas"."Canvas"("createdBy", "createdAt" DESC);
+CREATE INDEX "Flow_spaceId_updatedAt_idx" ON "canvas"."Flow"("spaceId", "updatedAt" DESC);
 
 -- CreateIndex
-CREATE UNIQUE INDEX "CanvasInvitation_token_key" ON "canvas"."CanvasInvitation"("token");
+CREATE INDEX "Flow_spaceId_createdAt_idx" ON "canvas"."Flow"("spaceId", "createdAt" DESC);
 
 -- CreateIndex
-CREATE INDEX "CanvasInvitation_canvasId_status_idx" ON "canvas"."CanvasInvitation"("canvasId", "status");
+CREATE INDEX "Flow_workspaceId_updatedAt_idx" ON "canvas"."Flow"("workspaceId", "updatedAt" DESC);
 
 -- CreateIndex
-CREATE INDEX "CanvasInvitation_email_status_idx" ON "canvas"."CanvasInvitation"("email", "status");
+CREATE INDEX "Flow_workspaceId_createdAt_idx" ON "canvas"."Flow"("workspaceId", "createdAt" DESC);
 
 -- CreateIndex
-CREATE INDEX "CanvasInvitation_token_expiresAt_idx" ON "canvas"."CanvasInvitation"("token", "expiresAt");
+CREATE INDEX "Flow_workspaceId_visibility_idx" ON "canvas"."Flow"("workspaceId", "visibility");
 
 -- CreateIndex
-CREATE INDEX "CanvasCollaborator_userId_idx" ON "canvas"."CanvasCollaborator"("userId");
+CREATE INDEX "Flow_createdBy_createdAt_idx" ON "canvas"."Flow"("createdBy", "createdAt" DESC);
 
 -- CreateIndex
-CREATE INDEX "CanvasCollaborator_canvasId_accessLevel_idx" ON "canvas"."CanvasCollaborator"("canvasId", "accessLevel");
+CREATE UNIQUE INDEX "FlowInvitation_token_key" ON "canvas"."FlowInvitation"("token");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "CanvasCollaborator_canvasId_userId_key" ON "canvas"."CanvasCollaborator"("canvasId", "userId");
+CREATE INDEX "FlowInvitation_flowId_status_idx" ON "canvas"."FlowInvitation"("flowId", "status");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "CanvasSession_sessionToken_key" ON "canvas"."CanvasSession"("sessionToken");
+CREATE INDEX "FlowInvitation_email_status_idx" ON "canvas"."FlowInvitation"("email", "status");
 
 -- CreateIndex
-CREATE INDEX "CanvasSession_canvasId_disconnectedAt_idx" ON "canvas"."CanvasSession"("canvasId", "disconnectedAt");
+CREATE INDEX "FlowInvitation_token_expiresAt_idx" ON "canvas"."FlowInvitation"("token", "expiresAt");
 
 -- CreateIndex
-CREATE INDEX "CanvasSession_socketId_idx" ON "canvas"."CanvasSession"("socketId");
+CREATE INDEX "FlowCollaborator_userId_idx" ON "canvas"."FlowCollaborator"("userId");
 
 -- CreateIndex
-CREATE INDEX "CanvasSession_canvasId_userId_disconnectedAt_idx" ON "canvas"."CanvasSession"("canvasId", "userId", "disconnectedAt");
+CREATE INDEX "FlowCollaborator_flowId_accessLevel_idx" ON "canvas"."FlowCollaborator"("flowId", "accessLevel");
 
 -- CreateIndex
-CREATE INDEX "CanvasSession_lastHeartbeatAt_idx" ON "canvas"."CanvasSession"("lastHeartbeatAt");
+CREATE UNIQUE INDEX "FlowCollaborator_flowId_userId_key" ON "canvas"."FlowCollaborator"("flowId", "userId");
 
 -- CreateIndex
-CREATE INDEX "CanvasSession_sessionToken_idx" ON "canvas"."CanvasSession"("sessionToken");
+CREATE UNIQUE INDEX "FlowSession_sessionToken_key" ON "canvas"."FlowSession"("sessionToken");
 
 -- CreateIndex
-CREATE INDEX "CanvasActivityLog_canvasId_createdAt_idx" ON "canvas"."CanvasActivityLog"("canvasId", "createdAt" DESC);
+CREATE INDEX "FlowSession_flowId_disconnectedAt_idx" ON "canvas"."FlowSession"("flowId", "disconnectedAt");
 
 -- CreateIndex
-CREATE INDEX "CanvasActivityLog_userId_createdAt_idx" ON "canvas"."CanvasActivityLog"("userId", "createdAt" DESC);
+CREATE INDEX "FlowSession_socketId_idx" ON "canvas"."FlowSession"("socketId");
 
 -- CreateIndex
-CREATE INDEX "CanvasActivityLog_action_createdAt_idx" ON "canvas"."CanvasActivityLog"("action", "createdAt" DESC);
+CREATE INDEX "FlowSession_flowId_userId_disconnectedAt_idx" ON "canvas"."FlowSession"("flowId", "userId", "disconnectedAt");
 
 -- CreateIndex
-CREATE INDEX "CanvasComment_canvasId_createdAt_idx" ON "canvas"."CanvasComment"("canvasId", "createdAt" DESC);
+CREATE INDEX "FlowSession_lastHeartbeatAt_idx" ON "canvas"."FlowSession"("lastHeartbeatAt");
 
 -- CreateIndex
-CREATE INDEX "CanvasComment_userId_createdAt_idx" ON "canvas"."CanvasComment"("userId", "createdAt" DESC);
+CREATE INDEX "FlowSession_sessionToken_idx" ON "canvas"."FlowSession"("sessionToken");
 
 -- CreateIndex
-CREATE INDEX "CanvasComment_podId_idx" ON "canvas"."CanvasComment"("podId");
+CREATE INDEX "FlowActivityLog_flowId_createdAt_idx" ON "canvas"."FlowActivityLog"("flowId", "createdAt" DESC);
 
 -- CreateIndex
-CREATE INDEX "CanvasComment_parentId_idx" ON "canvas"."CanvasComment"("parentId");
+CREATE INDEX "FlowActivityLog_userId_createdAt_idx" ON "canvas"."FlowActivityLog"("userId", "createdAt" DESC);
 
 -- CreateIndex
-CREATE INDEX "CanvasComment_isResolved_idx" ON "canvas"."CanvasComment"("isResolved");
+CREATE INDEX "FlowActivityLog_action_createdAt_idx" ON "canvas"."FlowActivityLog"("action", "createdAt" DESC);
 
 -- CreateIndex
-CREATE INDEX "ActionPod_canvasId_type_executionStatus_idx" ON "canvas"."ActionPod"("canvasId", "type", "executionStatus");
+CREATE INDEX "FlowComment_flowId_createdAt_idx" ON "canvas"."FlowComment"("flowId", "createdAt" DESC);
 
 -- CreateIndex
-CREATE INDEX "ActionPod_contextCanvasId_idx" ON "canvas"."ActionPod"("contextCanvasId");
+CREATE INDEX "FlowComment_userId_createdAt_idx" ON "canvas"."FlowComment"("userId", "createdAt" DESC);
 
 -- CreateIndex
-CREATE INDEX "ActionPod_documentId_idx" ON "canvas"."ActionPod"("documentId");
+CREATE INDEX "FlowComment_podId_idx" ON "canvas"."FlowComment"("podId");
 
 -- CreateIndex
-CREATE INDEX "ActionPod_executionStatus_updatedAt_idx" ON "canvas"."ActionPod"("executionStatus", "updatedAt");
+CREATE INDEX "FlowComment_parentId_idx" ON "canvas"."FlowComment"("parentId");
 
 -- CreateIndex
-CREATE INDEX "ActionPod_s3VectorBucket_s3VectorKey_idx" ON "canvas"."ActionPod"("s3VectorBucket", "s3VectorKey");
+CREATE INDEX "FlowComment_isResolved_idx" ON "canvas"."FlowComment"("isResolved");
 
 -- CreateIndex
-CREATE INDEX "ActionPod_lockedBy_lockedAt_idx" ON "canvas"."ActionPod"("lockedBy", "lockedAt");
+CREATE INDEX "Pod_flowId_type_executionStatus_idx" ON "canvas"."Pod"("flowId", "type", "executionStatus");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ActionPod_dynamoPartitionKey_dynamoSortKey_key" ON "canvas"."ActionPod"("dynamoPartitionKey", "dynamoSortKey");
+CREATE INDEX "Pod_contextFlowId_idx" ON "canvas"."Pod"("contextFlowId");
 
 -- CreateIndex
-CREATE INDEX "Edge_canvasId_idx" ON "canvas"."Edge"("canvasId");
+CREATE INDEX "Pod_documentId_idx" ON "canvas"."Pod"("documentId");
+
+-- CreateIndex
+CREATE INDEX "Pod_executionStatus_updatedAt_idx" ON "canvas"."Pod"("executionStatus", "updatedAt");
+
+-- CreateIndex
+CREATE INDEX "Pod_s3VectorBucket_s3VectorKey_idx" ON "canvas"."Pod"("s3VectorBucket", "s3VectorKey");
+
+-- CreateIndex
+CREATE INDEX "Pod_lockedBy_lockedAt_idx" ON "canvas"."Pod"("lockedBy", "lockedAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Pod_dynamoPartitionKey_dynamoSortKey_key" ON "canvas"."Pod"("dynamoPartitionKey", "dynamoSortKey");
+
+-- CreateIndex
+CREATE INDEX "Edge_flowId_idx" ON "canvas"."Edge"("flowId");
 
 -- CreateIndex
 CREATE INDEX "Edge_sourcePodId_idx" ON "canvas"."Edge"("sourcePodId");
@@ -943,25 +1022,25 @@ CREATE INDEX "Edge_sourcePodId_idx" ON "canvas"."Edge"("sourcePodId");
 CREATE INDEX "Edge_targetPodId_idx" ON "canvas"."Edge"("targetPodId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Edge_canvasId_sourcePodId_sourceHandle_targetPodId_targetHa_key" ON "canvas"."Edge"("canvasId", "sourcePodId", "sourceHandle", "targetPodId", "targetHandle");
+CREATE UNIQUE INDEX "Edge_flowId_sourcePodId_sourceHandle_targetPodId_targetHand_key" ON "canvas"."Edge"("flowId", "sourcePodId", "sourceHandle", "targetPodId", "targetHandle");
 
 -- CreateIndex
-CREATE INDEX "ActionPodExecution_podId_startedAt_idx" ON "canvas"."ActionPodExecution"("podId", "startedAt" DESC);
+CREATE INDEX "PodExecution_podId_startedAt_idx" ON "canvas"."PodExecution"("podId", "startedAt" DESC);
 
 -- CreateIndex
-CREATE INDEX "ActionPodExecution_workspaceId_status_startedAt_idx" ON "canvas"."ActionPodExecution"("workspaceId", "status", "startedAt" DESC);
+CREATE INDEX "PodExecution_workspaceId_status_startedAt_idx" ON "canvas"."PodExecution"("workspaceId", "status", "startedAt" DESC);
 
 -- CreateIndex
-CREATE INDEX "ActionPodExecution_canvasId_status_startedAt_idx" ON "canvas"."ActionPodExecution"("canvasId", "status", "startedAt" DESC);
+CREATE INDEX "PodExecution_flowId_status_startedAt_idx" ON "canvas"."PodExecution"("flowId", "status", "startedAt" DESC);
 
 -- CreateIndex
-CREATE INDEX "ActionPodExecution_status_startedAt_idx" ON "canvas"."ActionPodExecution"("status", "startedAt");
+CREATE INDEX "PodExecution_status_startedAt_idx" ON "canvas"."PodExecution"("status", "startedAt");
 
 -- CreateIndex
-CREATE INDEX "ActionPodExecution_provider_modelId_startedAt_idx" ON "canvas"."ActionPodExecution"("provider", "modelId", "startedAt" DESC);
+CREATE INDEX "PodExecution_provider_modelId_startedAt_idx" ON "canvas"."PodExecution"("provider", "modelId", "startedAt" DESC);
 
 -- CreateIndex
-CREATE INDEX "ActionPodExecution_provider_status_idx" ON "canvas"."ActionPodExecution"("provider", "status");
+CREATE INDEX "PodExecution_provider_status_idx" ON "canvas"."PodExecution"("provider", "status");
 
 -- CreateIndex
 CREATE INDEX "PodUsageLog_workspaceId_executedAt_idx" ON "canvas"."PodUsageLog"("workspaceId", "executedAt" DESC);
@@ -976,7 +1055,7 @@ CREATE INDEX "PodUsageLog_executionId_idx" ON "canvas"."PodUsageLog"("executionI
 CREATE INDEX "PodUsageLog_podId_executedAt_idx" ON "canvas"."PodUsageLog"("podId", "executedAt" DESC);
 
 -- CreateIndex
-CREATE INDEX "PodUsageLog_canvasId_executedAt_idx" ON "canvas"."PodUsageLog"("canvasId", "executedAt" DESC);
+CREATE INDEX "PodUsageLog_flowId_executedAt_idx" ON "canvas"."PodUsageLog"("flowId", "executedAt" DESC);
 
 -- CreateIndex
 CREATE INDEX "PodUsageLog_provider_modelId_executedAt_idx" ON "canvas"."PodUsageLog"("provider", "modelId", "executedAt" DESC);
@@ -988,7 +1067,7 @@ CREATE INDEX "PodUsageLog_provider_executedAt_idx" ON "canvas"."PodUsageLog"("pr
 CREATE INDEX "ContextModule_workspaceId_updatedAt_idx" ON "canvas"."ContextModule"("workspaceId", "updatedAt" DESC);
 
 -- CreateIndex
-CREATE INDEX "ContextModule_originalCanvasId_idx" ON "canvas"."ContextModule"("originalCanvasId");
+CREATE INDEX "ContextModule_originalFlowId_idx" ON "canvas"."ContextModule"("originalFlowId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "core"."User"("email");
@@ -1063,10 +1142,28 @@ CREATE INDEX "ShareLink_createdBy_createdAt_idx" ON "core"."ShareLink"("createdB
 CREATE UNIQUE INDEX "ShareLink_assetType_assetId_key" ON "core"."ShareLink"("assetType", "assetId");
 
 -- CreateIndex
+CREATE INDEX "DocumentFolder_workspaceId_parentId_sortOrder_idx" ON "documents"."DocumentFolder"("workspaceId", "parentId", "sortOrder");
+
+-- CreateIndex
+CREATE INDEX "DocumentFolder_parentId_sortOrder_idx" ON "documents"."DocumentFolder"("parentId", "sortOrder");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "DocumentFolder_workspaceId_parentId_name_key" ON "documents"."DocumentFolder"("workspaceId", "parentId", "name");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Document_storageKey_key" ON "documents"."Document"("storageKey");
 
 -- CreateIndex
+CREATE INDEX "Document_workspaceId_folderId_status_createdAt_idx" ON "documents"."Document"("workspaceId", "folderId", "status", "createdAt" DESC);
+
+-- CreateIndex
 CREATE INDEX "Document_workspaceId_status_createdAt_idx" ON "documents"."Document"("workspaceId", "status", "createdAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "Document_workspaceId_sourceType_createdAt_idx" ON "documents"."Document"("workspaceId", "sourceType", "createdAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "Document_folderId_createdAt_idx" ON "documents"."Document"("folderId", "createdAt" DESC);
 
 -- CreateIndex
 CREATE INDEX "Document_storageKey_idx" ON "documents"."Document"("storageKey");
@@ -1076,6 +1173,9 @@ CREATE INDEX "Document_status_updatedAt_idx" ON "documents"."Document"("status",
 
 -- CreateIndex
 CREATE INDEX "Document_fileType_workspaceId_idx" ON "documents"."Document"("fileType", "workspaceId");
+
+-- CreateIndex
+CREATE INDEX "Document_externalProvider_externalFileId_idx" ON "documents"."Document"("externalProvider", "externalFileId");
 
 -- CreateIndex
 CREATE INDEX "Embedding_documentId_createdAt_idx" ON "documents"."Embedding"("documentId", "createdAt" DESC);
@@ -1091,6 +1191,18 @@ CREATE UNIQUE INDEX "Embedding_documentId_chunkIndex_key" ON "documents"."Embedd
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Embedding_s3VectorBucket_s3VectorKey_key" ON "documents"."Embedding"("s3VectorBucket", "s3VectorKey");
+
+-- CreateIndex
+CREATE INDEX "DocumentProcessingCost_documentId_processedAt_idx" ON "documents"."DocumentProcessingCost"("documentId", "processedAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "DocumentProcessingCost_workspaceId_processedAt_idx" ON "documents"."DocumentProcessingCost"("workspaceId", "processedAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "DocumentProcessingCost_subscriptionId_processedAt_idx" ON "documents"."DocumentProcessingCost"("subscriptionId", "processedAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "DocumentProcessingCost_processingType_processedAt_idx" ON "documents"."DocumentProcessingCost"("processingType", "processedAt" DESC);
 
 -- AddForeignKey
 ALTER TABLE "admin"."AdminSession" ADD CONSTRAINT "AdminSession_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "admin"."Admin"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1117,55 +1229,61 @@ ALTER TABLE "billing"."CreditPurchase" ADD CONSTRAINT "CreditPurchase_subscripti
 ALTER TABLE "billing"."CreditUsageLog" ADD CONSTRAINT "CreditUsageLog_subscriptionId_fkey" FOREIGN KEY ("subscriptionId") REFERENCES "billing"."Subscription"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "canvas"."Canvas" ADD CONSTRAINT "Canvas_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "core"."Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "canvas"."Space" ADD CONSTRAINT "Space_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "core"."Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "canvas"."CanvasInvitation" ADD CONSTRAINT "CanvasInvitation_canvasId_fkey" FOREIGN KEY ("canvasId") REFERENCES "canvas"."Canvas"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "canvas"."Flow" ADD CONSTRAINT "Flow_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "core"."Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "canvas"."CanvasInvitation" ADD CONSTRAINT "CanvasInvitation_invitedBy_fkey" FOREIGN KEY ("invitedBy") REFERENCES "core"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "canvas"."Flow" ADD CONSTRAINT "Flow_spaceId_fkey" FOREIGN KEY ("spaceId") REFERENCES "canvas"."Space"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "canvas"."CanvasInvitation" ADD CONSTRAINT "CanvasInvitation_invitedUserId_fkey" FOREIGN KEY ("invitedUserId") REFERENCES "core"."User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "canvas"."FlowInvitation" ADD CONSTRAINT "FlowInvitation_flowId_fkey" FOREIGN KEY ("flowId") REFERENCES "canvas"."Flow"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "canvas"."CanvasCollaborator" ADD CONSTRAINT "CanvasCollaborator_canvasId_fkey" FOREIGN KEY ("canvasId") REFERENCES "canvas"."Canvas"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "canvas"."FlowInvitation" ADD CONSTRAINT "FlowInvitation_invitedBy_fkey" FOREIGN KEY ("invitedBy") REFERENCES "core"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "canvas"."CanvasCollaborator" ADD CONSTRAINT "CanvasCollaborator_userId_fkey" FOREIGN KEY ("userId") REFERENCES "core"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "canvas"."FlowInvitation" ADD CONSTRAINT "FlowInvitation_invitedUserId_fkey" FOREIGN KEY ("invitedUserId") REFERENCES "core"."User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "canvas"."CanvasSession" ADD CONSTRAINT "CanvasSession_canvasId_fkey" FOREIGN KEY ("canvasId") REFERENCES "canvas"."Canvas"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "canvas"."FlowCollaborator" ADD CONSTRAINT "FlowCollaborator_flowId_fkey" FOREIGN KEY ("flowId") REFERENCES "canvas"."Flow"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "canvas"."CanvasActivityLog" ADD CONSTRAINT "CanvasActivityLog_canvasId_fkey" FOREIGN KEY ("canvasId") REFERENCES "canvas"."Canvas"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "canvas"."FlowCollaborator" ADD CONSTRAINT "FlowCollaborator_userId_fkey" FOREIGN KEY ("userId") REFERENCES "core"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "canvas"."CanvasComment" ADD CONSTRAINT "CanvasComment_canvasId_fkey" FOREIGN KEY ("canvasId") REFERENCES "canvas"."Canvas"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "canvas"."FlowSession" ADD CONSTRAINT "FlowSession_flowId_fkey" FOREIGN KEY ("flowId") REFERENCES "canvas"."Flow"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "canvas"."ActionPod" ADD CONSTRAINT "ActionPod_canvasId_fkey" FOREIGN KEY ("canvasId") REFERENCES "canvas"."Canvas"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "canvas"."FlowActivityLog" ADD CONSTRAINT "FlowActivityLog_flowId_fkey" FOREIGN KEY ("flowId") REFERENCES "canvas"."Flow"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "canvas"."ActionPod" ADD CONSTRAINT "ActionPod_contextCanvasId_fkey" FOREIGN KEY ("contextCanvasId") REFERENCES "canvas"."Canvas"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "canvas"."FlowComment" ADD CONSTRAINT "FlowComment_flowId_fkey" FOREIGN KEY ("flowId") REFERENCES "canvas"."Flow"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "canvas"."ActionPod" ADD CONSTRAINT "ActionPod_documentId_fkey" FOREIGN KEY ("documentId") REFERENCES "documents"."Document"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "canvas"."Pod" ADD CONSTRAINT "Pod_flowId_fkey" FOREIGN KEY ("flowId") REFERENCES "canvas"."Flow"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "canvas"."Edge" ADD CONSTRAINT "Edge_canvasId_fkey" FOREIGN KEY ("canvasId") REFERENCES "canvas"."Canvas"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "canvas"."Pod" ADD CONSTRAINT "Pod_contextFlowId_fkey" FOREIGN KEY ("contextFlowId") REFERENCES "canvas"."Flow"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "canvas"."Edge" ADD CONSTRAINT "Edge_sourcePodId_fkey" FOREIGN KEY ("sourcePodId") REFERENCES "canvas"."ActionPod"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "canvas"."Pod" ADD CONSTRAINT "Pod_documentId_fkey" FOREIGN KEY ("documentId") REFERENCES "documents"."Document"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "canvas"."Edge" ADD CONSTRAINT "Edge_targetPodId_fkey" FOREIGN KEY ("targetPodId") REFERENCES "canvas"."ActionPod"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "canvas"."Edge" ADD CONSTRAINT "Edge_flowId_fkey" FOREIGN KEY ("flowId") REFERENCES "canvas"."Flow"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "canvas"."ActionPodExecution" ADD CONSTRAINT "ActionPodExecution_podId_fkey" FOREIGN KEY ("podId") REFERENCES "canvas"."ActionPod"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "canvas"."Edge" ADD CONSTRAINT "Edge_sourcePodId_fkey" FOREIGN KEY ("sourcePodId") REFERENCES "canvas"."Pod"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "canvas"."PodUsageLog" ADD CONSTRAINT "PodUsageLog_podId_fkey" FOREIGN KEY ("podId") REFERENCES "canvas"."ActionPod"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "canvas"."Edge" ADD CONSTRAINT "Edge_targetPodId_fkey" FOREIGN KEY ("targetPodId") REFERENCES "canvas"."Pod"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "canvas"."PodExecution" ADD CONSTRAINT "PodExecution_podId_fkey" FOREIGN KEY ("podId") REFERENCES "canvas"."Pod"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "canvas"."PodUsageLog" ADD CONSTRAINT "PodUsageLog_podId_fkey" FOREIGN KEY ("podId") REFERENCES "canvas"."Pod"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "canvas"."PodUsageLog" ADD CONSTRAINT "PodUsageLog_subscriptionId_fkey" FOREIGN KEY ("subscriptionId") REFERENCES "billing"."Subscription"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1174,7 +1292,7 @@ ALTER TABLE "canvas"."PodUsageLog" ADD CONSTRAINT "PodUsageLog_subscriptionId_fk
 ALTER TABLE "canvas"."ContextModule" ADD CONSTRAINT "ContextModule_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "core"."Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "canvas"."ContextModule" ADD CONSTRAINT "ContextModule_originalCanvasId_fkey" FOREIGN KEY ("originalCanvasId") REFERENCES "canvas"."Canvas"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "canvas"."ContextModule" ADD CONSTRAINT "ContextModule_originalFlowId_fkey" FOREIGN KEY ("originalFlowId") REFERENCES "canvas"."Flow"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "core"."RefreshToken" ADD CONSTRAINT "RefreshToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "core"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1204,7 +1322,22 @@ ALTER TABLE "core"."ProviderAPIKey" ADD CONSTRAINT "ProviderAPIKey_workspaceId_f
 ALTER TABLE "core"."ShareLink" ADD CONSTRAINT "ShareLink_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "core"."Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "documents"."DocumentFolder" ADD CONSTRAINT "DocumentFolder_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "documents"."DocumentFolder"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "documents"."DocumentFolder" ADD CONSTRAINT "DocumentFolder_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "core"."Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "documents"."Document" ADD CONSTRAINT "Document_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "core"."Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "documents"."Document" ADD CONSTRAINT "Document_folderId_fkey" FOREIGN KEY ("folderId") REFERENCES "documents"."DocumentFolder"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "documents"."Embedding" ADD CONSTRAINT "Embedding_documentId_fkey" FOREIGN KEY ("documentId") REFERENCES "documents"."Document"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "documents"."DocumentProcessingCost" ADD CONSTRAINT "DocumentProcessingCost_documentId_fkey" FOREIGN KEY ("documentId") REFERENCES "documents"."Document"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "documents"."DocumentProcessingCost" ADD CONSTRAINT "DocumentProcessingCost_subscriptionId_fkey" FOREIGN KEY ("subscriptionId") REFERENCES "billing"."Subscription"("id") ON DELETE CASCADE ON UPDATE CASCADE;

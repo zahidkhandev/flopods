@@ -1,3 +1,5 @@
+// /prisma/schemas/core.prisma
+
 // ==========================================
 // CORE SCHEMA - Users, Auth, Workspaces
 // ==========================================
@@ -7,31 +9,31 @@ model User {
   email     String   @unique
   name      String?
   image     String?
-  hash      String?  @db.VarChar(255) // For email authS
+  hash      String?  @db.VarChar(255)
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   accounts                 Account[]
   workspaces               WorkspaceUser[]
   refreshTokens            RefreshToken[]
-  canvasCollaborations     CanvasCollaborator[]
+  flowCollaborations       FlowCollaborator[]
   sentWorkspaceInvites     WorkspaceInvitation[] @relation("InvitedBy")
   receivedWorkspaceInvites WorkspaceInvitation[] @relation("InvitedUser")
-  sentCanvasInvites        CanvasInvitation[]    @relation("CanvasInvitedBy")
-  receivedCanvasInvites    CanvasInvitation[]    @relation("CanvasInvitedUser")
+  sentFlowInvites          FlowInvitation[]      @relation("FlowInvitedBy")
+  receivedFlowInvites      FlowInvitation[]      @relation("FlowInvitedUser")
 
   @@index([email])
   @@schema("core")
 }
 
 model RefreshToken {
-  id        String   @id @default(cuid())
-  token     String   @unique
-  deviceName  String   @db.VarChar(255)
-  userId    String
-  expiresAt DateTime @db.Timestamptz(6)
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  id         String   @id @default(cuid())
+  token      String   @unique
+  deviceName String   @db.VarChar(255)
+  userId     String
+  expiresAt  DateTime @db.Timestamptz(6)
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -65,14 +67,16 @@ model Workspace {
   createdAt DateTime      @default(now()) @db.Timestamptz(6)
   updatedAt DateTime      @updatedAt @db.Timestamptz(6)
 
-  members        WorkspaceUser[]
-  canvases       Canvas[]
-  documents      Document[]
-  subscription   Subscription?
-  contextModules ContextModule[]
-  shareLinks     ShareLink[]
-  apiKeys        ProviderAPIKey[]
-  invitations    WorkspaceInvitation[]
+  members         WorkspaceUser[]
+  spaces          Space[]
+  flows           Flow[]
+  documents       Document[]
+  documentFolders DocumentFolder[]
+  subscription    Subscription?
+  contextModules  ContextModule[]
+  shareLinks      ShareLink[]
+  apiKeys         ProviderAPIKey[]
+  invitations     WorkspaceInvitation[]
 
   @@index([type, createdAt])
   @@schema("core")
@@ -84,16 +88,15 @@ model WorkspaceUser {
   workspaceId String
   role        WorkspaceRole @default(MEMBER)
 
-  // Granular permissions
   canCreateCanvas  Boolean @default(true)
   canDeleteCanvas  Boolean @default(false)
   canManageBilling Boolean @default(false)
-  canInviteMembers Boolean @default(false) // Requires PAID plan
+  canInviteMembers Boolean @default(false)
   canManageMembers Boolean @default(false)
   canManageApiKeys Boolean @default(false)
 
   joinedAt  DateTime @default(now()) @db.Timestamptz(6)
-  invitedBy String? // userId who invited
+  invitedBy String?
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -109,10 +112,10 @@ model WorkspaceInvitation {
   workspaceId String
   email       String        @db.VarChar(255)
   role        WorkspaceRole @default(MEMBER)
-  permissions Json? // Custom permissions override
+  permissions Json?
 
   invitedBy     String
-  invitedUserId String? // If user exists in system
+  invitedUserId String?
 
   token  String           @unique @db.VarChar(255)
   status InvitationStatus @default(PENDING)
@@ -137,9 +140,9 @@ model ProviderAPIKey {
   provider    LLMProvider
   displayName String      @db.VarChar(100)
 
-  keyHash String @db.VarChar(255) // Encrypted
+  keyHash String @db.VarChar(255)
 
-  providerConfig Json? // Provider-specific config
+  providerConfig Json?
   endpoint       String?  @db.VarChar(500)
   authType       AuthType @default(BEARER_TOKEN)
 
@@ -165,9 +168,8 @@ model ShareLink {
   createdBy   String
 
   accessLevel ShareAccessLevel @default(VIEW_ONLY)
-  password    String?          @db.VarChar(255) // Optional password protection (bcrypt hash)
+  password    String?          @db.VarChar(255)
 
-  // Usage tracking
   viewCount    Int       @default(0)
   lastViewedAt DateTime? @db.Timestamptz(6)
 
@@ -218,9 +220,9 @@ enum InvitationStatus {
 }
 
 enum ShareAccessLevel {
-  VIEW_ONLY // FREE
-  COMMENT // FREE
-  EDIT // PAID (requires collaborator)
+  VIEW_ONLY
+  COMMENT
+  EDIT
 
   @@schema("core")
 }
@@ -262,7 +264,7 @@ enum AuthType {
 }
 
 enum ShareableAssetType {
-  CANVAS
+  FLOW
   CONTEXT_MODULE
 
   @@schema("core")

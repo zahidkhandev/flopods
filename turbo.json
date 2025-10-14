@@ -77,9 +77,10 @@
       ]
     },
     "db:generate": {
-      "cache": false,
+      "cache": true,
       "outputs": ["node_modules/.prisma/**", "node_modules/@prisma/**"],
-      "env": ["DATABASE_URL"]
+      "env": ["DATABASE_URL"],
+      "persistent": false
     },
     "db:migrate": {
       "cache": false,

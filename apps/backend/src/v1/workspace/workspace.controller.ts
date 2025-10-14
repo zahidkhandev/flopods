@@ -500,4 +500,20 @@ export class V1WorkspaceController {
   ): Promise<MessageResponse> {
     return this.workspaceService.deleteApiKey(id, keyId, userId);
   }
+
+  @Post(':id/transfer-ownership/:userId')
+  @ApiOperation({ summary: 'Transfer workspace ownership (OWNER only)' })
+  async transferOwnership(
+    @Param('id') id: string,
+    @Param('userId') newOwnerId: string,
+    @GetCurrentUserId() currentUserId: string,
+  ) {
+    return this.workspaceService.transferOwnership(id, currentUserId, newOwnerId);
+  }
+
+  @Get(':id/stats')
+  @ApiOperation({ summary: 'Get workspace statistics and analytics' })
+  async getWorkspaceStats(@Param('id') id: string, @GetCurrentUserId() userId: string) {
+    return this.workspaceService.getWorkspaceStats(id, userId);
+  }
 }

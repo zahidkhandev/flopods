@@ -318,9 +318,23 @@ exports.Prisma.ModelPricingTierScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
-exports.Prisma.CanvasScalarFieldEnum = {
+exports.Prisma.SpaceScalarFieldEnum = {
   id: 'id',
   workspaceId: 'workspaceId',
+  name: 'name',
+  description: 'description',
+  customInstructions: 'customInstructions',
+  icon: 'icon',
+  color: 'color',
+  createdBy: 'createdBy',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.FlowScalarFieldEnum = {
+  id: 'id',
+  workspaceId: 'workspaceId',
+  spaceId: 'spaceId',
   name: 'name',
   description: 'description',
   version: 'version',
@@ -332,9 +346,9 @@ exports.Prisma.CanvasScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
-exports.Prisma.CanvasInvitationScalarFieldEnum = {
+exports.Prisma.FlowInvitationScalarFieldEnum = {
   id: 'id',
-  canvasId: 'canvasId',
+  flowId: 'flowId',
   email: 'email',
   accessLevel: 'accessLevel',
   permissions: 'permissions',
@@ -347,9 +361,9 @@ exports.Prisma.CanvasInvitationScalarFieldEnum = {
   acceptedAt: 'acceptedAt'
 };
 
-exports.Prisma.CanvasCollaboratorScalarFieldEnum = {
+exports.Prisma.FlowCollaboratorScalarFieldEnum = {
   id: 'id',
-  canvasId: 'canvasId',
+  flowId: 'flowId',
   userId: 'userId',
   accessLevel: 'accessLevel',
   canEdit: 'canEdit',
@@ -362,9 +376,9 @@ exports.Prisma.CanvasCollaboratorScalarFieldEnum = {
   lastViewedAt: 'lastViewedAt'
 };
 
-exports.Prisma.CanvasSessionScalarFieldEnum = {
+exports.Prisma.FlowSessionScalarFieldEnum = {
   id: 'id',
-  canvasId: 'canvasId',
+  flowId: 'flowId',
   userId: 'userId',
   anonymousName: 'anonymousName',
   sessionToken: 'sessionToken',
@@ -380,9 +394,9 @@ exports.Prisma.CanvasSessionScalarFieldEnum = {
   disconnectedAt: 'disconnectedAt'
 };
 
-exports.Prisma.CanvasActivityLogScalarFieldEnum = {
+exports.Prisma.FlowActivityLogScalarFieldEnum = {
   id: 'id',
-  canvasId: 'canvasId',
+  flowId: 'flowId',
   userId: 'userId',
   action: 'action',
   entityType: 'entityType',
@@ -391,9 +405,9 @@ exports.Prisma.CanvasActivityLogScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
-exports.Prisma.CanvasCommentScalarFieldEnum = {
+exports.Prisma.FlowCommentScalarFieldEnum = {
   id: 'id',
-  canvasId: 'canvasId',
+  flowId: 'flowId',
   userId: 'userId',
   content: 'content',
   position: 'position',
@@ -406,14 +420,14 @@ exports.Prisma.CanvasCommentScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
-exports.Prisma.ActionPodScalarFieldEnum = {
+exports.Prisma.PodScalarFieldEnum = {
   id: 'id',
-  canvasId: 'canvasId',
+  flowId: 'flowId',
   type: 'type',
   position: 'position',
   executionStatus: 'executionStatus',
   lastExecutionId: 'lastExecutionId',
-  contextCanvasId: 'contextCanvasId',
+  contextFlowId: 'contextFlowId',
   documentId: 'documentId',
   lockedBy: 'lockedBy',
   lockedAt: 'lockedAt',
@@ -427,7 +441,7 @@ exports.Prisma.ActionPodScalarFieldEnum = {
 
 exports.Prisma.EdgeScalarFieldEnum = {
   id: 'id',
-  canvasId: 'canvasId',
+  flowId: 'flowId',
   sourcePodId: 'sourcePodId',
   targetPodId: 'targetPodId',
   sourceHandle: 'sourceHandle',
@@ -436,10 +450,10 @@ exports.Prisma.EdgeScalarFieldEnum = {
   createdAt: 'createdAt'
 };
 
-exports.Prisma.ActionPodExecutionScalarFieldEnum = {
+exports.Prisma.PodExecutionScalarFieldEnum = {
   id: 'id',
   podId: 'podId',
-  canvasId: 'canvasId',
+  flowId: 'flowId',
   workspaceId: 'workspaceId',
   status: 'status',
   startedAt: 'startedAt',
@@ -464,7 +478,7 @@ exports.Prisma.PodUsageLogScalarFieldEnum = {
   id: 'id',
   podId: 'podId',
   executionId: 'executionId',
-  canvasId: 'canvasId',
+  flowId: 'flowId',
   workspaceId: 'workspaceId',
   subscriptionId: 'subscriptionId',
   provider: 'provider',
@@ -489,7 +503,7 @@ exports.Prisma.ContextModuleScalarFieldEnum = {
   name: 'name',
   description: 'description',
   definitionJson: 'definitionJson',
-  originalCanvasId: 'originalCanvasId',
+  originalFlowId: 'originalFlowId',
   version: 'version',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -594,12 +608,30 @@ exports.Prisma.ShareLinkScalarFieldEnum = {
   expiresAt: 'expiresAt'
 };
 
-exports.Prisma.DocumentScalarFieldEnum = {
+exports.Prisma.DocumentFolderScalarFieldEnum = {
   id: 'id',
   workspaceId: 'workspaceId',
   name: 'name',
+  parentId: 'parentId',
+  icon: 'icon',
+  color: 'color',
+  sortOrder: 'sortOrder',
+  createdBy: 'createdBy',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.DocumentScalarFieldEnum = {
+  id: 'id',
+  workspaceId: 'workspaceId',
+  folderId: 'folderId',
+  name: 'name',
+  sourceType: 'sourceType',
   storageKey: 'storageKey',
   s3Bucket: 's3Bucket',
+  externalUrl: 'externalUrl',
+  externalProvider: 'externalProvider',
+  externalFileId: 'externalFileId',
   fileType: 'fileType',
   mimeType: 'mimeType',
   sizeInBytes: 'sizeInBytes',
@@ -621,6 +653,23 @@ exports.Prisma.EmbeddingScalarFieldEnum = {
   vectorDimension: 'vectorDimension',
   metadata: 'metadata',
   createdAt: 'createdAt'
+};
+
+exports.Prisma.DocumentProcessingCostScalarFieldEnum = {
+  id: 'id',
+  documentId: 'documentId',
+  workspaceId: 'workspaceId',
+  subscriptionId: 'subscriptionId',
+  processingType: 'processingType',
+  creditsConsumed: 'creditsConsumed',
+  extractionCost: 'extractionCost',
+  embeddingCost: 'embeddingCost',
+  totalCostInUsd: 'totalCostInUsd',
+  chunkCount: 'chunkCount',
+  embeddingModel: 'embeddingModel',
+  processingTimeMs: 'processingTimeMs',
+  tokensProcessed: 'tokensProcessed',
+  processedAt: 'processedAt'
 };
 
 exports.Prisma.SortOrder = {
@@ -750,34 +799,46 @@ exports.Prisma.ModelPricingTierOrderByRelevanceFieldEnum = {
   description: 'description'
 };
 
-exports.Prisma.CanvasOrderByRelevanceFieldEnum = {
+exports.Prisma.SpaceOrderByRelevanceFieldEnum = {
   id: 'id',
   workspaceId: 'workspaceId',
+  name: 'name',
+  description: 'description',
+  customInstructions: 'customInstructions',
+  icon: 'icon',
+  color: 'color',
+  createdBy: 'createdBy'
+};
+
+exports.Prisma.FlowOrderByRelevanceFieldEnum = {
+  id: 'id',
+  workspaceId: 'workspaceId',
+  spaceId: 'spaceId',
   name: 'name',
   description: 'description',
   createdBy: 'createdBy',
   thumbnailS3Key: 'thumbnailS3Key'
 };
 
-exports.Prisma.CanvasInvitationOrderByRelevanceFieldEnum = {
+exports.Prisma.FlowInvitationOrderByRelevanceFieldEnum = {
   id: 'id',
-  canvasId: 'canvasId',
+  flowId: 'flowId',
   email: 'email',
   invitedBy: 'invitedBy',
   invitedUserId: 'invitedUserId',
   token: 'token'
 };
 
-exports.Prisma.CanvasCollaboratorOrderByRelevanceFieldEnum = {
+exports.Prisma.FlowCollaboratorOrderByRelevanceFieldEnum = {
   id: 'id',
-  canvasId: 'canvasId',
+  flowId: 'flowId',
   userId: 'userId',
   invitedBy: 'invitedBy'
 };
 
-exports.Prisma.CanvasSessionOrderByRelevanceFieldEnum = {
+exports.Prisma.FlowSessionOrderByRelevanceFieldEnum = {
   id: 'id',
-  canvasId: 'canvasId',
+  flowId: 'flowId',
   userId: 'userId',
   anonymousName: 'anonymousName',
   sessionToken: 'sessionToken',
@@ -787,17 +848,17 @@ exports.Prisma.CanvasSessionOrderByRelevanceFieldEnum = {
   ipAddress: 'ipAddress'
 };
 
-exports.Prisma.CanvasActivityLogOrderByRelevanceFieldEnum = {
+exports.Prisma.FlowActivityLogOrderByRelevanceFieldEnum = {
   id: 'id',
-  canvasId: 'canvasId',
+  flowId: 'flowId',
   userId: 'userId',
   entityType: 'entityType',
   entityId: 'entityId'
 };
 
-exports.Prisma.CanvasCommentOrderByRelevanceFieldEnum = {
+exports.Prisma.FlowCommentOrderByRelevanceFieldEnum = {
   id: 'id',
-  canvasId: 'canvasId',
+  flowId: 'flowId',
   userId: 'userId',
   content: 'content',
   podId: 'podId',
@@ -805,11 +866,11 @@ exports.Prisma.CanvasCommentOrderByRelevanceFieldEnum = {
   resolvedBy: 'resolvedBy'
 };
 
-exports.Prisma.ActionPodOrderByRelevanceFieldEnum = {
+exports.Prisma.PodOrderByRelevanceFieldEnum = {
   id: 'id',
-  canvasId: 'canvasId',
+  flowId: 'flowId',
   lastExecutionId: 'lastExecutionId',
-  contextCanvasId: 'contextCanvasId',
+  contextFlowId: 'contextFlowId',
   documentId: 'documentId',
   lockedBy: 'lockedBy',
   dynamoPartitionKey: 'dynamoPartitionKey',
@@ -820,17 +881,17 @@ exports.Prisma.ActionPodOrderByRelevanceFieldEnum = {
 
 exports.Prisma.EdgeOrderByRelevanceFieldEnum = {
   id: 'id',
-  canvasId: 'canvasId',
+  flowId: 'flowId',
   sourcePodId: 'sourcePodId',
   targetPodId: 'targetPodId',
   sourceHandle: 'sourceHandle',
   targetHandle: 'targetHandle'
 };
 
-exports.Prisma.ActionPodExecutionOrderByRelevanceFieldEnum = {
+exports.Prisma.PodExecutionOrderByRelevanceFieldEnum = {
   id: 'id',
   podId: 'podId',
-  canvasId: 'canvasId',
+  flowId: 'flowId',
   workspaceId: 'workspaceId',
   modelId: 'modelId',
   modelName: 'modelName',
@@ -842,7 +903,7 @@ exports.Prisma.PodUsageLogOrderByRelevanceFieldEnum = {
   id: 'id',
   podId: 'podId',
   executionId: 'executionId',
-  canvasId: 'canvasId',
+  flowId: 'flowId',
   workspaceId: 'workspaceId',
   subscriptionId: 'subscriptionId',
   modelId: 'modelId',
@@ -854,7 +915,7 @@ exports.Prisma.ContextModuleOrderByRelevanceFieldEnum = {
   workspaceId: 'workspaceId',
   name: 'name',
   description: 'description',
-  originalCanvasId: 'originalCanvasId'
+  originalFlowId: 'originalFlowId'
 };
 
 exports.Prisma.UserOrderByRelevanceFieldEnum = {
@@ -918,12 +979,26 @@ exports.Prisma.ShareLinkOrderByRelevanceFieldEnum = {
   password: 'password'
 };
 
-exports.Prisma.DocumentOrderByRelevanceFieldEnum = {
+exports.Prisma.DocumentFolderOrderByRelevanceFieldEnum = {
   id: 'id',
   workspaceId: 'workspaceId',
   name: 'name',
+  parentId: 'parentId',
+  icon: 'icon',
+  color: 'color',
+  createdBy: 'createdBy'
+};
+
+exports.Prisma.DocumentOrderByRelevanceFieldEnum = {
+  id: 'id',
+  workspaceId: 'workspaceId',
+  folderId: 'folderId',
+  name: 'name',
   storageKey: 'storageKey',
   s3Bucket: 's3Bucket',
+  externalUrl: 'externalUrl',
+  externalProvider: 'externalProvider',
+  externalFileId: 'externalFileId',
   fileType: 'fileType',
   mimeType: 'mimeType',
   uploadedBy: 'uploadedBy'
@@ -936,6 +1011,14 @@ exports.Prisma.EmbeddingOrderByRelevanceFieldEnum = {
   chunkText: 'chunkText',
   s3VectorBucket: 's3VectorBucket',
   s3VectorKey: 's3VectorKey'
+};
+
+exports.Prisma.DocumentProcessingCostOrderByRelevanceFieldEnum = {
+  id: 'id',
+  documentId: 'documentId',
+  workspaceId: 'workspaceId',
+  subscriptionId: 'subscriptionId',
+  embeddingModel: 'embeddingModel'
 };
 exports.AdminRole = exports.$Enums.AdminRole = {
   SUPER_ADMIN: 'SUPER_ADMIN',
@@ -1088,13 +1171,13 @@ exports.ModelCategory = exports.$Enums.ModelCategory = {
   TRANSLATION: 'TRANSLATION'
 };
 
-exports.CanvasVisibility = exports.$Enums.CanvasVisibility = {
+exports.FlowVisibility = exports.$Enums.FlowVisibility = {
   PRIVATE: 'PRIVATE',
   WORKSPACE: 'WORKSPACE',
   PUBLIC: 'PUBLIC'
 };
 
-exports.CanvasAccessLevel = exports.$Enums.CanvasAccessLevel = {
+exports.FlowAccessLevel = exports.$Enums.FlowAccessLevel = {
   VIEWER: 'VIEWER',
   COMMENTER: 'COMMENTER',
   EDITOR: 'EDITOR',
@@ -1109,12 +1192,12 @@ exports.InvitationStatus = exports.$Enums.InvitationStatus = {
   REVOKED: 'REVOKED'
 };
 
-exports.CanvasActivityAction = exports.$Enums.CanvasActivityAction = {
-  CANVAS_CREATED: 'CANVAS_CREATED',
-  CANVAS_UPDATED: 'CANVAS_UPDATED',
-  CANVAS_DELETED: 'CANVAS_DELETED',
-  CANVAS_SHARED: 'CANVAS_SHARED',
-  CANVAS_VISIBILITY_CHANGED: 'CANVAS_VISIBILITY_CHANGED',
+exports.FlowActivityAction = exports.$Enums.FlowActivityAction = {
+  FLOW_CREATED: 'FLOW_CREATED',
+  FLOW_UPDATED: 'FLOW_UPDATED',
+  FLOW_DELETED: 'FLOW_DELETED',
+  FLOW_SHARED: 'FLOW_SHARED',
+  FLOW_VISIBILITY_CHANGED: 'FLOW_VISIBILITY_CHANGED',
   POD_CREATED: 'POD_CREATED',
   POD_UPDATED: 'POD_UPDATED',
   POD_DELETED: 'POD_DELETED',
@@ -1133,7 +1216,7 @@ exports.CanvasActivityAction = exports.$Enums.CanvasActivityAction = {
   USER_LEFT: 'USER_LEFT'
 };
 
-exports.ActionPodType = exports.$Enums.ActionPodType = {
+exports.PodType = exports.$Enums.PodType = {
   TEXT_INPUT: 'TEXT_INPUT',
   DOCUMENT_INPUT: 'DOCUMENT_INPUT',
   URL_INPUT: 'URL_INPUT',
@@ -1148,11 +1231,11 @@ exports.ActionPodType = exports.$Enums.ActionPodType = {
   VIDEO_OUTPUT: 'VIDEO_OUTPUT',
   AUDIO_OUTPUT: 'AUDIO_OUTPUT',
   CONTEXT_MODULE: 'CONTEXT_MODULE',
-  CANVAS_CONTEXT_INPUT: 'CANVAS_CONTEXT_INPUT',
+  FLOW_CONTEXT_INPUT: 'FLOW_CONTEXT_INPUT',
   CODE_EXECUTION: 'CODE_EXECUTION'
 };
 
-exports.ActionPodExecutionStatus = exports.$Enums.ActionPodExecutionStatus = {
+exports.PodExecutionStatus = exports.$Enums.PodExecutionStatus = {
   IDLE: 'IDLE',
   QUEUED: 'QUEUED',
   RUNNING: 'RUNNING',
@@ -1190,7 +1273,7 @@ exports.AuthType = exports.$Enums.AuthType = {
 };
 
 exports.ShareableAssetType = exports.$Enums.ShareableAssetType = {
-  CANVAS: 'CANVAS',
+  FLOW: 'FLOW',
   CONTEXT_MODULE: 'CONTEXT_MODULE'
 };
 
@@ -1200,12 +1283,31 @@ exports.ShareAccessLevel = exports.$Enums.ShareAccessLevel = {
   EDIT: 'EDIT'
 };
 
+exports.DocumentSourceType = exports.$Enums.DocumentSourceType = {
+  INTERNAL: 'INTERNAL',
+  GOOGLE_DRIVE: 'GOOGLE_DRIVE',
+  YOUTUBE: 'YOUTUBE',
+  VIMEO: 'VIMEO',
+  LOOM: 'LOOM',
+  URL: 'URL'
+};
+
 exports.DocumentStatus = exports.$Enums.DocumentStatus = {
   UPLOADING: 'UPLOADING',
   PROCESSING: 'PROCESSING',
   READY: 'READY',
   ERROR: 'ERROR',
   ARCHIVED: 'ARCHIVED'
+};
+
+exports.DocumentProcessingType = exports.$Enums.DocumentProcessingType = {
+  PDF_TEXT_EXTRACTION: 'PDF_TEXT_EXTRACTION',
+  IMAGE_OCR: 'IMAGE_OCR',
+  VIDEO_TRANSCRIPT: 'VIDEO_TRANSCRIPT',
+  AUDIO_TRANSCRIPT: 'AUDIO_TRANSCRIPT',
+  DOCUMENT_EMBEDDING: 'DOCUMENT_EMBEDDING',
+  URL_SCRAPING: 'URL_SCRAPING',
+  VISION_EXTRACTION: 'VISION_EXTRACTION'
 };
 
 exports.Prisma.ModelName = {
@@ -1220,15 +1322,16 @@ exports.Prisma.ModelName = {
   CreditPurchase: 'CreditPurchase',
   CreditUsageLog: 'CreditUsageLog',
   ModelPricingTier: 'ModelPricingTier',
-  Canvas: 'Canvas',
-  CanvasInvitation: 'CanvasInvitation',
-  CanvasCollaborator: 'CanvasCollaborator',
-  CanvasSession: 'CanvasSession',
-  CanvasActivityLog: 'CanvasActivityLog',
-  CanvasComment: 'CanvasComment',
-  ActionPod: 'ActionPod',
+  Space: 'Space',
+  Flow: 'Flow',
+  FlowInvitation: 'FlowInvitation',
+  FlowCollaborator: 'FlowCollaborator',
+  FlowSession: 'FlowSession',
+  FlowActivityLog: 'FlowActivityLog',
+  FlowComment: 'FlowComment',
+  Pod: 'Pod',
   Edge: 'Edge',
-  ActionPodExecution: 'ActionPodExecution',
+  PodExecution: 'PodExecution',
   PodUsageLog: 'PodUsageLog',
   ContextModule: 'ContextModule',
   User: 'User',
@@ -1239,8 +1342,10 @@ exports.Prisma.ModelName = {
   WorkspaceInvitation: 'WorkspaceInvitation',
   ProviderAPIKey: 'ProviderAPIKey',
   ShareLink: 'ShareLink',
+  DocumentFolder: 'DocumentFolder',
   Document: 'Document',
-  Embedding: 'Embedding'
+  Embedding: 'Embedding',
+  DocumentProcessingCost: 'DocumentProcessingCost'
 };
 
 /**
