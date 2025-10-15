@@ -1,3 +1,5 @@
+// components/add-api-key-dialog.tsx
+
 import { useState } from 'react';
 import {
   Dialog,
@@ -30,9 +32,13 @@ interface AddApiKeyDialogProps {
 const LLM_PROVIDERS = [
   { value: 'OPENAI', label: 'OpenAI' },
   { value: 'ANTHROPIC', label: 'Anthropic' },
-  { value: 'GOOGLE', label: 'Google AI' },
-  { value: 'AZURE_OPENAI', label: 'Azure OpenAI' },
+  { value: 'GOOGLE_GEMINI', label: 'Google Gemini' },
+  { value: 'PERPLEXITY', label: 'Perplexity' },
+  { value: 'MISTRAL', label: 'Mistral' },
   { value: 'COHERE', label: 'Cohere' },
+  { value: 'GROQ', label: 'Groq' },
+  { value: 'XAI', label: 'xAI (Grok)' },
+  { value: 'DEEPSEEK', label: 'DeepSeek' },
   { value: 'CUSTOM', label: 'Custom' },
 ];
 
@@ -44,7 +50,6 @@ export function AddApiKeyDialog({ workspaceId, open, onOpenChange }: AddApiKeyDi
     provider: 'OPENAI',
     displayName: '',
     apiKey: '',
-    endpoint: '',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -58,7 +63,6 @@ export function AddApiKeyDialog({ workspaceId, open, onOpenChange }: AddApiKeyDi
         provider: 'OPENAI',
         displayName: '',
         apiKey: '',
-        endpoint: '',
       });
       setShowApiKey(false);
     } catch {
@@ -74,7 +78,7 @@ export function AddApiKeyDialog({ workspaceId, open, onOpenChange }: AddApiKeyDi
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Add API Key</DialogTitle>
-            <DialogDescription>Connect an LLM provider to use in your flows</DialogDescription>
+            <DialogDescription>Connect an LLM provider to use in your workflows</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
@@ -130,19 +134,8 @@ export function AddApiKeyDialog({ workspaceId, open, onOpenChange }: AddApiKeyDi
                   {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="endpoint">Custom Endpoint (Optional)</Label>
-              <Input
-                id="endpoint"
-                type="url"
-                placeholder="https://api.example.com/v1"
-                value={formData.endpoint}
-                onChange={(e) => setFormData({ ...formData, endpoint: e.target.value })}
-              />
               <p className="text-muted-foreground text-xs">
-                Leave empty to use the default endpoint
+                Your API key will be encrypted and stored securely
               </p>
             </div>
           </div>

@@ -1,10 +1,13 @@
 // lib/axios-instance.ts
+
 import axios, { AxiosError, AxiosHeaders, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
+import { toast } from 'sonner';
 import { getAuthTokens, setAuthTokens, clearAuthTokens } from '@/utils/token-utils';
 import { AuthTokens } from '@/types/auth';
 
 interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
+  showErrorToast?: boolean; // ✅ NEW: Optional flag to show error toast
 }
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
@@ -17,7 +20,10 @@ export const axiosInstance = axios.create({
   },
 });
 
-// ---- Helpers to remember/restore previous route when going offline ----
+// ==========================================
+// OFFLINE REDIRECT HELPERS
+// ==========================================
+
 const OFFLINE_REDIRECT_FLAG = 'offlineRedirectPending';
 const PRE_ERROR_PATH = 'preErrorPath';
 
@@ -29,7 +35,7 @@ function markOfflineAndRememberPath() {
     }
     sessionStorage.setItem(OFFLINE_REDIRECT_FLAG, '1');
   } catch {
-    //EMPTY
+    // EMPTY
   }
 }
 
@@ -42,14 +48,16 @@ export function redirectFromOfflineIfNeeded() {
     sessionStorage.removeItem(OFFLINE_REDIRECT_FLAG);
     sessionStorage.removeItem(PRE_ERROR_PATH);
 
-    // Use replace so the /errors/offline page isn't kept in history
     window.location.replace(prev);
   } catch {
     window.location.replace('/dashboard');
   }
 }
 
-// ---- Refresh token response structure ----
+// ==========================================
+// REFRESH TOKEN HANDLING
+// ==========================================
+
 interface RefreshTokenResponse {
   statusCode: number;
   message: string;
@@ -60,7 +68,6 @@ interface RefreshTokenResponse {
   };
 }
 
-// ---- Queue to manage requests during token refresh ----
 interface FailedRequest {
   resolve: (token: string) => void;
   reject: (error: any) => void;
@@ -77,9 +84,13 @@ const processQueue = (error: any, token: string | null = null): void => {
   failedQueue = [];
 };
 
-// ---- Request interceptor: attach token or skip if x-public header ----
+// ==========================================
+// REQUEST INTERCEPTOR
+// ==========================================
+
 axiosInstance.interceptors.request.use(
   (config: InternalAxiosRequestConfig): InternalAxiosRequestConfig => {
+    // Skip auth for public endpoints
     if (config.headers && config.headers['x-public'] === 'true') {
       delete config.headers['x-public'];
       return config;
@@ -94,9 +105,12 @@ axiosInstance.interceptors.request.use(
   (error: AxiosError) => Promise.reject(error)
 );
 
-// ---- Response interceptor: success + error handling ----
+// ==========================================
+// RESPONSE INTERCEPTOR
+// ==========================================
+
 axiosInstance.interceptors.response.use(
-  // ✅ SUCCESS: If we’re on the offline page and have a pending redirect, bounce back.
+  // ✅ SUCCESS
   (response: AxiosResponse): AxiosResponse => {
     if (window.location.pathname.includes('/errors/offline')) {
       redirectFromOfflineIfNeeded();
@@ -104,15 +118,26 @@ axiosInstance.interceptors.response.use(
     return response;
   },
 
-  // ❌ ERROR
   async (error: AxiosError): Promise<any> => {
     const originalRequest = error.config as CustomAxiosRequestConfig;
+    const showErrorToast = originalRequest?.showErrorToast === true; // ✅ Default true
 
-    // ==================== NETWORK ERROR ====================
+    // ==========================================
+    // NETWORK ERROR (No Internet)
+    // ==========================================
     if (!error.response) {
       console.error('Network error:', error.message);
+
+      if (showErrorToast) {
+        toast.error('No internet connection', {
+          description: 'Please check your network and try again',
+          duration: 5000,
+        });
+      }
+
       markOfflineAndRememberPath();
 
+      // Only redirect if not already on offline page
       if (!window.location.pathname.includes('/errors/offline')) {
         window.location.href = '/errors/offline';
       }
@@ -120,8 +145,12 @@ axiosInstance.interceptors.response.use(
     }
 
     const status = error.response.status;
+    const errorData = error.response.data as any;
+    const errorMessage = errorData?.message || 'An error occurred';
 
-    // ==================== 401 UNAUTHORIZED ====================
+    // ==========================================
+    // 401 UNAUTHORIZED (Token Refresh)
+    // ==========================================
     if (
       status === 401 &&
       !originalRequest._retry &&
@@ -146,6 +175,11 @@ axiosInstance.interceptors.response.use(
       const tokens = getAuthTokens();
       if (!tokens?.refreshToken) {
         clearAuthTokens();
+        if (showErrorToast) {
+          toast.error('Session expired', {
+            description: 'Please log in again',
+          });
+        }
         window.location.href = '/auth/login';
         return Promise.reject(error);
       }
@@ -179,6 +213,11 @@ axiosInstance.interceptors.response.use(
       } catch (err) {
         processQueue(err, null);
         clearAuthTokens();
+        if (showErrorToast) {
+          toast.error('Session expired', {
+            description: 'Please log in again',
+          });
+        }
         window.location.href = '/auth/login';
         return Promise.reject(err);
       } finally {
@@ -186,46 +225,124 @@ axiosInstance.interceptors.response.use(
       }
     }
 
-    // ==================== 403 FORBIDDEN ====================
+    // ==========================================
+    // 403 FORBIDDEN
+    // ==========================================
     if (status === 403) {
-      console.error('Access forbidden:', error.response.data);
-      if (!window.location.pathname.includes('/errors/403')) {
-        window.location.href = '/errors/403';
+      console.error('Access forbidden:', errorData);
+      if (showErrorToast) {
+        toast.error('Access denied', {
+          description: errorMessage || "You don't have permission to access this resource",
+        });
       }
       return Promise.reject(error);
     }
 
-    // ==================== 404 NOT FOUND ====================
+    // ==========================================
+    // 404 NOT FOUND
+    // ==========================================
     if (status === 404) {
-      console.error('Resource not found:', error.response.data);
+      console.error('Resource not found:', errorData);
+      if (showErrorToast) {
+        toast.error('Not found', {
+          description: errorMessage || 'The requested resource was not found',
+        });
+      }
       return Promise.reject(error);
     }
 
-    // ==================== 500 INTERNAL SERVER ERROR ====================
+    // ==========================================
+    // 409 CONFLICT
+    // ==========================================
+    if (status === 409) {
+      console.error('Conflict:', errorData);
+      if (showErrorToast) {
+        toast.error('Conflict', {
+          description: errorMessage || 'A conflict occurred with existing data',
+        });
+      }
+      return Promise.reject(error);
+    }
+
+    // ==========================================
+    // 422 VALIDATION ERROR
+    // ==========================================
+    if (status === 422) {
+      console.error('Validation error:', errorData);
+      if (showErrorToast) {
+        toast.error('Validation error', {
+          description: errorMessage || 'Please check your input and try again',
+        });
+      }
+      return Promise.reject(error);
+    }
+
+    // ==========================================
+    // 429 TOO MANY REQUESTS
+    // ==========================================
+    if (status === 429) {
+      console.error('Rate limit exceeded:', errorData);
+      if (showErrorToast) {
+        toast.error('Too many requests', {
+          description: 'Please wait a moment before trying again',
+          duration: 5000,
+        });
+      }
+      return Promise.reject(error);
+    }
+
+    // ==========================================
+    // 500 INTERNAL SERVER ERROR
+    // ==========================================
     if (status === 500) {
-      console.error('Server error:', error.response.data);
-      if (!window.location.pathname.includes('/errors/500')) {
-        window.location.href = '/errors/500';
+      console.error('Server error:', errorData);
+      if (showErrorToast) {
+        toast.error('Server error', {
+          description: errorMessage || 'Something went wrong on our end. Please try again later',
+          duration: 5000,
+        });
       }
       return Promise.reject(error);
     }
 
-    // ==================== 502 BAD GATEWAY ====================
+    // ==========================================
+    // 502 BAD GATEWAY
+    // ==========================================
     if (status === 502) {
-      console.error('Bad gateway:', error.response.data);
-      if (!window.location.pathname.includes('/errors/500')) {
-        window.location.href = '/errors/500';
+      console.error('Bad gateway:', errorData);
+      if (showErrorToast) {
+        toast.error('Service temporarily unavailable', {
+          description: 'Our servers are having issues. Please try again in a few moments',
+          duration: 5000,
+        });
       }
       return Promise.reject(error);
     }
 
-    // ==================== 503 SERVICE UNAVAILABLE ====================
+    // ==========================================
+    // 503 SERVICE UNAVAILABLE
+    // ==========================================
     if (status === 503) {
-      console.error('Service unavailable:', error.response.data);
-      if (!window.location.pathname.includes('/errors/maintenance')) {
-        window.location.href = '/errors/maintenance';
+      console.error('Service unavailable:', errorData);
+      if (showErrorToast) {
+        toast.error('Service unavailable', {
+          description: 'The service is temporarily down for maintenance',
+          duration: 5000,
+        });
       }
       return Promise.reject(error);
+    }
+
+    // ==========================================
+    // OTHER ERRORS (4xx, 5xx)
+    // ==========================================
+    if (status >= 400) {
+      console.error('HTTP error:', status, errorData);
+      if (showErrorToast) {
+        toast.error('Request failed', {
+          description: errorMessage || `An error occurred (${status})`,
+        });
+      }
     }
 
     return Promise.reject(error);

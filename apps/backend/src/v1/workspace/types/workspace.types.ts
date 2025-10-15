@@ -1,10 +1,6 @@
-import {
-  WorkspaceType,
-  WorkspaceRole,
-  InvitationStatus,
-  LLMProvider,
-  AuthType,
-} from '@actopod/schema';
+// src/modules/workspace/types/workspace.types.ts
+
+import { WorkspaceType, WorkspaceRole, InvitationStatus, LLMProvider } from '@actopod/schema';
 
 /**
  * Response type for workspace list
@@ -23,7 +19,7 @@ export interface WorkspaceListItem {
     canManageApiKeys: boolean;
   };
   memberCount: number;
-  canvasCount: number; // Keep as canvasCount (user-facing name)
+  canvasCount: number;
   joinedAt: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -58,7 +54,7 @@ export interface WorkspaceDetails {
     };
   }>;
   _count: {
-    flows: number; // FIXED: canvases → flows
+    flows: number;
     documents: number;
     apiKeys: number;
   };
@@ -97,19 +93,30 @@ export interface WorkspaceMemberResponse {
 }
 
 /**
- * Response type for API keys
+ * Simplified API key response (with usage tracking)
  */
 export interface ApiKeyResponse {
   id: string;
   provider: LLMProvider;
   displayName: string;
-  endpoint: string | null;
-  authType: AuthType;
-  providerConfig: any;
   isActive: boolean;
   lastUsedAt: Date | null;
   createdAt: Date;
-  expiresAt?: Date | null;
+
+  // Usage metrics
+  usageCount: number;
+  totalTokens: string; // BigInt as string
+  totalCost: number;
+
+  // Error tracking
+  lastErrorAt: Date | null;
+
+  // Creator
+  createdBy: {
+    id: string;
+    name: string | null;
+    email: string;
+  };
 }
 
 /**
@@ -150,4 +157,34 @@ export interface AcceptInvitationResponse {
  */
 export interface MessageResponse {
   message: string;
+}
+
+/**
+ * API key usage statistics (simplified)
+ */
+export interface ApiKeyUsageStats {
+  totalKeys: number;
+  activeKeys: number;
+  inactiveKeys: number;
+  providerBreakdown: Record<string, number>;
+
+  // Cumulative metrics
+  totalUsageCount: number;
+  totalTokensConsumed: string; // BigInt as string
+  totalCostIncurred: number;
+}
+
+/**
+ * Usage metric response (daily aggregated)
+ */
+export interface UsageMetricResponse {
+  id: string;
+  date: Date;
+  requestCount: number;
+  successCount: number;
+  errorCount: number;
+  promptTokens: string; // BigInt as string
+  completionTokens: string; // BigInt as string
+  totalTokens: string; // BigInt as string
+  estimatedCost: number;
 }

@@ -1,97 +1,124 @@
-import { useState, useEffect, useCallback } from 'react';
+// hooks/useWorkspaceInvitations.ts
+
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import axiosInstance from '@/lib/axios-instance';
+import { WorkspaceInvitation, SendInvitationDto } from '../types/settings.types';
 
-export interface WorkspaceInvitation {
-  id: string;
-  workspaceId: string;
-  email: string;
-  role: string;
-  permissions: {
-    canCreateCanvas: boolean;
-    canDeleteCanvas: boolean;
-    canInviteMembers: boolean;
-    canManageApiKeys: boolean;
-    canManageMembers: boolean;
-  };
-  invitedBy: string;
-  invitedUserId: string | null;
-  token: string;
-  status: 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'REVOKED';
-  createdAt: string;
-  expiresAt: string;
-  acceptedAt: string | null;
+interface UseWorkspaceInvitationsOptions {
+  autoRefresh?: boolean;
+  refreshInterval?: number;
 }
 
-export interface SendInvitationDto {
-  email: string;
-  role?: string;
-  permissions?: {
-    canCreateCanvas?: boolean;
-    canDeleteCanvas?: boolean;
-    canInviteMembers?: boolean;
-    canManageApiKeys?: boolean;
-    canManageMembers?: boolean;
-  };
-}
+export function useWorkspaceInvitations(
+  workspaceId: string,
+  options: UseWorkspaceInvitationsOptions = {}
+) {
+  const { autoRefresh = false, refreshInterval = 30000 } = options;
 
-export function useWorkspaceInvitations(workspaceId: string) {
+  // ✅ INITIALIZE AS EMPTY ARRAY
   const [invitations, setInvitations] = useState<WorkspaceInvitation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const fetchInvitations = useCallback(async () => {
-    if (!workspaceId) return;
+  const fetchInvitations = useCallback(
+    async (showLoading: boolean = true) => {
+      if (!workspaceId) return;
 
-    setIsLoading(true);
-    try {
-      const response = await axiosInstance.get(`/workspaces/${workspaceId}/invitations`);
-      // ✅ FIX: Extract data from response.data.data
-      setInvitations(response.data.data || []);
-    } catch (error: any) {
-      toast.error('Failed to load invitations', {
-        description: error.response?.data?.message || 'Please try again',
-      });
-      setInvitations([]);
-    } finally {
-      setIsLoading(false);
+      try {
+        if (showLoading) {
+          setIsLoading(true);
+        } else {
+          setIsRefreshing(true);
+        }
+        setError(null);
+
+        const response = await axiosInstance.get(`/workspaces/${workspaceId}/invitations`);
+
+        // ✅ ENSURE ARRAY
+        setInvitations(Array.isArray(response.data) ? response.data : []);
+      } catch (error: any) {
+        const errorMessage = error.response?.data?.message || 'Failed to load invitations';
+        setError(errorMessage);
+        toast.error('Failed to load invitations', {
+          description: errorMessage,
+        });
+        setInvitations([]); // ✅ SET EMPTY ARRAY ON ERROR
+      } finally {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
+    },
+    [workspaceId]
+  );
+
+  const sendInvitation = useCallback(
+    async (data: SendInvitationDto) => {
+      try {
+        const response = await axiosInstance.post(`/workspaces/${workspaceId}/invitations`, data);
+
+        toast.success('Invitation sent successfully', {
+          description: `Invite sent to ${data.email}`,
+        });
+
+        await fetchInvitations(false);
+        return response.data;
+      } catch (error: any) {
+        toast.error('Failed to send invitation', {
+          description: error.response?.data?.message || 'Please try again',
+        });
+        throw error;
+      }
+    },
+    [workspaceId, fetchInvitations]
+  );
+
+  const revokeInvitation = useCallback(
+    async (invitationId: string) => {
+      try {
+        await axiosInstance.delete(`/workspaces/${workspaceId}/invitations/${invitationId}`);
+
+        toast.success('Invitation revoked successfully');
+
+        setInvitations((prev) => prev.filter((inv) => inv.id !== invitationId));
+      } catch (error: any) {
+        toast.error('Failed to revoke invitation', {
+          description: error.response?.data?.message || 'Please try again',
+        });
+        throw error;
+      }
+    },
+    [workspaceId]
+  );
+
+  const pendingInvitations = useMemo(
+    () => invitations.filter((inv) => inv.status === 'PENDING'),
+    [invitations]
+  );
+
+  useEffect(() => {
+    if (autoRefresh && refreshInterval > 0) {
+      const interval = setInterval(() => {
+        fetchInvitations(false);
+      }, refreshInterval);
+
+      return () => clearInterval(interval);
     }
-  }, [workspaceId]);
-
-  const sendInvitation = async (data: SendInvitationDto) => {
-    try {
-      const response = await axiosInstance.post(`/workspaces/${workspaceId}/invitations`, data);
-      toast.success('Invitation sent successfully', {
-        description: `Invite sent to ${data.email}`,
-      });
-      await fetchInvitations();
-      return response.data.data;
-    } catch (error: any) {
-      toast.error('Failed to send invitation', {
-        description: error.response?.data?.message || 'Please try again',
-      });
-      throw error;
-    }
-  };
-
-  const revokeInvitation = async (invitationId: string) => {
-    try {
-      await axiosInstance.delete(`/workspaces/${workspaceId}/invitations/${invitationId}`);
-      await fetchInvitations(); // Refresh list after revoking
-    } catch (error: any) {
-      toast.error('Failed to revoke invitation', {
-        description: error.response?.data?.message || 'Please try again',
-      });
-      throw error;
-    }
-  };
+  }, [autoRefresh, refreshInterval, fetchInvitations]);
 
   useEffect(() => {
     fetchInvitations();
   }, [fetchInvitations]);
 
   return {
-    invitations,
+    invitations, // ✅ ALWAYS AN ARRAY
+    pendingInvitations,
     isLoading,
+    isRefreshing,
+    error,
+    totalInvitations: invitations.length,
+    pendingCount: pendingInvitations.length,
     sendInvitation,
     revokeInvitation,
     refetch: fetchInvitations,

@@ -459,6 +459,7 @@ exports.Prisma.PodExecutionScalarFieldEnum = {
   startedAt: 'startedAt',
   finishedAt: 'finishedAt',
   runtimeInMs: 'runtimeInMs',
+  apiKeyId: 'apiKeyId',
   provider: 'provider',
   modelId: 'modelId',
   modelName: 'modelName',
@@ -481,6 +482,7 @@ exports.Prisma.PodUsageLogScalarFieldEnum = {
   flowId: 'flowId',
   workspaceId: 'workspaceId',
   subscriptionId: 'subscriptionId',
+  apiKeyId: 'apiKeyId',
   provider: 'provider',
   modelId: 'modelId',
   modelName: 'modelName',
@@ -584,13 +586,30 @@ exports.Prisma.ProviderAPIKeyScalarFieldEnum = {
   provider: 'provider',
   displayName: 'displayName',
   keyHash: 'keyHash',
-  providerConfig: 'providerConfig',
-  endpoint: 'endpoint',
-  authType: 'authType',
   isActive: 'isActive',
   lastUsedAt: 'lastUsedAt',
+  usageCount: 'usageCount',
+  totalTokens: 'totalTokens',
+  totalCost: 'totalCost',
+  lastErrorAt: 'lastErrorAt',
+  createdById: 'createdById',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.UsageMetricScalarFieldEnum = {
+  id: 'id',
+  workspaceId: 'workspaceId',
+  keyId: 'keyId',
+  date: 'date',
+  requestCount: 'requestCount',
+  successCount: 'successCount',
+  errorCount: 'errorCount',
+  promptTokens: 'promptTokens',
+  completionTokens: 'completionTokens',
+  totalTokens: 'totalTokens',
+  estimatedCost: 'estimatedCost',
   createdAt: 'createdAt',
-  expiresAt: 'expiresAt'
+  updatedAt: 'updatedAt'
 };
 
 exports.Prisma.ShareLinkScalarFieldEnum = {
@@ -893,6 +912,7 @@ exports.Prisma.PodExecutionOrderByRelevanceFieldEnum = {
   podId: 'podId',
   flowId: 'flowId',
   workspaceId: 'workspaceId',
+  apiKeyId: 'apiKeyId',
   modelId: 'modelId',
   modelName: 'modelName',
   errorMessage: 'errorMessage',
@@ -906,6 +926,7 @@ exports.Prisma.PodUsageLogOrderByRelevanceFieldEnum = {
   flowId: 'flowId',
   workspaceId: 'workspaceId',
   subscriptionId: 'subscriptionId',
+  apiKeyId: 'apiKeyId',
   modelId: 'modelId',
   modelName: 'modelName'
 };
@@ -967,7 +988,13 @@ exports.Prisma.ProviderAPIKeyOrderByRelevanceFieldEnum = {
   workspaceId: 'workspaceId',
   displayName: 'displayName',
   keyHash: 'keyHash',
-  endpoint: 'endpoint'
+  createdById: 'createdById'
+};
+
+exports.Prisma.UsageMetricOrderByRelevanceFieldEnum = {
+  id: 'id',
+  workspaceId: 'workspaceId',
+  keyId: 'keyId'
 };
 
 exports.Prisma.ShareLinkOrderByRelevanceFieldEnum = {
@@ -1139,20 +1166,10 @@ exports.LLMProvider = exports.$Enums.LLMProvider = {
   GOOGLE_GEMINI: 'GOOGLE_GEMINI',
   PERPLEXITY: 'PERPLEXITY',
   MISTRAL: 'MISTRAL',
-  META_AI: 'META_AI',
-  XAI: 'XAI',
-  DEEPSEEK: 'DEEPSEEK',
   COHERE: 'COHERE',
   GROQ: 'GROQ',
-  TOGETHER: 'TOGETHER',
-  REPLICATE: 'REPLICATE',
-  HUGGINGFACE: 'HUGGINGFACE',
-  OPENROUTER: 'OPENROUTER',
-  BEDROCK: 'BEDROCK',
-  OLLAMA: 'OLLAMA',
-  VLLM: 'VLLM',
-  LLAMACPP: 'LLAMACPP',
-  TEXTGEN_WEBUI: 'TEXTGEN_WEBUI',
+  XAI: 'XAI',
+  DEEPSEEK: 'DEEPSEEK',
   CUSTOM: 'CUSTOM'
 };
 
@@ -1263,15 +1280,6 @@ exports.WorkspaceRole = exports.$Enums.WorkspaceRole = {
   VIEWER: 'VIEWER'
 };
 
-exports.AuthType = exports.$Enums.AuthType = {
-  BEARER_TOKEN: 'BEARER_TOKEN',
-  API_KEY_HEADER: 'API_KEY_HEADER',
-  BASIC_AUTH: 'BASIC_AUTH',
-  OAUTH2: 'OAUTH2',
-  AWS_SIGV4: 'AWS_SIGV4',
-  CUSTOM_HEADER: 'CUSTOM_HEADER'
-};
-
 exports.ShareableAssetType = exports.$Enums.ShareableAssetType = {
   FLOW: 'FLOW',
   CONTEXT_MODULE: 'CONTEXT_MODULE'
@@ -1341,6 +1349,7 @@ exports.Prisma.ModelName = {
   WorkspaceUser: 'WorkspaceUser',
   WorkspaceInvitation: 'WorkspaceInvitation',
   ProviderAPIKey: 'ProviderAPIKey',
+  UsageMetric: 'UsageMetric',
   ShareLink: 'ShareLink',
   DocumentFolder: 'DocumentFolder',
   Document: 'Document',

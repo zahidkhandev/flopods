@@ -164,6 +164,11 @@ export type WorkspaceInvitation = $Result.DefaultSelection<Prisma.$WorkspaceInvi
  */
 export type ProviderAPIKey = $Result.DefaultSelection<Prisma.$ProviderAPIKeyPayload>
 /**
+ * Model UsageMetric
+ * 
+ */
+export type UsageMetric = $Result.DefaultSelection<Prisma.$UsageMetricPayload>
+/**
  * Model ShareLink
  * 
  */
@@ -485,36 +490,14 @@ export const LLMProvider: {
   GOOGLE_GEMINI: 'GOOGLE_GEMINI',
   PERPLEXITY: 'PERPLEXITY',
   MISTRAL: 'MISTRAL',
-  META_AI: 'META_AI',
-  XAI: 'XAI',
-  DEEPSEEK: 'DEEPSEEK',
   COHERE: 'COHERE',
   GROQ: 'GROQ',
-  TOGETHER: 'TOGETHER',
-  REPLICATE: 'REPLICATE',
-  HUGGINGFACE: 'HUGGINGFACE',
-  OPENROUTER: 'OPENROUTER',
-  BEDROCK: 'BEDROCK',
-  OLLAMA: 'OLLAMA',
-  VLLM: 'VLLM',
-  LLAMACPP: 'LLAMACPP',
-  TEXTGEN_WEBUI: 'TEXTGEN_WEBUI',
+  XAI: 'XAI',
+  DEEPSEEK: 'DEEPSEEK',
   CUSTOM: 'CUSTOM'
 };
 
 export type LLMProvider = (typeof LLMProvider)[keyof typeof LLMProvider]
-
-
-export const AuthType: {
-  BEARER_TOKEN: 'BEARER_TOKEN',
-  API_KEY_HEADER: 'API_KEY_HEADER',
-  BASIC_AUTH: 'BASIC_AUTH',
-  OAUTH2: 'OAUTH2',
-  AWS_SIGV4: 'AWS_SIGV4',
-  CUSTOM_HEADER: 'CUSTOM_HEADER'
-};
-
-export type AuthType = (typeof AuthType)[keyof typeof AuthType]
 
 
 export const ShareableAssetType: {
@@ -645,10 +628,6 @@ export const ShareAccessLevel: typeof $Enums.ShareAccessLevel
 export type LLMProvider = $Enums.LLMProvider
 
 export const LLMProvider: typeof $Enums.LLMProvider
-
-export type AuthType = $Enums.AuthType
-
-export const AuthType: typeof $Enums.AuthType
 
 export type ShareableAssetType = $Enums.ShareableAssetType
 
@@ -1083,6 +1062,16 @@ export class PrismaClient<
     * ```
     */
   get providerAPIKey(): Prisma.ProviderAPIKeyDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.usageMetric`: Exposes CRUD operations for the **UsageMetric** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more UsageMetrics
+    * const usageMetrics = await prisma.usageMetric.findMany()
+    * ```
+    */
+  get usageMetric(): Prisma.UsageMetricDelegate<ExtArgs, ClientOptions>;
 
   /**
    * `prisma.shareLink`: Exposes CRUD operations for the **ShareLink** model.
@@ -1603,6 +1592,7 @@ export namespace Prisma {
     WorkspaceUser: 'WorkspaceUser',
     WorkspaceInvitation: 'WorkspaceInvitation',
     ProviderAPIKey: 'ProviderAPIKey',
+    UsageMetric: 'UsageMetric',
     ShareLink: 'ShareLink',
     DocumentFolder: 'DocumentFolder',
     Document: 'Document',
@@ -1626,7 +1616,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "admin" | "adminSession" | "adminAuditLog" | "adminPermission" | "adminAPIKey" | "adminInvitation" | "adminSecurityEvent" | "subscription" | "creditPurchase" | "creditUsageLog" | "modelPricingTier" | "space" | "flow" | "flowInvitation" | "flowCollaborator" | "flowSession" | "flowActivityLog" | "flowComment" | "pod" | "edge" | "podExecution" | "podUsageLog" | "contextModule" | "user" | "refreshToken" | "account" | "workspace" | "workspaceUser" | "workspaceInvitation" | "providerAPIKey" | "shareLink" | "documentFolder" | "document" | "embedding" | "documentProcessingCost"
+      modelProps: "admin" | "adminSession" | "adminAuditLog" | "adminPermission" | "adminAPIKey" | "adminInvitation" | "adminSecurityEvent" | "subscription" | "creditPurchase" | "creditUsageLog" | "modelPricingTier" | "space" | "flow" | "flowInvitation" | "flowCollaborator" | "flowSession" | "flowActivityLog" | "flowComment" | "pod" | "edge" | "podExecution" | "podUsageLog" | "contextModule" | "user" | "refreshToken" | "account" | "workspace" | "workspaceUser" | "workspaceInvitation" | "providerAPIKey" | "usageMetric" | "shareLink" | "documentFolder" | "document" | "embedding" | "documentProcessingCost"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -3850,6 +3840,80 @@ export namespace Prisma {
           }
         }
       }
+      UsageMetric: {
+        payload: Prisma.$UsageMetricPayload<ExtArgs>
+        fields: Prisma.UsageMetricFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.UsageMetricFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UsageMetricPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.UsageMetricFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UsageMetricPayload>
+          }
+          findFirst: {
+            args: Prisma.UsageMetricFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UsageMetricPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.UsageMetricFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UsageMetricPayload>
+          }
+          findMany: {
+            args: Prisma.UsageMetricFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UsageMetricPayload>[]
+          }
+          create: {
+            args: Prisma.UsageMetricCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UsageMetricPayload>
+          }
+          createMany: {
+            args: Prisma.UsageMetricCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          createManyAndReturn: {
+            args: Prisma.UsageMetricCreateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UsageMetricPayload>[]
+          }
+          delete: {
+            args: Prisma.UsageMetricDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UsageMetricPayload>
+          }
+          update: {
+            args: Prisma.UsageMetricUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UsageMetricPayload>
+          }
+          deleteMany: {
+            args: Prisma.UsageMetricDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.UsageMetricUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateManyAndReturn: {
+            args: Prisma.UsageMetricUpdateManyAndReturnArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UsageMetricPayload>[]
+          }
+          upsert: {
+            args: Prisma.UsageMetricUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$UsageMetricPayload>
+          }
+          aggregate: {
+            args: Prisma.UsageMetricAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateUsageMetric>
+          }
+          groupBy: {
+            args: Prisma.UsageMetricGroupByArgs<ExtArgs>
+            result: $Utils.Optional<UsageMetricGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.UsageMetricCountArgs<ExtArgs>
+            result: $Utils.Optional<UsageMetricCountAggregateOutputType> | number
+          }
+        }
+      }
       ShareLink: {
         payload: Prisma.$ShareLinkPayload<ExtArgs>
         fields: Prisma.ShareLinkFieldRefs
@@ -4346,6 +4410,7 @@ export namespace Prisma {
     workspaceUser?: WorkspaceUserOmit
     workspaceInvitation?: WorkspaceInvitationOmit
     providerAPIKey?: ProviderAPIKeyOmit
+    usageMetric?: UsageMetricOmit
     shareLink?: ShareLinkOmit
     documentFolder?: DocumentFolderOmit
     document?: DocumentOmit
@@ -4756,6 +4821,7 @@ export namespace Prisma {
     receivedWorkspaceInvites: number
     sentFlowInvites: number
     receivedFlowInvites: number
+    createdApiKeys: number
   }
 
   export type UserCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -4767,6 +4833,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: boolean | UserCountOutputTypeCountReceivedWorkspaceInvitesArgs
     sentFlowInvites?: boolean | UserCountOutputTypeCountSentFlowInvitesArgs
     receivedFlowInvites?: boolean | UserCountOutputTypeCountReceivedFlowInvitesArgs
+    createdApiKeys?: boolean | UserCountOutputTypeCountCreatedApiKeysArgs
   }
 
   // Custom InputTypes
@@ -4836,6 +4903,13 @@ export namespace Prisma {
     where?: FlowInvitationWhereInput
   }
 
+  /**
+   * UserCountOutputType without action
+   */
+  export type UserCountOutputTypeCountCreatedApiKeysArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: ProviderAPIKeyWhereInput
+  }
+
 
   /**
    * Count Type WorkspaceCountOutputType
@@ -4851,6 +4925,7 @@ export namespace Prisma {
     shareLinks: number
     apiKeys: number
     invitations: number
+    usageMetrics: number
   }
 
   export type WorkspaceCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -4863,6 +4938,7 @@ export namespace Prisma {
     shareLinks?: boolean | WorkspaceCountOutputTypeCountShareLinksArgs
     apiKeys?: boolean | WorkspaceCountOutputTypeCountApiKeysArgs
     invitations?: boolean | WorkspaceCountOutputTypeCountInvitationsArgs
+    usageMetrics?: boolean | WorkspaceCountOutputTypeCountUsageMetricsArgs
   }
 
   // Custom InputTypes
@@ -4937,6 +5013,62 @@ export namespace Prisma {
    */
   export type WorkspaceCountOutputTypeCountInvitationsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     where?: WorkspaceInvitationWhereInput
+  }
+
+  /**
+   * WorkspaceCountOutputType without action
+   */
+  export type WorkspaceCountOutputTypeCountUsageMetricsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: UsageMetricWhereInput
+  }
+
+
+  /**
+   * Count Type ProviderAPIKeyCountOutputType
+   */
+
+  export type ProviderAPIKeyCountOutputType = {
+    usageMetrics: number
+    podExecutions: number
+    podUsageLogs: number
+  }
+
+  export type ProviderAPIKeyCountOutputTypeSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    usageMetrics?: boolean | ProviderAPIKeyCountOutputTypeCountUsageMetricsArgs
+    podExecutions?: boolean | ProviderAPIKeyCountOutputTypeCountPodExecutionsArgs
+    podUsageLogs?: boolean | ProviderAPIKeyCountOutputTypeCountPodUsageLogsArgs
+  }
+
+  // Custom InputTypes
+  /**
+   * ProviderAPIKeyCountOutputType without action
+   */
+  export type ProviderAPIKeyCountOutputTypeDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProviderAPIKeyCountOutputType
+     */
+    select?: ProviderAPIKeyCountOutputTypeSelect<ExtArgs> | null
+  }
+
+  /**
+   * ProviderAPIKeyCountOutputType without action
+   */
+  export type ProviderAPIKeyCountOutputTypeCountUsageMetricsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: UsageMetricWhereInput
+  }
+
+  /**
+   * ProviderAPIKeyCountOutputType without action
+   */
+  export type ProviderAPIKeyCountOutputTypeCountPodExecutionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: PodExecutionWhereInput
+  }
+
+  /**
+   * ProviderAPIKeyCountOutputType without action
+   */
+  export type ProviderAPIKeyCountOutputTypeCountPodUsageLogsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: PodUsageLogWhereInput
   }
 
 
@@ -29383,6 +29515,7 @@ export namespace Prisma {
     startedAt: Date | null
     finishedAt: Date | null
     runtimeInMs: number | null
+    apiKeyId: string | null
     provider: $Enums.LLMProvider | null
     modelId: string | null
     modelName: string | null
@@ -29404,6 +29537,7 @@ export namespace Prisma {
     startedAt: Date | null
     finishedAt: Date | null
     runtimeInMs: number | null
+    apiKeyId: string | null
     provider: $Enums.LLMProvider | null
     modelId: string | null
     modelName: string | null
@@ -29425,6 +29559,7 @@ export namespace Prisma {
     startedAt: number
     finishedAt: number
     runtimeInMs: number
+    apiKeyId: number
     provider: number
     modelId: number
     modelName: number
@@ -29469,6 +29604,7 @@ export namespace Prisma {
     startedAt?: true
     finishedAt?: true
     runtimeInMs?: true
+    apiKeyId?: true
     provider?: true
     modelId?: true
     modelName?: true
@@ -29490,6 +29626,7 @@ export namespace Prisma {
     startedAt?: true
     finishedAt?: true
     runtimeInMs?: true
+    apiKeyId?: true
     provider?: true
     modelId?: true
     modelName?: true
@@ -29511,6 +29648,7 @@ export namespace Prisma {
     startedAt?: true
     finishedAt?: true
     runtimeInMs?: true
+    apiKeyId?: true
     provider?: true
     modelId?: true
     modelName?: true
@@ -29622,6 +29760,7 @@ export namespace Prisma {
     startedAt: Date
     finishedAt: Date | null
     runtimeInMs: number | null
+    apiKeyId: string | null
     provider: $Enums.LLMProvider
     modelId: string
     modelName: string | null
@@ -29665,6 +29804,7 @@ export namespace Prisma {
     startedAt?: boolean
     finishedAt?: boolean
     runtimeInMs?: boolean
+    apiKeyId?: boolean
     provider?: boolean
     modelId?: boolean
     modelName?: boolean
@@ -29679,6 +29819,7 @@ export namespace Prisma {
     creditsConsumed?: boolean
     costInUsd?: boolean
     pod?: boolean | PodDefaultArgs<ExtArgs>
+    apiKey?: boolean | PodExecution$apiKeyArgs<ExtArgs>
   }, ExtArgs["result"]["podExecution"]>
 
   export type PodExecutionSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -29690,6 +29831,7 @@ export namespace Prisma {
     startedAt?: boolean
     finishedAt?: boolean
     runtimeInMs?: boolean
+    apiKeyId?: boolean
     provider?: boolean
     modelId?: boolean
     modelName?: boolean
@@ -29704,6 +29846,7 @@ export namespace Prisma {
     creditsConsumed?: boolean
     costInUsd?: boolean
     pod?: boolean | PodDefaultArgs<ExtArgs>
+    apiKey?: boolean | PodExecution$apiKeyArgs<ExtArgs>
   }, ExtArgs["result"]["podExecution"]>
 
   export type PodExecutionSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -29715,6 +29858,7 @@ export namespace Prisma {
     startedAt?: boolean
     finishedAt?: boolean
     runtimeInMs?: boolean
+    apiKeyId?: boolean
     provider?: boolean
     modelId?: boolean
     modelName?: boolean
@@ -29729,6 +29873,7 @@ export namespace Prisma {
     creditsConsumed?: boolean
     costInUsd?: boolean
     pod?: boolean | PodDefaultArgs<ExtArgs>
+    apiKey?: boolean | PodExecution$apiKeyArgs<ExtArgs>
   }, ExtArgs["result"]["podExecution"]>
 
   export type PodExecutionSelectScalar = {
@@ -29740,6 +29885,7 @@ export namespace Prisma {
     startedAt?: boolean
     finishedAt?: boolean
     runtimeInMs?: boolean
+    apiKeyId?: boolean
     provider?: boolean
     modelId?: boolean
     modelName?: boolean
@@ -29755,21 +29901,25 @@ export namespace Prisma {
     costInUsd?: boolean
   }
 
-  export type PodExecutionOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "podId" | "flowId" | "workspaceId" | "status" | "startedAt" | "finishedAt" | "runtimeInMs" | "provider" | "modelId" | "modelName" | "providerMetadata" | "requestMetadata" | "responseMetadata" | "errorMessage" | "errorCode" | "inputTokens" | "outputTokens" | "reasoningTokens" | "creditsConsumed" | "costInUsd", ExtArgs["result"]["podExecution"]>
+  export type PodExecutionOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "podId" | "flowId" | "workspaceId" | "status" | "startedAt" | "finishedAt" | "runtimeInMs" | "apiKeyId" | "provider" | "modelId" | "modelName" | "providerMetadata" | "requestMetadata" | "responseMetadata" | "errorMessage" | "errorCode" | "inputTokens" | "outputTokens" | "reasoningTokens" | "creditsConsumed" | "costInUsd", ExtArgs["result"]["podExecution"]>
   export type PodExecutionInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     pod?: boolean | PodDefaultArgs<ExtArgs>
+    apiKey?: boolean | PodExecution$apiKeyArgs<ExtArgs>
   }
   export type PodExecutionIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     pod?: boolean | PodDefaultArgs<ExtArgs>
+    apiKey?: boolean | PodExecution$apiKeyArgs<ExtArgs>
   }
   export type PodExecutionIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     pod?: boolean | PodDefaultArgs<ExtArgs>
+    apiKey?: boolean | PodExecution$apiKeyArgs<ExtArgs>
   }
 
   export type $PodExecutionPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "PodExecution"
     objects: {
       pod: Prisma.$PodPayload<ExtArgs>
+      apiKey: Prisma.$ProviderAPIKeyPayload<ExtArgs> | null
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -29780,6 +29930,7 @@ export namespace Prisma {
       startedAt: Date
       finishedAt: Date | null
       runtimeInMs: number | null
+      apiKeyId: string | null
       provider: $Enums.LLMProvider
       modelId: string
       modelName: string | null
@@ -30188,6 +30339,7 @@ export namespace Prisma {
   export interface Prisma__PodExecutionClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     pod<T extends PodDefaultArgs<ExtArgs> = {}>(args?: Subset<T, PodDefaultArgs<ExtArgs>>): Prisma__PodClient<$Result.GetResult<Prisma.$PodPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    apiKey<T extends PodExecution$apiKeyArgs<ExtArgs> = {}>(args?: Subset<T, PodExecution$apiKeyArgs<ExtArgs>>): Prisma__ProviderAPIKeyClient<$Result.GetResult<Prisma.$ProviderAPIKeyPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -30225,6 +30377,7 @@ export namespace Prisma {
     readonly startedAt: FieldRef<"PodExecution", 'DateTime'>
     readonly finishedAt: FieldRef<"PodExecution", 'DateTime'>
     readonly runtimeInMs: FieldRef<"PodExecution", 'Int'>
+    readonly apiKeyId: FieldRef<"PodExecution", 'String'>
     readonly provider: FieldRef<"PodExecution", 'LLMProvider'>
     readonly modelId: FieldRef<"PodExecution", 'String'>
     readonly modelName: FieldRef<"PodExecution", 'String'>
@@ -30634,6 +30787,25 @@ export namespace Prisma {
   }
 
   /**
+   * PodExecution.apiKey
+   */
+  export type PodExecution$apiKeyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProviderAPIKey
+     */
+    select?: ProviderAPIKeySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProviderAPIKey
+     */
+    omit?: ProviderAPIKeyOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ProviderAPIKeyInclude<ExtArgs> | null
+    where?: ProviderAPIKeyWhereInput
+  }
+
+  /**
    * PodExecution without action
    */
   export type PodExecutionDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -30695,6 +30867,7 @@ export namespace Prisma {
     flowId: string | null
     workspaceId: string | null
     subscriptionId: string | null
+    apiKeyId: string | null
     provider: $Enums.LLMProvider | null
     modelId: string | null
     modelName: string | null
@@ -30717,6 +30890,7 @@ export namespace Prisma {
     flowId: string | null
     workspaceId: string | null
     subscriptionId: string | null
+    apiKeyId: string | null
     provider: $Enums.LLMProvider | null
     modelId: string | null
     modelName: string | null
@@ -30739,6 +30913,7 @@ export namespace Prisma {
     flowId: number
     workspaceId: number
     subscriptionId: number
+    apiKeyId: number
     provider: number
     modelId: number
     modelName: number
@@ -30788,6 +30963,7 @@ export namespace Prisma {
     flowId?: true
     workspaceId?: true
     subscriptionId?: true
+    apiKeyId?: true
     provider?: true
     modelId?: true
     modelName?: true
@@ -30810,6 +30986,7 @@ export namespace Prisma {
     flowId?: true
     workspaceId?: true
     subscriptionId?: true
+    apiKeyId?: true
     provider?: true
     modelId?: true
     modelName?: true
@@ -30832,6 +31009,7 @@ export namespace Prisma {
     flowId?: true
     workspaceId?: true
     subscriptionId?: true
+    apiKeyId?: true
     provider?: true
     modelId?: true
     modelName?: true
@@ -30942,6 +31120,7 @@ export namespace Prisma {
     flowId: string
     workspaceId: string
     subscriptionId: string
+    apiKeyId: string | null
     provider: $Enums.LLMProvider
     modelId: string
     modelName: string | null
@@ -30984,6 +31163,7 @@ export namespace Prisma {
     flowId?: boolean
     workspaceId?: boolean
     subscriptionId?: boolean
+    apiKeyId?: boolean
     provider?: boolean
     modelId?: boolean
     modelName?: boolean
@@ -31000,6 +31180,7 @@ export namespace Prisma {
     executedAt?: boolean
     pod?: boolean | PodDefaultArgs<ExtArgs>
     subscription?: boolean | SubscriptionDefaultArgs<ExtArgs>
+    apiKey?: boolean | PodUsageLog$apiKeyArgs<ExtArgs>
   }, ExtArgs["result"]["podUsageLog"]>
 
   export type PodUsageLogSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -31009,6 +31190,7 @@ export namespace Prisma {
     flowId?: boolean
     workspaceId?: boolean
     subscriptionId?: boolean
+    apiKeyId?: boolean
     provider?: boolean
     modelId?: boolean
     modelName?: boolean
@@ -31025,6 +31207,7 @@ export namespace Prisma {
     executedAt?: boolean
     pod?: boolean | PodDefaultArgs<ExtArgs>
     subscription?: boolean | SubscriptionDefaultArgs<ExtArgs>
+    apiKey?: boolean | PodUsageLog$apiKeyArgs<ExtArgs>
   }, ExtArgs["result"]["podUsageLog"]>
 
   export type PodUsageLogSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -31034,6 +31217,7 @@ export namespace Prisma {
     flowId?: boolean
     workspaceId?: boolean
     subscriptionId?: boolean
+    apiKeyId?: boolean
     provider?: boolean
     modelId?: boolean
     modelName?: boolean
@@ -31050,6 +31234,7 @@ export namespace Prisma {
     executedAt?: boolean
     pod?: boolean | PodDefaultArgs<ExtArgs>
     subscription?: boolean | SubscriptionDefaultArgs<ExtArgs>
+    apiKey?: boolean | PodUsageLog$apiKeyArgs<ExtArgs>
   }, ExtArgs["result"]["podUsageLog"]>
 
   export type PodUsageLogSelectScalar = {
@@ -31059,6 +31244,7 @@ export namespace Prisma {
     flowId?: boolean
     workspaceId?: boolean
     subscriptionId?: boolean
+    apiKeyId?: boolean
     provider?: boolean
     modelId?: boolean
     modelName?: boolean
@@ -31075,18 +31261,21 @@ export namespace Prisma {
     executedAt?: boolean
   }
 
-  export type PodUsageLogOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "podId" | "executionId" | "flowId" | "workspaceId" | "subscriptionId" | "provider" | "modelId" | "modelName" | "providerMetadata" | "inputTokens" | "outputTokens" | "reasoningTokens" | "creditsConsumed" | "runtimeInMs" | "inputTokenCost" | "outputTokenCost" | "reasoningTokenCost" | "totalCostInUsd" | "executedAt", ExtArgs["result"]["podUsageLog"]>
+  export type PodUsageLogOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "podId" | "executionId" | "flowId" | "workspaceId" | "subscriptionId" | "apiKeyId" | "provider" | "modelId" | "modelName" | "providerMetadata" | "inputTokens" | "outputTokens" | "reasoningTokens" | "creditsConsumed" | "runtimeInMs" | "inputTokenCost" | "outputTokenCost" | "reasoningTokenCost" | "totalCostInUsd" | "executedAt", ExtArgs["result"]["podUsageLog"]>
   export type PodUsageLogInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     pod?: boolean | PodDefaultArgs<ExtArgs>
     subscription?: boolean | SubscriptionDefaultArgs<ExtArgs>
+    apiKey?: boolean | PodUsageLog$apiKeyArgs<ExtArgs>
   }
   export type PodUsageLogIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     pod?: boolean | PodDefaultArgs<ExtArgs>
     subscription?: boolean | SubscriptionDefaultArgs<ExtArgs>
+    apiKey?: boolean | PodUsageLog$apiKeyArgs<ExtArgs>
   }
   export type PodUsageLogIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     pod?: boolean | PodDefaultArgs<ExtArgs>
     subscription?: boolean | SubscriptionDefaultArgs<ExtArgs>
+    apiKey?: boolean | PodUsageLog$apiKeyArgs<ExtArgs>
   }
 
   export type $PodUsageLogPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -31094,6 +31283,7 @@ export namespace Prisma {
     objects: {
       pod: Prisma.$PodPayload<ExtArgs>
       subscription: Prisma.$SubscriptionPayload<ExtArgs>
+      apiKey: Prisma.$ProviderAPIKeyPayload<ExtArgs> | null
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -31102,6 +31292,7 @@ export namespace Prisma {
       flowId: string
       workspaceId: string
       subscriptionId: string
+      apiKeyId: string | null
       provider: $Enums.LLMProvider
       modelId: string
       modelName: string | null
@@ -31512,6 +31703,7 @@ export namespace Prisma {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     pod<T extends PodDefaultArgs<ExtArgs> = {}>(args?: Subset<T, PodDefaultArgs<ExtArgs>>): Prisma__PodClient<$Result.GetResult<Prisma.$PodPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
     subscription<T extends SubscriptionDefaultArgs<ExtArgs> = {}>(args?: Subset<T, SubscriptionDefaultArgs<ExtArgs>>): Prisma__SubscriptionClient<$Result.GetResult<Prisma.$SubscriptionPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    apiKey<T extends PodUsageLog$apiKeyArgs<ExtArgs> = {}>(args?: Subset<T, PodUsageLog$apiKeyArgs<ExtArgs>>): Prisma__ProviderAPIKeyClient<$Result.GetResult<Prisma.$ProviderAPIKeyPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -31547,6 +31739,7 @@ export namespace Prisma {
     readonly flowId: FieldRef<"PodUsageLog", 'String'>
     readonly workspaceId: FieldRef<"PodUsageLog", 'String'>
     readonly subscriptionId: FieldRef<"PodUsageLog", 'String'>
+    readonly apiKeyId: FieldRef<"PodUsageLog", 'String'>
     readonly provider: FieldRef<"PodUsageLog", 'LLMProvider'>
     readonly modelId: FieldRef<"PodUsageLog", 'String'>
     readonly modelName: FieldRef<"PodUsageLog", 'String'>
@@ -31954,6 +32147,25 @@ export namespace Prisma {
      * Limit how many PodUsageLogs to delete.
      */
     limit?: number
+  }
+
+  /**
+   * PodUsageLog.apiKey
+   */
+  export type PodUsageLog$apiKeyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProviderAPIKey
+     */
+    select?: ProviderAPIKeySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProviderAPIKey
+     */
+    omit?: ProviderAPIKeyOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ProviderAPIKeyInclude<ExtArgs> | null
+    where?: ProviderAPIKeyWhereInput
   }
 
   /**
@@ -33330,6 +33542,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: boolean | User$receivedWorkspaceInvitesArgs<ExtArgs>
     sentFlowInvites?: boolean | User$sentFlowInvitesArgs<ExtArgs>
     receivedFlowInvites?: boolean | User$receivedFlowInvitesArgs<ExtArgs>
+    createdApiKeys?: boolean | User$createdApiKeysArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["user"]>
 
@@ -33373,6 +33586,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: boolean | User$receivedWorkspaceInvitesArgs<ExtArgs>
     sentFlowInvites?: boolean | User$sentFlowInvitesArgs<ExtArgs>
     receivedFlowInvites?: boolean | User$receivedFlowInvitesArgs<ExtArgs>
+    createdApiKeys?: boolean | User$createdApiKeysArgs<ExtArgs>
     _count?: boolean | UserCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type UserIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
@@ -33389,6 +33603,7 @@ export namespace Prisma {
       receivedWorkspaceInvites: Prisma.$WorkspaceInvitationPayload<ExtArgs>[]
       sentFlowInvites: Prisma.$FlowInvitationPayload<ExtArgs>[]
       receivedFlowInvites: Prisma.$FlowInvitationPayload<ExtArgs>[]
+      createdApiKeys: Prisma.$ProviderAPIKeyPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -33800,6 +34015,7 @@ export namespace Prisma {
     receivedWorkspaceInvites<T extends User$receivedWorkspaceInvitesArgs<ExtArgs> = {}>(args?: Subset<T, User$receivedWorkspaceInvitesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$WorkspaceInvitationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     sentFlowInvites<T extends User$sentFlowInvitesArgs<ExtArgs> = {}>(args?: Subset<T, User$sentFlowInvitesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FlowInvitationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     receivedFlowInvites<T extends User$receivedFlowInvitesArgs<ExtArgs> = {}>(args?: Subset<T, User$receivedFlowInvitesArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FlowInvitationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    createdApiKeys<T extends User$createdApiKeysArgs<ExtArgs> = {}>(args?: Subset<T, User$createdApiKeysArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ProviderAPIKeyPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -34413,6 +34629,30 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: FlowInvitationScalarFieldEnum | FlowInvitationScalarFieldEnum[]
+  }
+
+  /**
+   * User.createdApiKeys
+   */
+  export type User$createdApiKeysArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the ProviderAPIKey
+     */
+    select?: ProviderAPIKeySelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the ProviderAPIKey
+     */
+    omit?: ProviderAPIKeyOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: ProviderAPIKeyInclude<ExtArgs> | null
+    where?: ProviderAPIKeyWhereInput
+    orderBy?: ProviderAPIKeyOrderByWithRelationInput | ProviderAPIKeyOrderByWithRelationInput[]
+    cursor?: ProviderAPIKeyWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: ProviderAPIKeyScalarFieldEnum | ProviderAPIKeyScalarFieldEnum[]
   }
 
   /**
@@ -36789,6 +37029,7 @@ export namespace Prisma {
     shareLinks?: boolean | Workspace$shareLinksArgs<ExtArgs>
     apiKeys?: boolean | Workspace$apiKeysArgs<ExtArgs>
     invitations?: boolean | Workspace$invitationsArgs<ExtArgs>
+    usageMetrics?: boolean | Workspace$usageMetricsArgs<ExtArgs>
     _count?: boolean | WorkspaceCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["workspace"]>
 
@@ -36828,6 +37069,7 @@ export namespace Prisma {
     shareLinks?: boolean | Workspace$shareLinksArgs<ExtArgs>
     apiKeys?: boolean | Workspace$apiKeysArgs<ExtArgs>
     invitations?: boolean | Workspace$invitationsArgs<ExtArgs>
+    usageMetrics?: boolean | Workspace$usageMetricsArgs<ExtArgs>
     _count?: boolean | WorkspaceCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type WorkspaceIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
@@ -36846,6 +37088,7 @@ export namespace Prisma {
       shareLinks: Prisma.$ShareLinkPayload<ExtArgs>[]
       apiKeys: Prisma.$ProviderAPIKeyPayload<ExtArgs>[]
       invitations: Prisma.$WorkspaceInvitationPayload<ExtArgs>[]
+      usageMetrics: Prisma.$UsageMetricPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -37257,6 +37500,7 @@ export namespace Prisma {
     shareLinks<T extends Workspace$shareLinksArgs<ExtArgs> = {}>(args?: Subset<T, Workspace$shareLinksArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ShareLinkPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     apiKeys<T extends Workspace$apiKeysArgs<ExtArgs> = {}>(args?: Subset<T, Workspace$apiKeysArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ProviderAPIKeyPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     invitations<T extends Workspace$invitationsArgs<ExtArgs> = {}>(args?: Subset<T, Workspace$invitationsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$WorkspaceInvitationPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    usageMetrics<T extends Workspace$usageMetricsArgs<ExtArgs> = {}>(args?: Subset<T, Workspace$usageMetricsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UsageMetricPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -37911,6 +38155,30 @@ export namespace Prisma {
     take?: number
     skip?: number
     distinct?: WorkspaceInvitationScalarFieldEnum | WorkspaceInvitationScalarFieldEnum[]
+  }
+
+  /**
+   * Workspace.usageMetrics
+   */
+  export type Workspace$usageMetricsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UsageMetric
+     */
+    select?: UsageMetricSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UsageMetric
+     */
+    omit?: UsageMetricOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UsageMetricInclude<ExtArgs> | null
+    where?: UsageMetricWhereInput
+    orderBy?: UsageMetricOrderByWithRelationInput | UsageMetricOrderByWithRelationInput[]
+    cursor?: UsageMetricWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: UsageMetricScalarFieldEnum | UsageMetricScalarFieldEnum[]
   }
 
   /**
@@ -40275,8 +40543,22 @@ export namespace Prisma {
 
   export type AggregateProviderAPIKey = {
     _count: ProviderAPIKeyCountAggregateOutputType | null
+    _avg: ProviderAPIKeyAvgAggregateOutputType | null
+    _sum: ProviderAPIKeySumAggregateOutputType | null
     _min: ProviderAPIKeyMinAggregateOutputType | null
     _max: ProviderAPIKeyMaxAggregateOutputType | null
+  }
+
+  export type ProviderAPIKeyAvgAggregateOutputType = {
+    usageCount: number | null
+    totalTokens: number | null
+    totalCost: Decimal | null
+  }
+
+  export type ProviderAPIKeySumAggregateOutputType = {
+    usageCount: number | null
+    totalTokens: bigint | null
+    totalCost: Decimal | null
   }
 
   export type ProviderAPIKeyMinAggregateOutputType = {
@@ -40285,12 +40567,14 @@ export namespace Prisma {
     provider: $Enums.LLMProvider | null
     displayName: string | null
     keyHash: string | null
-    endpoint: string | null
-    authType: $Enums.AuthType | null
     isActive: boolean | null
     lastUsedAt: Date | null
+    usageCount: number | null
+    totalTokens: bigint | null
+    totalCost: Decimal | null
+    lastErrorAt: Date | null
+    createdById: string | null
     createdAt: Date | null
-    expiresAt: Date | null
   }
 
   export type ProviderAPIKeyMaxAggregateOutputType = {
@@ -40299,12 +40583,14 @@ export namespace Prisma {
     provider: $Enums.LLMProvider | null
     displayName: string | null
     keyHash: string | null
-    endpoint: string | null
-    authType: $Enums.AuthType | null
     isActive: boolean | null
     lastUsedAt: Date | null
+    usageCount: number | null
+    totalTokens: bigint | null
+    totalCost: Decimal | null
+    lastErrorAt: Date | null
+    createdById: string | null
     createdAt: Date | null
-    expiresAt: Date | null
   }
 
   export type ProviderAPIKeyCountAggregateOutputType = {
@@ -40313,16 +40599,29 @@ export namespace Prisma {
     provider: number
     displayName: number
     keyHash: number
-    providerConfig: number
-    endpoint: number
-    authType: number
     isActive: number
     lastUsedAt: number
+    usageCount: number
+    totalTokens: number
+    totalCost: number
+    lastErrorAt: number
+    createdById: number
     createdAt: number
-    expiresAt: number
     _all: number
   }
 
+
+  export type ProviderAPIKeyAvgAggregateInputType = {
+    usageCount?: true
+    totalTokens?: true
+    totalCost?: true
+  }
+
+  export type ProviderAPIKeySumAggregateInputType = {
+    usageCount?: true
+    totalTokens?: true
+    totalCost?: true
+  }
 
   export type ProviderAPIKeyMinAggregateInputType = {
     id?: true
@@ -40330,12 +40629,14 @@ export namespace Prisma {
     provider?: true
     displayName?: true
     keyHash?: true
-    endpoint?: true
-    authType?: true
     isActive?: true
     lastUsedAt?: true
+    usageCount?: true
+    totalTokens?: true
+    totalCost?: true
+    lastErrorAt?: true
+    createdById?: true
     createdAt?: true
-    expiresAt?: true
   }
 
   export type ProviderAPIKeyMaxAggregateInputType = {
@@ -40344,12 +40645,14 @@ export namespace Prisma {
     provider?: true
     displayName?: true
     keyHash?: true
-    endpoint?: true
-    authType?: true
     isActive?: true
     lastUsedAt?: true
+    usageCount?: true
+    totalTokens?: true
+    totalCost?: true
+    lastErrorAt?: true
+    createdById?: true
     createdAt?: true
-    expiresAt?: true
   }
 
   export type ProviderAPIKeyCountAggregateInputType = {
@@ -40358,13 +40661,14 @@ export namespace Prisma {
     provider?: true
     displayName?: true
     keyHash?: true
-    providerConfig?: true
-    endpoint?: true
-    authType?: true
     isActive?: true
     lastUsedAt?: true
+    usageCount?: true
+    totalTokens?: true
+    totalCost?: true
+    lastErrorAt?: true
+    createdById?: true
     createdAt?: true
-    expiresAt?: true
     _all?: true
   }
 
@@ -40406,6 +40710,18 @@ export namespace Prisma {
     /**
      * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
      * 
+     * Select which fields to average
+    **/
+    _avg?: ProviderAPIKeyAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: ProviderAPIKeySumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
      * Select which fields to find the minimum value
     **/
     _min?: ProviderAPIKeyMinAggregateInputType
@@ -40436,6 +40752,8 @@ export namespace Prisma {
     take?: number
     skip?: number
     _count?: ProviderAPIKeyCountAggregateInputType | true
+    _avg?: ProviderAPIKeyAvgAggregateInputType
+    _sum?: ProviderAPIKeySumAggregateInputType
     _min?: ProviderAPIKeyMinAggregateInputType
     _max?: ProviderAPIKeyMaxAggregateInputType
   }
@@ -40446,14 +40764,17 @@ export namespace Prisma {
     provider: $Enums.LLMProvider
     displayName: string
     keyHash: string
-    providerConfig: JsonValue | null
-    endpoint: string | null
-    authType: $Enums.AuthType
     isActive: boolean
     lastUsedAt: Date | null
+    usageCount: number
+    totalTokens: bigint
+    totalCost: Decimal
+    lastErrorAt: Date | null
+    createdById: string
     createdAt: Date
-    expiresAt: Date | null
     _count: ProviderAPIKeyCountAggregateOutputType | null
+    _avg: ProviderAPIKeyAvgAggregateOutputType | null
+    _sum: ProviderAPIKeySumAggregateOutputType | null
     _min: ProviderAPIKeyMinAggregateOutputType | null
     _max: ProviderAPIKeyMaxAggregateOutputType | null
   }
@@ -40478,14 +40799,20 @@ export namespace Prisma {
     provider?: boolean
     displayName?: boolean
     keyHash?: boolean
-    providerConfig?: boolean
-    endpoint?: boolean
-    authType?: boolean
     isActive?: boolean
     lastUsedAt?: boolean
+    usageCount?: boolean
+    totalTokens?: boolean
+    totalCost?: boolean
+    lastErrorAt?: boolean
+    createdById?: boolean
     createdAt?: boolean
-    expiresAt?: boolean
     workspace?: boolean | WorkspaceDefaultArgs<ExtArgs>
+    createdBy?: boolean | UserDefaultArgs<ExtArgs>
+    usageMetrics?: boolean | ProviderAPIKey$usageMetricsArgs<ExtArgs>
+    podExecutions?: boolean | ProviderAPIKey$podExecutionsArgs<ExtArgs>
+    podUsageLogs?: boolean | ProviderAPIKey$podUsageLogsArgs<ExtArgs>
+    _count?: boolean | ProviderAPIKeyCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["providerAPIKey"]>
 
   export type ProviderAPIKeySelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -40494,14 +40821,16 @@ export namespace Prisma {
     provider?: boolean
     displayName?: boolean
     keyHash?: boolean
-    providerConfig?: boolean
-    endpoint?: boolean
-    authType?: boolean
     isActive?: boolean
     lastUsedAt?: boolean
+    usageCount?: boolean
+    totalTokens?: boolean
+    totalCost?: boolean
+    lastErrorAt?: boolean
+    createdById?: boolean
     createdAt?: boolean
-    expiresAt?: boolean
     workspace?: boolean | WorkspaceDefaultArgs<ExtArgs>
+    createdBy?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["providerAPIKey"]>
 
   export type ProviderAPIKeySelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
@@ -40510,14 +40839,16 @@ export namespace Prisma {
     provider?: boolean
     displayName?: boolean
     keyHash?: boolean
-    providerConfig?: boolean
-    endpoint?: boolean
-    authType?: boolean
     isActive?: boolean
     lastUsedAt?: boolean
+    usageCount?: boolean
+    totalTokens?: boolean
+    totalCost?: boolean
+    lastErrorAt?: boolean
+    createdById?: boolean
     createdAt?: boolean
-    expiresAt?: boolean
     workspace?: boolean | WorkspaceDefaultArgs<ExtArgs>
+    createdBy?: boolean | UserDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["providerAPIKey"]>
 
   export type ProviderAPIKeySelectScalar = {
@@ -40526,30 +40857,42 @@ export namespace Prisma {
     provider?: boolean
     displayName?: boolean
     keyHash?: boolean
-    providerConfig?: boolean
-    endpoint?: boolean
-    authType?: boolean
     isActive?: boolean
     lastUsedAt?: boolean
+    usageCount?: boolean
+    totalTokens?: boolean
+    totalCost?: boolean
+    lastErrorAt?: boolean
+    createdById?: boolean
     createdAt?: boolean
-    expiresAt?: boolean
   }
 
-  export type ProviderAPIKeyOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "workspaceId" | "provider" | "displayName" | "keyHash" | "providerConfig" | "endpoint" | "authType" | "isActive" | "lastUsedAt" | "createdAt" | "expiresAt", ExtArgs["result"]["providerAPIKey"]>
+  export type ProviderAPIKeyOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "workspaceId" | "provider" | "displayName" | "keyHash" | "isActive" | "lastUsedAt" | "usageCount" | "totalTokens" | "totalCost" | "lastErrorAt" | "createdById" | "createdAt", ExtArgs["result"]["providerAPIKey"]>
   export type ProviderAPIKeyInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     workspace?: boolean | WorkspaceDefaultArgs<ExtArgs>
+    createdBy?: boolean | UserDefaultArgs<ExtArgs>
+    usageMetrics?: boolean | ProviderAPIKey$usageMetricsArgs<ExtArgs>
+    podExecutions?: boolean | ProviderAPIKey$podExecutionsArgs<ExtArgs>
+    podUsageLogs?: boolean | ProviderAPIKey$podUsageLogsArgs<ExtArgs>
+    _count?: boolean | ProviderAPIKeyCountOutputTypeDefaultArgs<ExtArgs>
   }
   export type ProviderAPIKeyIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     workspace?: boolean | WorkspaceDefaultArgs<ExtArgs>
+    createdBy?: boolean | UserDefaultArgs<ExtArgs>
   }
   export type ProviderAPIKeyIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     workspace?: boolean | WorkspaceDefaultArgs<ExtArgs>
+    createdBy?: boolean | UserDefaultArgs<ExtArgs>
   }
 
   export type $ProviderAPIKeyPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "ProviderAPIKey"
     objects: {
       workspace: Prisma.$WorkspacePayload<ExtArgs>
+      createdBy: Prisma.$UserPayload<ExtArgs>
+      usageMetrics: Prisma.$UsageMetricPayload<ExtArgs>[]
+      podExecutions: Prisma.$PodExecutionPayload<ExtArgs>[]
+      podUsageLogs: Prisma.$PodUsageLogPayload<ExtArgs>[]
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
@@ -40557,13 +40900,14 @@ export namespace Prisma {
       provider: $Enums.LLMProvider
       displayName: string
       keyHash: string
-      providerConfig: Prisma.JsonValue | null
-      endpoint: string | null
-      authType: $Enums.AuthType
       isActive: boolean
       lastUsedAt: Date | null
+      usageCount: number
+      totalTokens: bigint
+      totalCost: Prisma.Decimal
+      lastErrorAt: Date | null
+      createdById: string
       createdAt: Date
-      expiresAt: Date | null
     }, ExtArgs["result"]["providerAPIKey"]>
     composites: {}
   }
@@ -40959,6 +41303,10 @@ export namespace Prisma {
   export interface Prisma__ProviderAPIKeyClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
     readonly [Symbol.toStringTag]: "PrismaPromise"
     workspace<T extends WorkspaceDefaultArgs<ExtArgs> = {}>(args?: Subset<T, WorkspaceDefaultArgs<ExtArgs>>): Prisma__WorkspaceClient<$Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    createdBy<T extends UserDefaultArgs<ExtArgs> = {}>(args?: Subset<T, UserDefaultArgs<ExtArgs>>): Prisma__UserClient<$Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    usageMetrics<T extends ProviderAPIKey$usageMetricsArgs<ExtArgs> = {}>(args?: Subset<T, ProviderAPIKey$usageMetricsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UsageMetricPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    podExecutions<T extends ProviderAPIKey$podExecutionsArgs<ExtArgs> = {}>(args?: Subset<T, ProviderAPIKey$podExecutionsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$PodExecutionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+    podUsageLogs<T extends ProviderAPIKey$podUsageLogsArgs<ExtArgs> = {}>(args?: Subset<T, ProviderAPIKey$podUsageLogsArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$PodUsageLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
     /**
      * Attaches callbacks for the resolution and/or rejection of the Promise.
      * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -40993,13 +41341,14 @@ export namespace Prisma {
     readonly provider: FieldRef<"ProviderAPIKey", 'LLMProvider'>
     readonly displayName: FieldRef<"ProviderAPIKey", 'String'>
     readonly keyHash: FieldRef<"ProviderAPIKey", 'String'>
-    readonly providerConfig: FieldRef<"ProviderAPIKey", 'Json'>
-    readonly endpoint: FieldRef<"ProviderAPIKey", 'String'>
-    readonly authType: FieldRef<"ProviderAPIKey", 'AuthType'>
     readonly isActive: FieldRef<"ProviderAPIKey", 'Boolean'>
     readonly lastUsedAt: FieldRef<"ProviderAPIKey", 'DateTime'>
+    readonly usageCount: FieldRef<"ProviderAPIKey", 'Int'>
+    readonly totalTokens: FieldRef<"ProviderAPIKey", 'BigInt'>
+    readonly totalCost: FieldRef<"ProviderAPIKey", 'Decimal'>
+    readonly lastErrorAt: FieldRef<"ProviderAPIKey", 'DateTime'>
+    readonly createdById: FieldRef<"ProviderAPIKey", 'String'>
     readonly createdAt: FieldRef<"ProviderAPIKey", 'DateTime'>
-    readonly expiresAt: FieldRef<"ProviderAPIKey", 'DateTime'>
   }
     
 
@@ -41396,6 +41745,78 @@ export namespace Prisma {
   }
 
   /**
+   * ProviderAPIKey.usageMetrics
+   */
+  export type ProviderAPIKey$usageMetricsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UsageMetric
+     */
+    select?: UsageMetricSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UsageMetric
+     */
+    omit?: UsageMetricOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UsageMetricInclude<ExtArgs> | null
+    where?: UsageMetricWhereInput
+    orderBy?: UsageMetricOrderByWithRelationInput | UsageMetricOrderByWithRelationInput[]
+    cursor?: UsageMetricWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: UsageMetricScalarFieldEnum | UsageMetricScalarFieldEnum[]
+  }
+
+  /**
+   * ProviderAPIKey.podExecutions
+   */
+  export type ProviderAPIKey$podExecutionsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the PodExecution
+     */
+    select?: PodExecutionSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the PodExecution
+     */
+    omit?: PodExecutionOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PodExecutionInclude<ExtArgs> | null
+    where?: PodExecutionWhereInput
+    orderBy?: PodExecutionOrderByWithRelationInput | PodExecutionOrderByWithRelationInput[]
+    cursor?: PodExecutionWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: PodExecutionScalarFieldEnum | PodExecutionScalarFieldEnum[]
+  }
+
+  /**
+   * ProviderAPIKey.podUsageLogs
+   */
+  export type ProviderAPIKey$podUsageLogsArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the PodUsageLog
+     */
+    select?: PodUsageLogSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the PodUsageLog
+     */
+    omit?: PodUsageLogOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: PodUsageLogInclude<ExtArgs> | null
+    where?: PodUsageLogWhereInput
+    orderBy?: PodUsageLogOrderByWithRelationInput | PodUsageLogOrderByWithRelationInput[]
+    cursor?: PodUsageLogWhereUniqueInput
+    take?: number
+    skip?: number
+    distinct?: PodUsageLogScalarFieldEnum | PodUsageLogScalarFieldEnum[]
+  }
+
+  /**
    * ProviderAPIKey without action
    */
   export type ProviderAPIKeyDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -41411,6 +41832,1234 @@ export namespace Prisma {
      * Choose, which related nodes to fetch as well
      */
     include?: ProviderAPIKeyInclude<ExtArgs> | null
+  }
+
+
+  /**
+   * Model UsageMetric
+   */
+
+  export type AggregateUsageMetric = {
+    _count: UsageMetricCountAggregateOutputType | null
+    _avg: UsageMetricAvgAggregateOutputType | null
+    _sum: UsageMetricSumAggregateOutputType | null
+    _min: UsageMetricMinAggregateOutputType | null
+    _max: UsageMetricMaxAggregateOutputType | null
+  }
+
+  export type UsageMetricAvgAggregateOutputType = {
+    requestCount: number | null
+    successCount: number | null
+    errorCount: number | null
+    promptTokens: number | null
+    completionTokens: number | null
+    totalTokens: number | null
+    estimatedCost: Decimal | null
+  }
+
+  export type UsageMetricSumAggregateOutputType = {
+    requestCount: number | null
+    successCount: number | null
+    errorCount: number | null
+    promptTokens: bigint | null
+    completionTokens: bigint | null
+    totalTokens: bigint | null
+    estimatedCost: Decimal | null
+  }
+
+  export type UsageMetricMinAggregateOutputType = {
+    id: string | null
+    workspaceId: string | null
+    keyId: string | null
+    date: Date | null
+    requestCount: number | null
+    successCount: number | null
+    errorCount: number | null
+    promptTokens: bigint | null
+    completionTokens: bigint | null
+    totalTokens: bigint | null
+    estimatedCost: Decimal | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type UsageMetricMaxAggregateOutputType = {
+    id: string | null
+    workspaceId: string | null
+    keyId: string | null
+    date: Date | null
+    requestCount: number | null
+    successCount: number | null
+    errorCount: number | null
+    promptTokens: bigint | null
+    completionTokens: bigint | null
+    totalTokens: bigint | null
+    estimatedCost: Decimal | null
+    createdAt: Date | null
+    updatedAt: Date | null
+  }
+
+  export type UsageMetricCountAggregateOutputType = {
+    id: number
+    workspaceId: number
+    keyId: number
+    date: number
+    requestCount: number
+    successCount: number
+    errorCount: number
+    promptTokens: number
+    completionTokens: number
+    totalTokens: number
+    estimatedCost: number
+    createdAt: number
+    updatedAt: number
+    _all: number
+  }
+
+
+  export type UsageMetricAvgAggregateInputType = {
+    requestCount?: true
+    successCount?: true
+    errorCount?: true
+    promptTokens?: true
+    completionTokens?: true
+    totalTokens?: true
+    estimatedCost?: true
+  }
+
+  export type UsageMetricSumAggregateInputType = {
+    requestCount?: true
+    successCount?: true
+    errorCount?: true
+    promptTokens?: true
+    completionTokens?: true
+    totalTokens?: true
+    estimatedCost?: true
+  }
+
+  export type UsageMetricMinAggregateInputType = {
+    id?: true
+    workspaceId?: true
+    keyId?: true
+    date?: true
+    requestCount?: true
+    successCount?: true
+    errorCount?: true
+    promptTokens?: true
+    completionTokens?: true
+    totalTokens?: true
+    estimatedCost?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type UsageMetricMaxAggregateInputType = {
+    id?: true
+    workspaceId?: true
+    keyId?: true
+    date?: true
+    requestCount?: true
+    successCount?: true
+    errorCount?: true
+    promptTokens?: true
+    completionTokens?: true
+    totalTokens?: true
+    estimatedCost?: true
+    createdAt?: true
+    updatedAt?: true
+  }
+
+  export type UsageMetricCountAggregateInputType = {
+    id?: true
+    workspaceId?: true
+    keyId?: true
+    date?: true
+    requestCount?: true
+    successCount?: true
+    errorCount?: true
+    promptTokens?: true
+    completionTokens?: true
+    totalTokens?: true
+    estimatedCost?: true
+    createdAt?: true
+    updatedAt?: true
+    _all?: true
+  }
+
+  export type UsageMetricAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which UsageMetric to aggregate.
+     */
+    where?: UsageMetricWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of UsageMetrics to fetch.
+     */
+    orderBy?: UsageMetricOrderByWithRelationInput | UsageMetricOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: UsageMetricWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` UsageMetrics from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` UsageMetrics.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned UsageMetrics
+    **/
+    _count?: true | UsageMetricCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to average
+    **/
+    _avg?: UsageMetricAvgAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to sum
+    **/
+    _sum?: UsageMetricSumAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: UsageMetricMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: UsageMetricMaxAggregateInputType
+  }
+
+  export type GetUsageMetricAggregateType<T extends UsageMetricAggregateArgs> = {
+        [P in keyof T & keyof AggregateUsageMetric]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateUsageMetric[P]>
+      : GetScalarType<T[P], AggregateUsageMetric[P]>
+  }
+
+
+
+
+  export type UsageMetricGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: UsageMetricWhereInput
+    orderBy?: UsageMetricOrderByWithAggregationInput | UsageMetricOrderByWithAggregationInput[]
+    by: UsageMetricScalarFieldEnum[] | UsageMetricScalarFieldEnum
+    having?: UsageMetricScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: UsageMetricCountAggregateInputType | true
+    _avg?: UsageMetricAvgAggregateInputType
+    _sum?: UsageMetricSumAggregateInputType
+    _min?: UsageMetricMinAggregateInputType
+    _max?: UsageMetricMaxAggregateInputType
+  }
+
+  export type UsageMetricGroupByOutputType = {
+    id: string
+    workspaceId: string
+    keyId: string
+    date: Date
+    requestCount: number
+    successCount: number
+    errorCount: number
+    promptTokens: bigint
+    completionTokens: bigint
+    totalTokens: bigint
+    estimatedCost: Decimal
+    createdAt: Date
+    updatedAt: Date
+    _count: UsageMetricCountAggregateOutputType | null
+    _avg: UsageMetricAvgAggregateOutputType | null
+    _sum: UsageMetricSumAggregateOutputType | null
+    _min: UsageMetricMinAggregateOutputType | null
+    _max: UsageMetricMaxAggregateOutputType | null
+  }
+
+  type GetUsageMetricGroupByPayload<T extends UsageMetricGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<UsageMetricGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof UsageMetricGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], UsageMetricGroupByOutputType[P]>
+            : GetScalarType<T[P], UsageMetricGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type UsageMetricSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    workspaceId?: boolean
+    keyId?: boolean
+    date?: boolean
+    requestCount?: boolean
+    successCount?: boolean
+    errorCount?: boolean
+    promptTokens?: boolean
+    completionTokens?: boolean
+    totalTokens?: boolean
+    estimatedCost?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    workspace?: boolean | WorkspaceDefaultArgs<ExtArgs>
+    apiKey?: boolean | ProviderAPIKeyDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["usageMetric"]>
+
+  export type UsageMetricSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    workspaceId?: boolean
+    keyId?: boolean
+    date?: boolean
+    requestCount?: boolean
+    successCount?: boolean
+    errorCount?: boolean
+    promptTokens?: boolean
+    completionTokens?: boolean
+    totalTokens?: boolean
+    estimatedCost?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    workspace?: boolean | WorkspaceDefaultArgs<ExtArgs>
+    apiKey?: boolean | ProviderAPIKeyDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["usageMetric"]>
+
+  export type UsageMetricSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    workspaceId?: boolean
+    keyId?: boolean
+    date?: boolean
+    requestCount?: boolean
+    successCount?: boolean
+    errorCount?: boolean
+    promptTokens?: boolean
+    completionTokens?: boolean
+    totalTokens?: boolean
+    estimatedCost?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+    workspace?: boolean | WorkspaceDefaultArgs<ExtArgs>
+    apiKey?: boolean | ProviderAPIKeyDefaultArgs<ExtArgs>
+  }, ExtArgs["result"]["usageMetric"]>
+
+  export type UsageMetricSelectScalar = {
+    id?: boolean
+    workspaceId?: boolean
+    keyId?: boolean
+    date?: boolean
+    requestCount?: boolean
+    successCount?: boolean
+    errorCount?: boolean
+    promptTokens?: boolean
+    completionTokens?: boolean
+    totalTokens?: boolean
+    estimatedCost?: boolean
+    createdAt?: boolean
+    updatedAt?: boolean
+  }
+
+  export type UsageMetricOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "workspaceId" | "keyId" | "date" | "requestCount" | "successCount" | "errorCount" | "promptTokens" | "completionTokens" | "totalTokens" | "estimatedCost" | "createdAt" | "updatedAt", ExtArgs["result"]["usageMetric"]>
+  export type UsageMetricInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    workspace?: boolean | WorkspaceDefaultArgs<ExtArgs>
+    apiKey?: boolean | ProviderAPIKeyDefaultArgs<ExtArgs>
+  }
+  export type UsageMetricIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    workspace?: boolean | WorkspaceDefaultArgs<ExtArgs>
+    apiKey?: boolean | ProviderAPIKeyDefaultArgs<ExtArgs>
+  }
+  export type UsageMetricIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    workspace?: boolean | WorkspaceDefaultArgs<ExtArgs>
+    apiKey?: boolean | ProviderAPIKeyDefaultArgs<ExtArgs>
+  }
+
+  export type $UsageMetricPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "UsageMetric"
+    objects: {
+      workspace: Prisma.$WorkspacePayload<ExtArgs>
+      apiKey: Prisma.$ProviderAPIKeyPayload<ExtArgs>
+    }
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      workspaceId: string
+      keyId: string
+      date: Date
+      requestCount: number
+      successCount: number
+      errorCount: number
+      promptTokens: bigint
+      completionTokens: bigint
+      totalTokens: bigint
+      estimatedCost: Prisma.Decimal
+      createdAt: Date
+      updatedAt: Date
+    }, ExtArgs["result"]["usageMetric"]>
+    composites: {}
+  }
+
+  type UsageMetricGetPayload<S extends boolean | null | undefined | UsageMetricDefaultArgs> = $Result.GetResult<Prisma.$UsageMetricPayload, S>
+
+  type UsageMetricCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<UsageMetricFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: UsageMetricCountAggregateInputType | true
+    }
+
+  export interface UsageMetricDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['UsageMetric'], meta: { name: 'UsageMetric' } }
+    /**
+     * Find zero or one UsageMetric that matches the filter.
+     * @param {UsageMetricFindUniqueArgs} args - Arguments to find a UsageMetric
+     * @example
+     * // Get one UsageMetric
+     * const usageMetric = await prisma.usageMetric.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends UsageMetricFindUniqueArgs>(args: SelectSubset<T, UsageMetricFindUniqueArgs<ExtArgs>>): Prisma__UsageMetricClient<$Result.GetResult<Prisma.$UsageMetricPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one UsageMetric that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {UsageMetricFindUniqueOrThrowArgs} args - Arguments to find a UsageMetric
+     * @example
+     * // Get one UsageMetric
+     * const usageMetric = await prisma.usageMetric.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends UsageMetricFindUniqueOrThrowArgs>(args: SelectSubset<T, UsageMetricFindUniqueOrThrowArgs<ExtArgs>>): Prisma__UsageMetricClient<$Result.GetResult<Prisma.$UsageMetricPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first UsageMetric that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {UsageMetricFindFirstArgs} args - Arguments to find a UsageMetric
+     * @example
+     * // Get one UsageMetric
+     * const usageMetric = await prisma.usageMetric.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends UsageMetricFindFirstArgs>(args?: SelectSubset<T, UsageMetricFindFirstArgs<ExtArgs>>): Prisma__UsageMetricClient<$Result.GetResult<Prisma.$UsageMetricPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first UsageMetric that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {UsageMetricFindFirstOrThrowArgs} args - Arguments to find a UsageMetric
+     * @example
+     * // Get one UsageMetric
+     * const usageMetric = await prisma.usageMetric.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends UsageMetricFindFirstOrThrowArgs>(args?: SelectSubset<T, UsageMetricFindFirstOrThrowArgs<ExtArgs>>): Prisma__UsageMetricClient<$Result.GetResult<Prisma.$UsageMetricPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more UsageMetrics that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {UsageMetricFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all UsageMetrics
+     * const usageMetrics = await prisma.usageMetric.findMany()
+     * 
+     * // Get first 10 UsageMetrics
+     * const usageMetrics = await prisma.usageMetric.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const usageMetricWithIdOnly = await prisma.usageMetric.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends UsageMetricFindManyArgs>(args?: SelectSubset<T, UsageMetricFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UsageMetricPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a UsageMetric.
+     * @param {UsageMetricCreateArgs} args - Arguments to create a UsageMetric.
+     * @example
+     * // Create one UsageMetric
+     * const UsageMetric = await prisma.usageMetric.create({
+     *   data: {
+     *     // ... data to create a UsageMetric
+     *   }
+     * })
+     * 
+     */
+    create<T extends UsageMetricCreateArgs>(args: SelectSubset<T, UsageMetricCreateArgs<ExtArgs>>): Prisma__UsageMetricClient<$Result.GetResult<Prisma.$UsageMetricPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many UsageMetrics.
+     * @param {UsageMetricCreateManyArgs} args - Arguments to create many UsageMetrics.
+     * @example
+     * // Create many UsageMetrics
+     * const usageMetric = await prisma.usageMetric.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends UsageMetricCreateManyArgs>(args?: SelectSubset<T, UsageMetricCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create many UsageMetrics and returns the data saved in the database.
+     * @param {UsageMetricCreateManyAndReturnArgs} args - Arguments to create many UsageMetrics.
+     * @example
+     * // Create many UsageMetrics
+     * const usageMetric = await prisma.usageMetric.createManyAndReturn({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Create many UsageMetrics and only return the `id`
+     * const usageMetricWithIdOnly = await prisma.usageMetric.createManyAndReturn({
+     *   select: { id: true },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    createManyAndReturn<T extends UsageMetricCreateManyAndReturnArgs>(args?: SelectSubset<T, UsageMetricCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UsageMetricPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Delete a UsageMetric.
+     * @param {UsageMetricDeleteArgs} args - Arguments to delete one UsageMetric.
+     * @example
+     * // Delete one UsageMetric
+     * const UsageMetric = await prisma.usageMetric.delete({
+     *   where: {
+     *     // ... filter to delete one UsageMetric
+     *   }
+     * })
+     * 
+     */
+    delete<T extends UsageMetricDeleteArgs>(args: SelectSubset<T, UsageMetricDeleteArgs<ExtArgs>>): Prisma__UsageMetricClient<$Result.GetResult<Prisma.$UsageMetricPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one UsageMetric.
+     * @param {UsageMetricUpdateArgs} args - Arguments to update one UsageMetric.
+     * @example
+     * // Update one UsageMetric
+     * const usageMetric = await prisma.usageMetric.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends UsageMetricUpdateArgs>(args: SelectSubset<T, UsageMetricUpdateArgs<ExtArgs>>): Prisma__UsageMetricClient<$Result.GetResult<Prisma.$UsageMetricPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more UsageMetrics.
+     * @param {UsageMetricDeleteManyArgs} args - Arguments to filter UsageMetrics to delete.
+     * @example
+     * // Delete a few UsageMetrics
+     * const { count } = await prisma.usageMetric.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends UsageMetricDeleteManyArgs>(args?: SelectSubset<T, UsageMetricDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more UsageMetrics.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {UsageMetricUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many UsageMetrics
+     * const usageMetric = await prisma.usageMetric.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends UsageMetricUpdateManyArgs>(args: SelectSubset<T, UsageMetricUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more UsageMetrics and returns the data updated in the database.
+     * @param {UsageMetricUpdateManyAndReturnArgs} args - Arguments to update many UsageMetrics.
+     * @example
+     * // Update many UsageMetrics
+     * const usageMetric = await prisma.usageMetric.updateManyAndReturn({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * 
+     * // Update zero or more UsageMetrics and only return the `id`
+     * const usageMetricWithIdOnly = await prisma.usageMetric.updateManyAndReturn({
+     *   select: { id: true },
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * 
+     */
+    updateManyAndReturn<T extends UsageMetricUpdateManyAndReturnArgs>(args: SelectSubset<T, UsageMetricUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$UsageMetricPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
+
+    /**
+     * Create or update one UsageMetric.
+     * @param {UsageMetricUpsertArgs} args - Arguments to update or create a UsageMetric.
+     * @example
+     * // Update or create a UsageMetric
+     * const usageMetric = await prisma.usageMetric.upsert({
+     *   create: {
+     *     // ... data to create a UsageMetric
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the UsageMetric we want to update
+     *   }
+     * })
+     */
+    upsert<T extends UsageMetricUpsertArgs>(args: SelectSubset<T, UsageMetricUpsertArgs<ExtArgs>>): Prisma__UsageMetricClient<$Result.GetResult<Prisma.$UsageMetricPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of UsageMetrics.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {UsageMetricCountArgs} args - Arguments to filter UsageMetrics to count.
+     * @example
+     * // Count the number of UsageMetrics
+     * const count = await prisma.usageMetric.count({
+     *   where: {
+     *     // ... the filter for the UsageMetrics we want to count
+     *   }
+     * })
+    **/
+    count<T extends UsageMetricCountArgs>(
+      args?: Subset<T, UsageMetricCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], UsageMetricCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a UsageMetric.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {UsageMetricAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends UsageMetricAggregateArgs>(args: Subset<T, UsageMetricAggregateArgs>): Prisma.PrismaPromise<GetUsageMetricAggregateType<T>>
+
+    /**
+     * Group by UsageMetric.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {UsageMetricGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends UsageMetricGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: UsageMetricGroupByArgs['orderBy'] }
+        : { orderBy?: UsageMetricGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, UsageMetricGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetUsageMetricGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the UsageMetric model
+   */
+  readonly fields: UsageMetricFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for UsageMetric.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__UsageMetricClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    workspace<T extends WorkspaceDefaultArgs<ExtArgs> = {}>(args?: Subset<T, WorkspaceDefaultArgs<ExtArgs>>): Prisma__WorkspaceClient<$Result.GetResult<Prisma.$WorkspacePayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    apiKey<T extends ProviderAPIKeyDefaultArgs<ExtArgs> = {}>(args?: Subset<T, ProviderAPIKeyDefaultArgs<ExtArgs>>): Prisma__ProviderAPIKeyClient<$Result.GetResult<Prisma.$ProviderAPIKeyPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the UsageMetric model
+   */
+  interface UsageMetricFieldRefs {
+    readonly id: FieldRef<"UsageMetric", 'String'>
+    readonly workspaceId: FieldRef<"UsageMetric", 'String'>
+    readonly keyId: FieldRef<"UsageMetric", 'String'>
+    readonly date: FieldRef<"UsageMetric", 'DateTime'>
+    readonly requestCount: FieldRef<"UsageMetric", 'Int'>
+    readonly successCount: FieldRef<"UsageMetric", 'Int'>
+    readonly errorCount: FieldRef<"UsageMetric", 'Int'>
+    readonly promptTokens: FieldRef<"UsageMetric", 'BigInt'>
+    readonly completionTokens: FieldRef<"UsageMetric", 'BigInt'>
+    readonly totalTokens: FieldRef<"UsageMetric", 'BigInt'>
+    readonly estimatedCost: FieldRef<"UsageMetric", 'Decimal'>
+    readonly createdAt: FieldRef<"UsageMetric", 'DateTime'>
+    readonly updatedAt: FieldRef<"UsageMetric", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * UsageMetric findUnique
+   */
+  export type UsageMetricFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UsageMetric
+     */
+    select?: UsageMetricSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UsageMetric
+     */
+    omit?: UsageMetricOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UsageMetricInclude<ExtArgs> | null
+    /**
+     * Filter, which UsageMetric to fetch.
+     */
+    where: UsageMetricWhereUniqueInput
+  }
+
+  /**
+   * UsageMetric findUniqueOrThrow
+   */
+  export type UsageMetricFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UsageMetric
+     */
+    select?: UsageMetricSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UsageMetric
+     */
+    omit?: UsageMetricOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UsageMetricInclude<ExtArgs> | null
+    /**
+     * Filter, which UsageMetric to fetch.
+     */
+    where: UsageMetricWhereUniqueInput
+  }
+
+  /**
+   * UsageMetric findFirst
+   */
+  export type UsageMetricFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UsageMetric
+     */
+    select?: UsageMetricSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UsageMetric
+     */
+    omit?: UsageMetricOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UsageMetricInclude<ExtArgs> | null
+    /**
+     * Filter, which UsageMetric to fetch.
+     */
+    where?: UsageMetricWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of UsageMetrics to fetch.
+     */
+    orderBy?: UsageMetricOrderByWithRelationInput | UsageMetricOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for UsageMetrics.
+     */
+    cursor?: UsageMetricWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` UsageMetrics from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` UsageMetrics.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of UsageMetrics.
+     */
+    distinct?: UsageMetricScalarFieldEnum | UsageMetricScalarFieldEnum[]
+  }
+
+  /**
+   * UsageMetric findFirstOrThrow
+   */
+  export type UsageMetricFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UsageMetric
+     */
+    select?: UsageMetricSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UsageMetric
+     */
+    omit?: UsageMetricOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UsageMetricInclude<ExtArgs> | null
+    /**
+     * Filter, which UsageMetric to fetch.
+     */
+    where?: UsageMetricWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of UsageMetrics to fetch.
+     */
+    orderBy?: UsageMetricOrderByWithRelationInput | UsageMetricOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for UsageMetrics.
+     */
+    cursor?: UsageMetricWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` UsageMetrics from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` UsageMetrics.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of UsageMetrics.
+     */
+    distinct?: UsageMetricScalarFieldEnum | UsageMetricScalarFieldEnum[]
+  }
+
+  /**
+   * UsageMetric findMany
+   */
+  export type UsageMetricFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UsageMetric
+     */
+    select?: UsageMetricSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UsageMetric
+     */
+    omit?: UsageMetricOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UsageMetricInclude<ExtArgs> | null
+    /**
+     * Filter, which UsageMetrics to fetch.
+     */
+    where?: UsageMetricWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of UsageMetrics to fetch.
+     */
+    orderBy?: UsageMetricOrderByWithRelationInput | UsageMetricOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing UsageMetrics.
+     */
+    cursor?: UsageMetricWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` UsageMetrics from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` UsageMetrics.
+     */
+    skip?: number
+    distinct?: UsageMetricScalarFieldEnum | UsageMetricScalarFieldEnum[]
+  }
+
+  /**
+   * UsageMetric create
+   */
+  export type UsageMetricCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UsageMetric
+     */
+    select?: UsageMetricSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UsageMetric
+     */
+    omit?: UsageMetricOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UsageMetricInclude<ExtArgs> | null
+    /**
+     * The data needed to create a UsageMetric.
+     */
+    data: XOR<UsageMetricCreateInput, UsageMetricUncheckedCreateInput>
+  }
+
+  /**
+   * UsageMetric createMany
+   */
+  export type UsageMetricCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many UsageMetrics.
+     */
+    data: UsageMetricCreateManyInput | UsageMetricCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * UsageMetric createManyAndReturn
+   */
+  export type UsageMetricCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UsageMetric
+     */
+    select?: UsageMetricSelectCreateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the UsageMetric
+     */
+    omit?: UsageMetricOmit<ExtArgs> | null
+    /**
+     * The data used to create many UsageMetrics.
+     */
+    data: UsageMetricCreateManyInput | UsageMetricCreateManyInput[]
+    skipDuplicates?: boolean
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UsageMetricIncludeCreateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * UsageMetric update
+   */
+  export type UsageMetricUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UsageMetric
+     */
+    select?: UsageMetricSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UsageMetric
+     */
+    omit?: UsageMetricOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UsageMetricInclude<ExtArgs> | null
+    /**
+     * The data needed to update a UsageMetric.
+     */
+    data: XOR<UsageMetricUpdateInput, UsageMetricUncheckedUpdateInput>
+    /**
+     * Choose, which UsageMetric to update.
+     */
+    where: UsageMetricWhereUniqueInput
+  }
+
+  /**
+   * UsageMetric updateMany
+   */
+  export type UsageMetricUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update UsageMetrics.
+     */
+    data: XOR<UsageMetricUpdateManyMutationInput, UsageMetricUncheckedUpdateManyInput>
+    /**
+     * Filter which UsageMetrics to update
+     */
+    where?: UsageMetricWhereInput
+    /**
+     * Limit how many UsageMetrics to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * UsageMetric updateManyAndReturn
+   */
+  export type UsageMetricUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UsageMetric
+     */
+    select?: UsageMetricSelectUpdateManyAndReturn<ExtArgs> | null
+    /**
+     * Omit specific fields from the UsageMetric
+     */
+    omit?: UsageMetricOmit<ExtArgs> | null
+    /**
+     * The data used to update UsageMetrics.
+     */
+    data: XOR<UsageMetricUpdateManyMutationInput, UsageMetricUncheckedUpdateManyInput>
+    /**
+     * Filter which UsageMetrics to update
+     */
+    where?: UsageMetricWhereInput
+    /**
+     * Limit how many UsageMetrics to update.
+     */
+    limit?: number
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UsageMetricIncludeUpdateManyAndReturn<ExtArgs> | null
+  }
+
+  /**
+   * UsageMetric upsert
+   */
+  export type UsageMetricUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UsageMetric
+     */
+    select?: UsageMetricSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UsageMetric
+     */
+    omit?: UsageMetricOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UsageMetricInclude<ExtArgs> | null
+    /**
+     * The filter to search for the UsageMetric to update in case it exists.
+     */
+    where: UsageMetricWhereUniqueInput
+    /**
+     * In case the UsageMetric found by the `where` argument doesn't exist, create a new UsageMetric with this data.
+     */
+    create: XOR<UsageMetricCreateInput, UsageMetricUncheckedCreateInput>
+    /**
+     * In case the UsageMetric was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<UsageMetricUpdateInput, UsageMetricUncheckedUpdateInput>
+  }
+
+  /**
+   * UsageMetric delete
+   */
+  export type UsageMetricDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UsageMetric
+     */
+    select?: UsageMetricSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UsageMetric
+     */
+    omit?: UsageMetricOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UsageMetricInclude<ExtArgs> | null
+    /**
+     * Filter which UsageMetric to delete.
+     */
+    where: UsageMetricWhereUniqueInput
+  }
+
+  /**
+   * UsageMetric deleteMany
+   */
+  export type UsageMetricDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which UsageMetrics to delete
+     */
+    where?: UsageMetricWhereInput
+    /**
+     * Limit how many UsageMetrics to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * UsageMetric without action
+   */
+  export type UsageMetricDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the UsageMetric
+     */
+    select?: UsageMetricSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the UsageMetric
+     */
+    omit?: UsageMetricOmit<ExtArgs> | null
+    /**
+     * Choose, which related nodes to fetch as well
+     */
+    include?: UsageMetricInclude<ExtArgs> | null
   }
 
 
@@ -48020,6 +49669,7 @@ export namespace Prisma {
     startedAt: 'startedAt',
     finishedAt: 'finishedAt',
     runtimeInMs: 'runtimeInMs',
+    apiKeyId: 'apiKeyId',
     provider: 'provider',
     modelId: 'modelId',
     modelName: 'modelName',
@@ -48045,6 +49695,7 @@ export namespace Prisma {
     flowId: 'flowId',
     workspaceId: 'workspaceId',
     subscriptionId: 'subscriptionId',
+    apiKeyId: 'apiKeyId',
     provider: 'provider',
     modelId: 'modelId',
     modelName: 'modelName',
@@ -48172,16 +49823,36 @@ export namespace Prisma {
     provider: 'provider',
     displayName: 'displayName',
     keyHash: 'keyHash',
-    providerConfig: 'providerConfig',
-    endpoint: 'endpoint',
-    authType: 'authType',
     isActive: 'isActive',
     lastUsedAt: 'lastUsedAt',
-    createdAt: 'createdAt',
-    expiresAt: 'expiresAt'
+    usageCount: 'usageCount',
+    totalTokens: 'totalTokens',
+    totalCost: 'totalCost',
+    lastErrorAt: 'lastErrorAt',
+    createdById: 'createdById',
+    createdAt: 'createdAt'
   };
 
   export type ProviderAPIKeyScalarFieldEnum = (typeof ProviderAPIKeyScalarFieldEnum)[keyof typeof ProviderAPIKeyScalarFieldEnum]
+
+
+  export const UsageMetricScalarFieldEnum: {
+    id: 'id',
+    workspaceId: 'workspaceId',
+    keyId: 'keyId',
+    date: 'date',
+    requestCount: 'requestCount',
+    successCount: 'successCount',
+    errorCount: 'errorCount',
+    promptTokens: 'promptTokens',
+    completionTokens: 'completionTokens',
+    totalTokens: 'totalTokens',
+    estimatedCost: 'estimatedCost',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+  };
+
+  export type UsageMetricScalarFieldEnum = (typeof UsageMetricScalarFieldEnum)[keyof typeof UsageMetricScalarFieldEnum]
 
 
   export const ShareLinkScalarFieldEnum: {
@@ -48577,6 +50248,7 @@ export namespace Prisma {
     podId: 'podId',
     flowId: 'flowId',
     workspaceId: 'workspaceId',
+    apiKeyId: 'apiKeyId',
     modelId: 'modelId',
     modelName: 'modelName',
     errorMessage: 'errorMessage',
@@ -48593,6 +50265,7 @@ export namespace Prisma {
     flowId: 'flowId',
     workspaceId: 'workspaceId',
     subscriptionId: 'subscriptionId',
+    apiKeyId: 'apiKeyId',
     modelId: 'modelId',
     modelName: 'modelName'
   };
@@ -48678,10 +50351,19 @@ export namespace Prisma {
     workspaceId: 'workspaceId',
     displayName: 'displayName',
     keyHash: 'keyHash',
-    endpoint: 'endpoint'
+    createdById: 'createdById'
   };
 
   export type ProviderAPIKeyOrderByRelevanceFieldEnum = (typeof ProviderAPIKeyOrderByRelevanceFieldEnum)[keyof typeof ProviderAPIKeyOrderByRelevanceFieldEnum]
+
+
+  export const UsageMetricOrderByRelevanceFieldEnum: {
+    id: 'id',
+    workspaceId: 'workspaceId',
+    keyId: 'keyId'
+  };
+
+  export type UsageMetricOrderByRelevanceFieldEnum = (typeof UsageMetricOrderByRelevanceFieldEnum)[keyof typeof UsageMetricOrderByRelevanceFieldEnum]
 
 
   export const ShareLinkOrderByRelevanceFieldEnum: {
@@ -49113,16 +50795,16 @@ export namespace Prisma {
 
 
   /**
-   * Reference to a field of type 'AuthType'
+   * Reference to a field of type 'BigInt'
    */
-  export type EnumAuthTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AuthType'>
+  export type BigIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'BigInt'>
     
 
 
   /**
-   * Reference to a field of type 'AuthType[]'
+   * Reference to a field of type 'BigInt[]'
    */
-  export type ListEnumAuthTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'AuthType[]'>
+  export type ListBigIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'BigInt[]'>
     
 
 
@@ -49165,20 +50847,6 @@ export namespace Prisma {
    * Reference to a field of type 'DocumentSourceType[]'
    */
   export type ListEnumDocumentSourceTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DocumentSourceType[]'>
-    
-
-
-  /**
-   * Reference to a field of type 'BigInt'
-   */
-  export type BigIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'BigInt'>
-    
-
-
-  /**
-   * Reference to a field of type 'BigInt[]'
-   */
-  export type ListBigIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'BigInt[]'>
     
 
 
@@ -51315,6 +52983,7 @@ export namespace Prisma {
     startedAt?: DateTimeFilter<"PodExecution"> | Date | string
     finishedAt?: DateTimeNullableFilter<"PodExecution"> | Date | string | null
     runtimeInMs?: IntNullableFilter<"PodExecution"> | number | null
+    apiKeyId?: StringNullableFilter<"PodExecution"> | string | null
     provider?: EnumLLMProviderFilter<"PodExecution"> | $Enums.LLMProvider
     modelId?: StringFilter<"PodExecution"> | string
     modelName?: StringNullableFilter<"PodExecution"> | string | null
@@ -51329,6 +52998,7 @@ export namespace Prisma {
     creditsConsumed?: IntFilter<"PodExecution"> | number
     costInUsd?: DecimalNullableFilter<"PodExecution"> | Decimal | DecimalJsLike | number | string | null
     pod?: XOR<PodScalarRelationFilter, PodWhereInput>
+    apiKey?: XOR<ProviderAPIKeyNullableScalarRelationFilter, ProviderAPIKeyWhereInput> | null
   }
 
   export type PodExecutionOrderByWithRelationInput = {
@@ -51340,6 +53010,7 @@ export namespace Prisma {
     startedAt?: SortOrder
     finishedAt?: SortOrderInput | SortOrder
     runtimeInMs?: SortOrderInput | SortOrder
+    apiKeyId?: SortOrderInput | SortOrder
     provider?: SortOrder
     modelId?: SortOrder
     modelName?: SortOrderInput | SortOrder
@@ -51354,6 +53025,7 @@ export namespace Prisma {
     creditsConsumed?: SortOrder
     costInUsd?: SortOrderInput | SortOrder
     pod?: PodOrderByWithRelationInput
+    apiKey?: ProviderAPIKeyOrderByWithRelationInput
     _relevance?: PodExecutionOrderByRelevanceInput
   }
 
@@ -51369,6 +53041,7 @@ export namespace Prisma {
     startedAt?: DateTimeFilter<"PodExecution"> | Date | string
     finishedAt?: DateTimeNullableFilter<"PodExecution"> | Date | string | null
     runtimeInMs?: IntNullableFilter<"PodExecution"> | number | null
+    apiKeyId?: StringNullableFilter<"PodExecution"> | string | null
     provider?: EnumLLMProviderFilter<"PodExecution"> | $Enums.LLMProvider
     modelId?: StringFilter<"PodExecution"> | string
     modelName?: StringNullableFilter<"PodExecution"> | string | null
@@ -51383,6 +53056,7 @@ export namespace Prisma {
     creditsConsumed?: IntFilter<"PodExecution"> | number
     costInUsd?: DecimalNullableFilter<"PodExecution"> | Decimal | DecimalJsLike | number | string | null
     pod?: XOR<PodScalarRelationFilter, PodWhereInput>
+    apiKey?: XOR<ProviderAPIKeyNullableScalarRelationFilter, ProviderAPIKeyWhereInput> | null
   }, "id">
 
   export type PodExecutionOrderByWithAggregationInput = {
@@ -51394,6 +53068,7 @@ export namespace Prisma {
     startedAt?: SortOrder
     finishedAt?: SortOrderInput | SortOrder
     runtimeInMs?: SortOrderInput | SortOrder
+    apiKeyId?: SortOrderInput | SortOrder
     provider?: SortOrder
     modelId?: SortOrder
     modelName?: SortOrderInput | SortOrder
@@ -51426,6 +53101,7 @@ export namespace Prisma {
     startedAt?: DateTimeWithAggregatesFilter<"PodExecution"> | Date | string
     finishedAt?: DateTimeNullableWithAggregatesFilter<"PodExecution"> | Date | string | null
     runtimeInMs?: IntNullableWithAggregatesFilter<"PodExecution"> | number | null
+    apiKeyId?: StringNullableWithAggregatesFilter<"PodExecution"> | string | null
     provider?: EnumLLMProviderWithAggregatesFilter<"PodExecution"> | $Enums.LLMProvider
     modelId?: StringWithAggregatesFilter<"PodExecution"> | string
     modelName?: StringNullableWithAggregatesFilter<"PodExecution"> | string | null
@@ -51451,6 +53127,7 @@ export namespace Prisma {
     flowId?: StringFilter<"PodUsageLog"> | string
     workspaceId?: StringFilter<"PodUsageLog"> | string
     subscriptionId?: StringFilter<"PodUsageLog"> | string
+    apiKeyId?: StringNullableFilter<"PodUsageLog"> | string | null
     provider?: EnumLLMProviderFilter<"PodUsageLog"> | $Enums.LLMProvider
     modelId?: StringFilter<"PodUsageLog"> | string
     modelName?: StringNullableFilter<"PodUsageLog"> | string | null
@@ -51467,6 +53144,7 @@ export namespace Prisma {
     executedAt?: DateTimeFilter<"PodUsageLog"> | Date | string
     pod?: XOR<PodScalarRelationFilter, PodWhereInput>
     subscription?: XOR<SubscriptionScalarRelationFilter, SubscriptionWhereInput>
+    apiKey?: XOR<ProviderAPIKeyNullableScalarRelationFilter, ProviderAPIKeyWhereInput> | null
   }
 
   export type PodUsageLogOrderByWithRelationInput = {
@@ -51476,6 +53154,7 @@ export namespace Prisma {
     flowId?: SortOrder
     workspaceId?: SortOrder
     subscriptionId?: SortOrder
+    apiKeyId?: SortOrderInput | SortOrder
     provider?: SortOrder
     modelId?: SortOrder
     modelName?: SortOrderInput | SortOrder
@@ -51492,6 +53171,7 @@ export namespace Prisma {
     executedAt?: SortOrder
     pod?: PodOrderByWithRelationInput
     subscription?: SubscriptionOrderByWithRelationInput
+    apiKey?: ProviderAPIKeyOrderByWithRelationInput
     _relevance?: PodUsageLogOrderByRelevanceInput
   }
 
@@ -51505,6 +53185,7 @@ export namespace Prisma {
     flowId?: StringFilter<"PodUsageLog"> | string
     workspaceId?: StringFilter<"PodUsageLog"> | string
     subscriptionId?: StringFilter<"PodUsageLog"> | string
+    apiKeyId?: StringNullableFilter<"PodUsageLog"> | string | null
     provider?: EnumLLMProviderFilter<"PodUsageLog"> | $Enums.LLMProvider
     modelId?: StringFilter<"PodUsageLog"> | string
     modelName?: StringNullableFilter<"PodUsageLog"> | string | null
@@ -51521,6 +53202,7 @@ export namespace Prisma {
     executedAt?: DateTimeFilter<"PodUsageLog"> | Date | string
     pod?: XOR<PodScalarRelationFilter, PodWhereInput>
     subscription?: XOR<SubscriptionScalarRelationFilter, SubscriptionWhereInput>
+    apiKey?: XOR<ProviderAPIKeyNullableScalarRelationFilter, ProviderAPIKeyWhereInput> | null
   }, "id">
 
   export type PodUsageLogOrderByWithAggregationInput = {
@@ -51530,6 +53212,7 @@ export namespace Prisma {
     flowId?: SortOrder
     workspaceId?: SortOrder
     subscriptionId?: SortOrder
+    apiKeyId?: SortOrderInput | SortOrder
     provider?: SortOrder
     modelId?: SortOrder
     modelName?: SortOrderInput | SortOrder
@@ -51561,6 +53244,7 @@ export namespace Prisma {
     flowId?: StringWithAggregatesFilter<"PodUsageLog"> | string
     workspaceId?: StringWithAggregatesFilter<"PodUsageLog"> | string
     subscriptionId?: StringWithAggregatesFilter<"PodUsageLog"> | string
+    apiKeyId?: StringNullableWithAggregatesFilter<"PodUsageLog"> | string | null
     provider?: EnumLLMProviderWithAggregatesFilter<"PodUsageLog"> | $Enums.LLMProvider
     modelId?: StringWithAggregatesFilter<"PodUsageLog"> | string
     modelName?: StringNullableWithAggregatesFilter<"PodUsageLog"> | string | null
@@ -51677,6 +53361,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: WorkspaceInvitationListRelationFilter
     sentFlowInvites?: FlowInvitationListRelationFilter
     receivedFlowInvites?: FlowInvitationListRelationFilter
+    createdApiKeys?: ProviderAPIKeyListRelationFilter
   }
 
   export type UserOrderByWithRelationInput = {
@@ -51695,6 +53380,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: WorkspaceInvitationOrderByRelationAggregateInput
     sentFlowInvites?: FlowInvitationOrderByRelationAggregateInput
     receivedFlowInvites?: FlowInvitationOrderByRelationAggregateInput
+    createdApiKeys?: ProviderAPIKeyOrderByRelationAggregateInput
     _relevance?: UserOrderByRelevanceInput
   }
 
@@ -51717,6 +53403,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: WorkspaceInvitationListRelationFilter
     sentFlowInvites?: FlowInvitationListRelationFilter
     receivedFlowInvites?: FlowInvitationListRelationFilter
+    createdApiKeys?: ProviderAPIKeyListRelationFilter
   }, "id" | "email">
 
   export type UserOrderByWithAggregationInput = {
@@ -51903,6 +53590,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkListRelationFilter
     apiKeys?: ProviderAPIKeyListRelationFilter
     invitations?: WorkspaceInvitationListRelationFilter
+    usageMetrics?: UsageMetricListRelationFilter
   }
 
   export type WorkspaceOrderByWithRelationInput = {
@@ -51921,6 +53609,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkOrderByRelationAggregateInput
     apiKeys?: ProviderAPIKeyOrderByRelationAggregateInput
     invitations?: WorkspaceInvitationOrderByRelationAggregateInput
+    usageMetrics?: UsageMetricOrderByRelationAggregateInput
     _relevance?: WorkspaceOrderByRelevanceInput
   }
 
@@ -51943,6 +53632,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkListRelationFilter
     apiKeys?: ProviderAPIKeyListRelationFilter
     invitations?: WorkspaceInvitationListRelationFilter
+    usageMetrics?: UsageMetricListRelationFilter
   }, "id">
 
   export type WorkspaceOrderByWithAggregationInput = {
@@ -52168,14 +53858,19 @@ export namespace Prisma {
     provider?: EnumLLMProviderFilter<"ProviderAPIKey"> | $Enums.LLMProvider
     displayName?: StringFilter<"ProviderAPIKey"> | string
     keyHash?: StringFilter<"ProviderAPIKey"> | string
-    providerConfig?: JsonNullableFilter<"ProviderAPIKey">
-    endpoint?: StringNullableFilter<"ProviderAPIKey"> | string | null
-    authType?: EnumAuthTypeFilter<"ProviderAPIKey"> | $Enums.AuthType
     isActive?: BoolFilter<"ProviderAPIKey"> | boolean
     lastUsedAt?: DateTimeNullableFilter<"ProviderAPIKey"> | Date | string | null
+    usageCount?: IntFilter<"ProviderAPIKey"> | number
+    totalTokens?: BigIntFilter<"ProviderAPIKey"> | bigint | number
+    totalCost?: DecimalFilter<"ProviderAPIKey"> | Decimal | DecimalJsLike | number | string
+    lastErrorAt?: DateTimeNullableFilter<"ProviderAPIKey"> | Date | string | null
+    createdById?: StringFilter<"ProviderAPIKey"> | string
     createdAt?: DateTimeFilter<"ProviderAPIKey"> | Date | string
-    expiresAt?: DateTimeNullableFilter<"ProviderAPIKey"> | Date | string | null
     workspace?: XOR<WorkspaceScalarRelationFilter, WorkspaceWhereInput>
+    createdBy?: XOR<UserScalarRelationFilter, UserWhereInput>
+    usageMetrics?: UsageMetricListRelationFilter
+    podExecutions?: PodExecutionListRelationFilter
+    podUsageLogs?: PodUsageLogListRelationFilter
   }
 
   export type ProviderAPIKeyOrderByWithRelationInput = {
@@ -52184,14 +53879,19 @@ export namespace Prisma {
     provider?: SortOrder
     displayName?: SortOrder
     keyHash?: SortOrder
-    providerConfig?: SortOrderInput | SortOrder
-    endpoint?: SortOrderInput | SortOrder
-    authType?: SortOrder
     isActive?: SortOrder
     lastUsedAt?: SortOrderInput | SortOrder
+    usageCount?: SortOrder
+    totalTokens?: SortOrder
+    totalCost?: SortOrder
+    lastErrorAt?: SortOrderInput | SortOrder
+    createdById?: SortOrder
     createdAt?: SortOrder
-    expiresAt?: SortOrderInput | SortOrder
     workspace?: WorkspaceOrderByWithRelationInput
+    createdBy?: UserOrderByWithRelationInput
+    usageMetrics?: UsageMetricOrderByRelationAggregateInput
+    podExecutions?: PodExecutionOrderByRelationAggregateInput
+    podUsageLogs?: PodUsageLogOrderByRelationAggregateInput
     _relevance?: ProviderAPIKeyOrderByRelevanceInput
   }
 
@@ -52205,14 +53905,19 @@ export namespace Prisma {
     provider?: EnumLLMProviderFilter<"ProviderAPIKey"> | $Enums.LLMProvider
     displayName?: StringFilter<"ProviderAPIKey"> | string
     keyHash?: StringFilter<"ProviderAPIKey"> | string
-    providerConfig?: JsonNullableFilter<"ProviderAPIKey">
-    endpoint?: StringNullableFilter<"ProviderAPIKey"> | string | null
-    authType?: EnumAuthTypeFilter<"ProviderAPIKey"> | $Enums.AuthType
     isActive?: BoolFilter<"ProviderAPIKey"> | boolean
     lastUsedAt?: DateTimeNullableFilter<"ProviderAPIKey"> | Date | string | null
+    usageCount?: IntFilter<"ProviderAPIKey"> | number
+    totalTokens?: BigIntFilter<"ProviderAPIKey"> | bigint | number
+    totalCost?: DecimalFilter<"ProviderAPIKey"> | Decimal | DecimalJsLike | number | string
+    lastErrorAt?: DateTimeNullableFilter<"ProviderAPIKey"> | Date | string | null
+    createdById?: StringFilter<"ProviderAPIKey"> | string
     createdAt?: DateTimeFilter<"ProviderAPIKey"> | Date | string
-    expiresAt?: DateTimeNullableFilter<"ProviderAPIKey"> | Date | string | null
     workspace?: XOR<WorkspaceScalarRelationFilter, WorkspaceWhereInput>
+    createdBy?: XOR<UserScalarRelationFilter, UserWhereInput>
+    usageMetrics?: UsageMetricListRelationFilter
+    podExecutions?: PodExecutionListRelationFilter
+    podUsageLogs?: PodUsageLogListRelationFilter
   }, "id" | "workspaceId_provider_displayName">
 
   export type ProviderAPIKeyOrderByWithAggregationInput = {
@@ -52221,16 +53926,19 @@ export namespace Prisma {
     provider?: SortOrder
     displayName?: SortOrder
     keyHash?: SortOrder
-    providerConfig?: SortOrderInput | SortOrder
-    endpoint?: SortOrderInput | SortOrder
-    authType?: SortOrder
     isActive?: SortOrder
     lastUsedAt?: SortOrderInput | SortOrder
+    usageCount?: SortOrder
+    totalTokens?: SortOrder
+    totalCost?: SortOrder
+    lastErrorAt?: SortOrderInput | SortOrder
+    createdById?: SortOrder
     createdAt?: SortOrder
-    expiresAt?: SortOrderInput | SortOrder
     _count?: ProviderAPIKeyCountOrderByAggregateInput
+    _avg?: ProviderAPIKeyAvgOrderByAggregateInput
     _max?: ProviderAPIKeyMaxOrderByAggregateInput
     _min?: ProviderAPIKeyMinOrderByAggregateInput
+    _sum?: ProviderAPIKeySumOrderByAggregateInput
   }
 
   export type ProviderAPIKeyScalarWhereWithAggregatesInput = {
@@ -52242,13 +53950,116 @@ export namespace Prisma {
     provider?: EnumLLMProviderWithAggregatesFilter<"ProviderAPIKey"> | $Enums.LLMProvider
     displayName?: StringWithAggregatesFilter<"ProviderAPIKey"> | string
     keyHash?: StringWithAggregatesFilter<"ProviderAPIKey"> | string
-    providerConfig?: JsonNullableWithAggregatesFilter<"ProviderAPIKey">
-    endpoint?: StringNullableWithAggregatesFilter<"ProviderAPIKey"> | string | null
-    authType?: EnumAuthTypeWithAggregatesFilter<"ProviderAPIKey"> | $Enums.AuthType
     isActive?: BoolWithAggregatesFilter<"ProviderAPIKey"> | boolean
     lastUsedAt?: DateTimeNullableWithAggregatesFilter<"ProviderAPIKey"> | Date | string | null
+    usageCount?: IntWithAggregatesFilter<"ProviderAPIKey"> | number
+    totalTokens?: BigIntWithAggregatesFilter<"ProviderAPIKey"> | bigint | number
+    totalCost?: DecimalWithAggregatesFilter<"ProviderAPIKey"> | Decimal | DecimalJsLike | number | string
+    lastErrorAt?: DateTimeNullableWithAggregatesFilter<"ProviderAPIKey"> | Date | string | null
+    createdById?: StringWithAggregatesFilter<"ProviderAPIKey"> | string
     createdAt?: DateTimeWithAggregatesFilter<"ProviderAPIKey"> | Date | string
-    expiresAt?: DateTimeNullableWithAggregatesFilter<"ProviderAPIKey"> | Date | string | null
+  }
+
+  export type UsageMetricWhereInput = {
+    AND?: UsageMetricWhereInput | UsageMetricWhereInput[]
+    OR?: UsageMetricWhereInput[]
+    NOT?: UsageMetricWhereInput | UsageMetricWhereInput[]
+    id?: StringFilter<"UsageMetric"> | string
+    workspaceId?: StringFilter<"UsageMetric"> | string
+    keyId?: StringFilter<"UsageMetric"> | string
+    date?: DateTimeFilter<"UsageMetric"> | Date | string
+    requestCount?: IntFilter<"UsageMetric"> | number
+    successCount?: IntFilter<"UsageMetric"> | number
+    errorCount?: IntFilter<"UsageMetric"> | number
+    promptTokens?: BigIntFilter<"UsageMetric"> | bigint | number
+    completionTokens?: BigIntFilter<"UsageMetric"> | bigint | number
+    totalTokens?: BigIntFilter<"UsageMetric"> | bigint | number
+    estimatedCost?: DecimalFilter<"UsageMetric"> | Decimal | DecimalJsLike | number | string
+    createdAt?: DateTimeFilter<"UsageMetric"> | Date | string
+    updatedAt?: DateTimeFilter<"UsageMetric"> | Date | string
+    workspace?: XOR<WorkspaceScalarRelationFilter, WorkspaceWhereInput>
+    apiKey?: XOR<ProviderAPIKeyScalarRelationFilter, ProviderAPIKeyWhereInput>
+  }
+
+  export type UsageMetricOrderByWithRelationInput = {
+    id?: SortOrder
+    workspaceId?: SortOrder
+    keyId?: SortOrder
+    date?: SortOrder
+    requestCount?: SortOrder
+    successCount?: SortOrder
+    errorCount?: SortOrder
+    promptTokens?: SortOrder
+    completionTokens?: SortOrder
+    totalTokens?: SortOrder
+    estimatedCost?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    workspace?: WorkspaceOrderByWithRelationInput
+    apiKey?: ProviderAPIKeyOrderByWithRelationInput
+    _relevance?: UsageMetricOrderByRelevanceInput
+  }
+
+  export type UsageMetricWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    keyId_date?: UsageMetricKeyIdDateCompoundUniqueInput
+    AND?: UsageMetricWhereInput | UsageMetricWhereInput[]
+    OR?: UsageMetricWhereInput[]
+    NOT?: UsageMetricWhereInput | UsageMetricWhereInput[]
+    workspaceId?: StringFilter<"UsageMetric"> | string
+    keyId?: StringFilter<"UsageMetric"> | string
+    date?: DateTimeFilter<"UsageMetric"> | Date | string
+    requestCount?: IntFilter<"UsageMetric"> | number
+    successCount?: IntFilter<"UsageMetric"> | number
+    errorCount?: IntFilter<"UsageMetric"> | number
+    promptTokens?: BigIntFilter<"UsageMetric"> | bigint | number
+    completionTokens?: BigIntFilter<"UsageMetric"> | bigint | number
+    totalTokens?: BigIntFilter<"UsageMetric"> | bigint | number
+    estimatedCost?: DecimalFilter<"UsageMetric"> | Decimal | DecimalJsLike | number | string
+    createdAt?: DateTimeFilter<"UsageMetric"> | Date | string
+    updatedAt?: DateTimeFilter<"UsageMetric"> | Date | string
+    workspace?: XOR<WorkspaceScalarRelationFilter, WorkspaceWhereInput>
+    apiKey?: XOR<ProviderAPIKeyScalarRelationFilter, ProviderAPIKeyWhereInput>
+  }, "id" | "keyId_date">
+
+  export type UsageMetricOrderByWithAggregationInput = {
+    id?: SortOrder
+    workspaceId?: SortOrder
+    keyId?: SortOrder
+    date?: SortOrder
+    requestCount?: SortOrder
+    successCount?: SortOrder
+    errorCount?: SortOrder
+    promptTokens?: SortOrder
+    completionTokens?: SortOrder
+    totalTokens?: SortOrder
+    estimatedCost?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+    _count?: UsageMetricCountOrderByAggregateInput
+    _avg?: UsageMetricAvgOrderByAggregateInput
+    _max?: UsageMetricMaxOrderByAggregateInput
+    _min?: UsageMetricMinOrderByAggregateInput
+    _sum?: UsageMetricSumOrderByAggregateInput
+  }
+
+  export type UsageMetricScalarWhereWithAggregatesInput = {
+    AND?: UsageMetricScalarWhereWithAggregatesInput | UsageMetricScalarWhereWithAggregatesInput[]
+    OR?: UsageMetricScalarWhereWithAggregatesInput[]
+    NOT?: UsageMetricScalarWhereWithAggregatesInput | UsageMetricScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"UsageMetric"> | string
+    workspaceId?: StringWithAggregatesFilter<"UsageMetric"> | string
+    keyId?: StringWithAggregatesFilter<"UsageMetric"> | string
+    date?: DateTimeWithAggregatesFilter<"UsageMetric"> | Date | string
+    requestCount?: IntWithAggregatesFilter<"UsageMetric"> | number
+    successCount?: IntWithAggregatesFilter<"UsageMetric"> | number
+    errorCount?: IntWithAggregatesFilter<"UsageMetric"> | number
+    promptTokens?: BigIntWithAggregatesFilter<"UsageMetric"> | bigint | number
+    completionTokens?: BigIntWithAggregatesFilter<"UsageMetric"> | bigint | number
+    totalTokens?: BigIntWithAggregatesFilter<"UsageMetric"> | bigint | number
+    estimatedCost?: DecimalWithAggregatesFilter<"UsageMetric"> | Decimal | DecimalJsLike | number | string
+    createdAt?: DateTimeWithAggregatesFilter<"UsageMetric"> | Date | string
+    updatedAt?: DateTimeWithAggregatesFilter<"UsageMetric"> | Date | string
   }
 
   export type ShareLinkWhereInput = {
@@ -55163,6 +56974,7 @@ export namespace Prisma {
     creditsConsumed?: number
     costInUsd?: Decimal | DecimalJsLike | number | string | null
     pod: PodCreateNestedOneWithoutExecutionsInput
+    apiKey?: ProviderAPIKeyCreateNestedOneWithoutPodExecutionsInput
   }
 
   export type PodExecutionUncheckedCreateInput = {
@@ -55174,6 +56986,7 @@ export namespace Prisma {
     startedAt?: Date | string
     finishedAt?: Date | string | null
     runtimeInMs?: number | null
+    apiKeyId?: string | null
     provider: $Enums.LLMProvider
     modelId: string
     modelName?: string | null
@@ -55211,6 +57024,7 @@ export namespace Prisma {
     creditsConsumed?: IntFieldUpdateOperationsInput | number
     costInUsd?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
     pod?: PodUpdateOneRequiredWithoutExecutionsNestedInput
+    apiKey?: ProviderAPIKeyUpdateOneWithoutPodExecutionsNestedInput
   }
 
   export type PodExecutionUncheckedUpdateInput = {
@@ -55222,6 +57036,7 @@ export namespace Prisma {
     startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     finishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     runtimeInMs?: NullableIntFieldUpdateOperationsInput | number | null
+    apiKeyId?: NullableStringFieldUpdateOperationsInput | string | null
     provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
     modelId?: StringFieldUpdateOperationsInput | string
     modelName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -55246,6 +57061,7 @@ export namespace Prisma {
     startedAt?: Date | string
     finishedAt?: Date | string | null
     runtimeInMs?: number | null
+    apiKeyId?: string | null
     provider: $Enums.LLMProvider
     modelId: string
     modelName?: string | null
@@ -55293,6 +57109,7 @@ export namespace Prisma {
     startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     finishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     runtimeInMs?: NullableIntFieldUpdateOperationsInput | number | null
+    apiKeyId?: NullableStringFieldUpdateOperationsInput | string | null
     provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
     modelId?: StringFieldUpdateOperationsInput | string
     modelName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -55329,6 +57146,7 @@ export namespace Prisma {
     executedAt?: Date | string
     pod: PodCreateNestedOneWithoutUsageLogsInput
     subscription: SubscriptionCreateNestedOneWithoutUsageLogsInput
+    apiKey?: ProviderAPIKeyCreateNestedOneWithoutPodUsageLogsInput
   }
 
   export type PodUsageLogUncheckedCreateInput = {
@@ -55338,6 +57156,7 @@ export namespace Prisma {
     flowId: string
     workspaceId: string
     subscriptionId: string
+    apiKeyId?: string | null
     provider: $Enums.LLMProvider
     modelId: string
     modelName?: string | null
@@ -55375,6 +57194,7 @@ export namespace Prisma {
     executedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     pod?: PodUpdateOneRequiredWithoutUsageLogsNestedInput
     subscription?: SubscriptionUpdateOneRequiredWithoutUsageLogsNestedInput
+    apiKey?: ProviderAPIKeyUpdateOneWithoutPodUsageLogsNestedInput
   }
 
   export type PodUsageLogUncheckedUpdateInput = {
@@ -55384,6 +57204,7 @@ export namespace Prisma {
     flowId?: StringFieldUpdateOperationsInput | string
     workspaceId?: StringFieldUpdateOperationsInput | string
     subscriptionId?: StringFieldUpdateOperationsInput | string
+    apiKeyId?: NullableStringFieldUpdateOperationsInput | string | null
     provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
     modelId?: StringFieldUpdateOperationsInput | string
     modelName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -55407,6 +57228,7 @@ export namespace Prisma {
     flowId: string
     workspaceId: string
     subscriptionId: string
+    apiKeyId?: string | null
     provider: $Enums.LLMProvider
     modelId: string
     modelName?: string | null
@@ -55451,6 +57273,7 @@ export namespace Prisma {
     flowId?: StringFieldUpdateOperationsInput | string
     workspaceId?: StringFieldUpdateOperationsInput | string
     subscriptionId?: StringFieldUpdateOperationsInput | string
+    apiKeyId?: NullableStringFieldUpdateOperationsInput | string | null
     provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
     modelId?: StringFieldUpdateOperationsInput | string
     modelName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -55565,6 +57388,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: WorkspaceInvitationCreateNestedManyWithoutInvitedUserInput
     sentFlowInvites?: FlowInvitationCreateNestedManyWithoutInviterInput
     receivedFlowInvites?: FlowInvitationCreateNestedManyWithoutInvitedUserInput
+    createdApiKeys?: ProviderAPIKeyCreateNestedManyWithoutCreatedByInput
   }
 
   export type UserUncheckedCreateInput = {
@@ -55583,6 +57407,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: WorkspaceInvitationUncheckedCreateNestedManyWithoutInvitedUserInput
     sentFlowInvites?: FlowInvitationUncheckedCreateNestedManyWithoutInviterInput
     receivedFlowInvites?: FlowInvitationUncheckedCreateNestedManyWithoutInvitedUserInput
+    createdApiKeys?: ProviderAPIKeyUncheckedCreateNestedManyWithoutCreatedByInput
   }
 
   export type UserUpdateInput = {
@@ -55601,6 +57426,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: WorkspaceInvitationUpdateManyWithoutInvitedUserNestedInput
     sentFlowInvites?: FlowInvitationUpdateManyWithoutInviterNestedInput
     receivedFlowInvites?: FlowInvitationUpdateManyWithoutInvitedUserNestedInput
+    createdApiKeys?: ProviderAPIKeyUpdateManyWithoutCreatedByNestedInput
   }
 
   export type UserUncheckedUpdateInput = {
@@ -55619,6 +57445,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: WorkspaceInvitationUncheckedUpdateManyWithoutInvitedUserNestedInput
     sentFlowInvites?: FlowInvitationUncheckedUpdateManyWithoutInviterNestedInput
     receivedFlowInvites?: FlowInvitationUncheckedUpdateManyWithoutInvitedUserNestedInput
+    createdApiKeys?: ProviderAPIKeyUncheckedUpdateManyWithoutCreatedByNestedInput
   }
 
   export type UserCreateManyInput = {
@@ -55812,6 +57639,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkCreateNestedManyWithoutWorkspaceInput
     apiKeys?: ProviderAPIKeyCreateNestedManyWithoutWorkspaceInput
     invitations?: WorkspaceInvitationCreateNestedManyWithoutWorkspaceInput
+    usageMetrics?: UsageMetricCreateNestedManyWithoutWorkspaceInput
   }
 
   export type WorkspaceUncheckedCreateInput = {
@@ -55830,6 +57658,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkUncheckedCreateNestedManyWithoutWorkspaceInput
     apiKeys?: ProviderAPIKeyUncheckedCreateNestedManyWithoutWorkspaceInput
     invitations?: WorkspaceInvitationUncheckedCreateNestedManyWithoutWorkspaceInput
+    usageMetrics?: UsageMetricUncheckedCreateNestedManyWithoutWorkspaceInput
   }
 
   export type WorkspaceUpdateInput = {
@@ -55848,6 +57677,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkUpdateManyWithoutWorkspaceNestedInput
     apiKeys?: ProviderAPIKeyUpdateManyWithoutWorkspaceNestedInput
     invitations?: WorkspaceInvitationUpdateManyWithoutWorkspaceNestedInput
+    usageMetrics?: UsageMetricUpdateManyWithoutWorkspaceNestedInput
   }
 
   export type WorkspaceUncheckedUpdateInput = {
@@ -55866,6 +57696,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkUncheckedUpdateManyWithoutWorkspaceNestedInput
     apiKeys?: ProviderAPIKeyUncheckedUpdateManyWithoutWorkspaceNestedInput
     invitations?: WorkspaceInvitationUncheckedUpdateManyWithoutWorkspaceNestedInput
+    usageMetrics?: UsageMetricUncheckedUpdateManyWithoutWorkspaceNestedInput
   }
 
   export type WorkspaceCreateManyInput = {
@@ -56102,14 +57933,18 @@ export namespace Prisma {
     provider: $Enums.LLMProvider
     displayName: string
     keyHash: string
-    providerConfig?: NullableJsonNullValueInput | InputJsonValue
-    endpoint?: string | null
-    authType?: $Enums.AuthType
     isActive?: boolean
     lastUsedAt?: Date | string | null
+    usageCount?: number
+    totalTokens?: bigint | number
+    totalCost?: Decimal | DecimalJsLike | number | string
+    lastErrorAt?: Date | string | null
     createdAt?: Date | string
-    expiresAt?: Date | string | null
     workspace: WorkspaceCreateNestedOneWithoutApiKeysInput
+    createdBy: UserCreateNestedOneWithoutCreatedApiKeysInput
+    usageMetrics?: UsageMetricCreateNestedManyWithoutApiKeyInput
+    podExecutions?: PodExecutionCreateNestedManyWithoutApiKeyInput
+    podUsageLogs?: PodUsageLogCreateNestedManyWithoutApiKeyInput
   }
 
   export type ProviderAPIKeyUncheckedCreateInput = {
@@ -56118,13 +57953,17 @@ export namespace Prisma {
     provider: $Enums.LLMProvider
     displayName: string
     keyHash: string
-    providerConfig?: NullableJsonNullValueInput | InputJsonValue
-    endpoint?: string | null
-    authType?: $Enums.AuthType
     isActive?: boolean
     lastUsedAt?: Date | string | null
+    usageCount?: number
+    totalTokens?: bigint | number
+    totalCost?: Decimal | DecimalJsLike | number | string
+    lastErrorAt?: Date | string | null
+    createdById: string
     createdAt?: Date | string
-    expiresAt?: Date | string | null
+    usageMetrics?: UsageMetricUncheckedCreateNestedManyWithoutApiKeyInput
+    podExecutions?: PodExecutionUncheckedCreateNestedManyWithoutApiKeyInput
+    podUsageLogs?: PodUsageLogUncheckedCreateNestedManyWithoutApiKeyInput
   }
 
   export type ProviderAPIKeyUpdateInput = {
@@ -56132,14 +57971,18 @@ export namespace Prisma {
     provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
     displayName?: StringFieldUpdateOperationsInput | string
     keyHash?: StringFieldUpdateOperationsInput | string
-    providerConfig?: NullableJsonNullValueInput | InputJsonValue
-    endpoint?: NullableStringFieldUpdateOperationsInput | string | null
-    authType?: EnumAuthTypeFieldUpdateOperationsInput | $Enums.AuthType
     isActive?: BoolFieldUpdateOperationsInput | boolean
     lastUsedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    usageCount?: IntFieldUpdateOperationsInput | number
+    totalTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    totalCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    lastErrorAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    expiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     workspace?: WorkspaceUpdateOneRequiredWithoutApiKeysNestedInput
+    createdBy?: UserUpdateOneRequiredWithoutCreatedApiKeysNestedInput
+    usageMetrics?: UsageMetricUpdateManyWithoutApiKeyNestedInput
+    podExecutions?: PodExecutionUpdateManyWithoutApiKeyNestedInput
+    podUsageLogs?: PodUsageLogUpdateManyWithoutApiKeyNestedInput
   }
 
   export type ProviderAPIKeyUncheckedUpdateInput = {
@@ -56148,13 +57991,17 @@ export namespace Prisma {
     provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
     displayName?: StringFieldUpdateOperationsInput | string
     keyHash?: StringFieldUpdateOperationsInput | string
-    providerConfig?: NullableJsonNullValueInput | InputJsonValue
-    endpoint?: NullableStringFieldUpdateOperationsInput | string | null
-    authType?: EnumAuthTypeFieldUpdateOperationsInput | $Enums.AuthType
     isActive?: BoolFieldUpdateOperationsInput | boolean
     lastUsedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    usageCount?: IntFieldUpdateOperationsInput | number
+    totalTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    totalCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    lastErrorAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdById?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    expiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    usageMetrics?: UsageMetricUncheckedUpdateManyWithoutApiKeyNestedInput
+    podExecutions?: PodExecutionUncheckedUpdateManyWithoutApiKeyNestedInput
+    podUsageLogs?: PodUsageLogUncheckedUpdateManyWithoutApiKeyNestedInput
   }
 
   export type ProviderAPIKeyCreateManyInput = {
@@ -56163,13 +58010,14 @@ export namespace Prisma {
     provider: $Enums.LLMProvider
     displayName: string
     keyHash: string
-    providerConfig?: NullableJsonNullValueInput | InputJsonValue
-    endpoint?: string | null
-    authType?: $Enums.AuthType
     isActive?: boolean
     lastUsedAt?: Date | string | null
+    usageCount?: number
+    totalTokens?: bigint | number
+    totalCost?: Decimal | DecimalJsLike | number | string
+    lastErrorAt?: Date | string | null
+    createdById: string
     createdAt?: Date | string
-    expiresAt?: Date | string | null
   }
 
   export type ProviderAPIKeyUpdateManyMutationInput = {
@@ -56177,13 +58025,13 @@ export namespace Prisma {
     provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
     displayName?: StringFieldUpdateOperationsInput | string
     keyHash?: StringFieldUpdateOperationsInput | string
-    providerConfig?: NullableJsonNullValueInput | InputJsonValue
-    endpoint?: NullableStringFieldUpdateOperationsInput | string | null
-    authType?: EnumAuthTypeFieldUpdateOperationsInput | $Enums.AuthType
     isActive?: BoolFieldUpdateOperationsInput | boolean
     lastUsedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    usageCount?: IntFieldUpdateOperationsInput | number
+    totalTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    totalCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    lastErrorAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    expiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   }
 
   export type ProviderAPIKeyUncheckedUpdateManyInput = {
@@ -56192,13 +58040,124 @@ export namespace Prisma {
     provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
     displayName?: StringFieldUpdateOperationsInput | string
     keyHash?: StringFieldUpdateOperationsInput | string
-    providerConfig?: NullableJsonNullValueInput | InputJsonValue
-    endpoint?: NullableStringFieldUpdateOperationsInput | string | null
-    authType?: EnumAuthTypeFieldUpdateOperationsInput | $Enums.AuthType
     isActive?: BoolFieldUpdateOperationsInput | boolean
     lastUsedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    usageCount?: IntFieldUpdateOperationsInput | number
+    totalTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    totalCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    lastErrorAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdById?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    expiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  }
+
+  export type UsageMetricCreateInput = {
+    id?: string
+    date: Date | string
+    requestCount?: number
+    successCount?: number
+    errorCount?: number
+    promptTokens?: bigint | number
+    completionTokens?: bigint | number
+    totalTokens?: bigint | number
+    estimatedCost?: Decimal | DecimalJsLike | number | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    workspace: WorkspaceCreateNestedOneWithoutUsageMetricsInput
+    apiKey: ProviderAPIKeyCreateNestedOneWithoutUsageMetricsInput
+  }
+
+  export type UsageMetricUncheckedCreateInput = {
+    id?: string
+    workspaceId: string
+    keyId: string
+    date: Date | string
+    requestCount?: number
+    successCount?: number
+    errorCount?: number
+    promptTokens?: bigint | number
+    completionTokens?: bigint | number
+    totalTokens?: bigint | number
+    estimatedCost?: Decimal | DecimalJsLike | number | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type UsageMetricUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    date?: DateTimeFieldUpdateOperationsInput | Date | string
+    requestCount?: IntFieldUpdateOperationsInput | number
+    successCount?: IntFieldUpdateOperationsInput | number
+    errorCount?: IntFieldUpdateOperationsInput | number
+    promptTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    completionTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    totalTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    workspace?: WorkspaceUpdateOneRequiredWithoutUsageMetricsNestedInput
+    apiKey?: ProviderAPIKeyUpdateOneRequiredWithoutUsageMetricsNestedInput
+  }
+
+  export type UsageMetricUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    workspaceId?: StringFieldUpdateOperationsInput | string
+    keyId?: StringFieldUpdateOperationsInput | string
+    date?: DateTimeFieldUpdateOperationsInput | Date | string
+    requestCount?: IntFieldUpdateOperationsInput | number
+    successCount?: IntFieldUpdateOperationsInput | number
+    errorCount?: IntFieldUpdateOperationsInput | number
+    promptTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    completionTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    totalTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type UsageMetricCreateManyInput = {
+    id?: string
+    workspaceId: string
+    keyId: string
+    date: Date | string
+    requestCount?: number
+    successCount?: number
+    errorCount?: number
+    promptTokens?: bigint | number
+    completionTokens?: bigint | number
+    totalTokens?: bigint | number
+    estimatedCost?: Decimal | DecimalJsLike | number | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type UsageMetricUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    date?: DateTimeFieldUpdateOperationsInput | Date | string
+    requestCount?: IntFieldUpdateOperationsInput | number
+    successCount?: IntFieldUpdateOperationsInput | number
+    errorCount?: IntFieldUpdateOperationsInput | number
+    promptTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    completionTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    totalTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type UsageMetricUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    workspaceId?: StringFieldUpdateOperationsInput | string
+    keyId?: StringFieldUpdateOperationsInput | string
+    date?: DateTimeFieldUpdateOperationsInput | Date | string
+    requestCount?: IntFieldUpdateOperationsInput | number
+    successCount?: IntFieldUpdateOperationsInput | number
+    errorCount?: IntFieldUpdateOperationsInput | number
+    promptTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    completionTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    totalTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type ShareLinkCreateInput = {
@@ -58854,6 +60813,11 @@ export namespace Prisma {
     not?: NestedDecimalNullableFilter<$PrismaModel> | Decimal | DecimalJsLike | number | string | null
   }
 
+  export type ProviderAPIKeyNullableScalarRelationFilter = {
+    is?: ProviderAPIKeyWhereInput | null
+    isNot?: ProviderAPIKeyWhereInput | null
+  }
+
   export type PodExecutionOrderByRelevanceInput = {
     fields: PodExecutionOrderByRelevanceFieldEnum | PodExecutionOrderByRelevanceFieldEnum[]
     sort: SortOrder
@@ -58869,6 +60833,7 @@ export namespace Prisma {
     startedAt?: SortOrder
     finishedAt?: SortOrder
     runtimeInMs?: SortOrder
+    apiKeyId?: SortOrder
     provider?: SortOrder
     modelId?: SortOrder
     modelName?: SortOrder
@@ -58902,6 +60867,7 @@ export namespace Prisma {
     startedAt?: SortOrder
     finishedAt?: SortOrder
     runtimeInMs?: SortOrder
+    apiKeyId?: SortOrder
     provider?: SortOrder
     modelId?: SortOrder
     modelName?: SortOrder
@@ -58923,6 +60889,7 @@ export namespace Prisma {
     startedAt?: SortOrder
     finishedAt?: SortOrder
     runtimeInMs?: SortOrder
+    apiKeyId?: SortOrder
     provider?: SortOrder
     modelId?: SortOrder
     modelName?: SortOrder
@@ -58973,6 +60940,7 @@ export namespace Prisma {
     flowId?: SortOrder
     workspaceId?: SortOrder
     subscriptionId?: SortOrder
+    apiKeyId?: SortOrder
     provider?: SortOrder
     modelId?: SortOrder
     modelName?: SortOrder
@@ -59008,6 +60976,7 @@ export namespace Prisma {
     flowId?: SortOrder
     workspaceId?: SortOrder
     subscriptionId?: SortOrder
+    apiKeyId?: SortOrder
     provider?: SortOrder
     modelId?: SortOrder
     modelName?: SortOrder
@@ -59030,6 +60999,7 @@ export namespace Prisma {
     flowId?: SortOrder
     workspaceId?: SortOrder
     subscriptionId?: SortOrder
+    apiKeyId?: SortOrder
     provider?: SortOrder
     modelId?: SortOrder
     modelName?: SortOrder
@@ -59129,6 +61099,12 @@ export namespace Prisma {
     none?: WorkspaceInvitationWhereInput
   }
 
+  export type ProviderAPIKeyListRelationFilter = {
+    every?: ProviderAPIKeyWhereInput
+    some?: ProviderAPIKeyWhereInput
+    none?: ProviderAPIKeyWhereInput
+  }
+
   export type AccountOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
@@ -59142,6 +61118,10 @@ export namespace Prisma {
   }
 
   export type WorkspaceInvitationOrderByRelationAggregateInput = {
+    _count?: SortOrder
+  }
+
+  export type ProviderAPIKeyOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -59319,10 +61299,10 @@ export namespace Prisma {
     none?: ShareLinkWhereInput
   }
 
-  export type ProviderAPIKeyListRelationFilter = {
-    every?: ProviderAPIKeyWhereInput
-    some?: ProviderAPIKeyWhereInput
-    none?: ProviderAPIKeyWhereInput
+  export type UsageMetricListRelationFilter = {
+    every?: UsageMetricWhereInput
+    some?: UsageMetricWhereInput
+    none?: UsageMetricWhereInput
   }
 
   export type SpaceOrderByRelationAggregateInput = {
@@ -59341,7 +61321,7 @@ export namespace Prisma {
     _count?: SortOrder
   }
 
-  export type ProviderAPIKeyOrderByRelationAggregateInput = {
+  export type UsageMetricOrderByRelationAggregateInput = {
     _count?: SortOrder
   }
 
@@ -59507,11 +61487,15 @@ export namespace Prisma {
     acceptedAt?: SortOrder
   }
 
-  export type EnumAuthTypeFilter<$PrismaModel = never> = {
-    equals?: $Enums.AuthType | EnumAuthTypeFieldRefInput<$PrismaModel>
-    in?: $Enums.AuthType[] | ListEnumAuthTypeFieldRefInput<$PrismaModel>
-    notIn?: $Enums.AuthType[] | ListEnumAuthTypeFieldRefInput<$PrismaModel>
-    not?: NestedEnumAuthTypeFilter<$PrismaModel> | $Enums.AuthType
+  export type BigIntFilter<$PrismaModel = never> = {
+    equals?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    in?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
+    notIn?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
+    lt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    lte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    gt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    gte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    not?: NestedBigIntFilter<$PrismaModel> | bigint | number
   }
 
   export type ProviderAPIKeyOrderByRelevanceInput = {
@@ -59532,13 +61516,20 @@ export namespace Prisma {
     provider?: SortOrder
     displayName?: SortOrder
     keyHash?: SortOrder
-    providerConfig?: SortOrder
-    endpoint?: SortOrder
-    authType?: SortOrder
     isActive?: SortOrder
     lastUsedAt?: SortOrder
+    usageCount?: SortOrder
+    totalTokens?: SortOrder
+    totalCost?: SortOrder
+    lastErrorAt?: SortOrder
+    createdById?: SortOrder
     createdAt?: SortOrder
-    expiresAt?: SortOrder
+  }
+
+  export type ProviderAPIKeyAvgOrderByAggregateInput = {
+    usageCount?: SortOrder
+    totalTokens?: SortOrder
+    totalCost?: SortOrder
   }
 
   export type ProviderAPIKeyMaxOrderByAggregateInput = {
@@ -59547,12 +61538,14 @@ export namespace Prisma {
     provider?: SortOrder
     displayName?: SortOrder
     keyHash?: SortOrder
-    endpoint?: SortOrder
-    authType?: SortOrder
     isActive?: SortOrder
     lastUsedAt?: SortOrder
+    usageCount?: SortOrder
+    totalTokens?: SortOrder
+    totalCost?: SortOrder
+    lastErrorAt?: SortOrder
+    createdById?: SortOrder
     createdAt?: SortOrder
-    expiresAt?: SortOrder
   }
 
   export type ProviderAPIKeyMinOrderByAggregateInput = {
@@ -59561,22 +61554,120 @@ export namespace Prisma {
     provider?: SortOrder
     displayName?: SortOrder
     keyHash?: SortOrder
-    endpoint?: SortOrder
-    authType?: SortOrder
     isActive?: SortOrder
     lastUsedAt?: SortOrder
+    usageCount?: SortOrder
+    totalTokens?: SortOrder
+    totalCost?: SortOrder
+    lastErrorAt?: SortOrder
+    createdById?: SortOrder
     createdAt?: SortOrder
-    expiresAt?: SortOrder
   }
 
-  export type EnumAuthTypeWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: $Enums.AuthType | EnumAuthTypeFieldRefInput<$PrismaModel>
-    in?: $Enums.AuthType[] | ListEnumAuthTypeFieldRefInput<$PrismaModel>
-    notIn?: $Enums.AuthType[] | ListEnumAuthTypeFieldRefInput<$PrismaModel>
-    not?: NestedEnumAuthTypeWithAggregatesFilter<$PrismaModel> | $Enums.AuthType
+  export type ProviderAPIKeySumOrderByAggregateInput = {
+    usageCount?: SortOrder
+    totalTokens?: SortOrder
+    totalCost?: SortOrder
+  }
+
+  export type BigIntWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    in?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
+    notIn?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
+    lt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    lte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    gt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    gte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    not?: NestedBigIntWithAggregatesFilter<$PrismaModel> | bigint | number
     _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedEnumAuthTypeFilter<$PrismaModel>
-    _max?: NestedEnumAuthTypeFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedBigIntFilter<$PrismaModel>
+    _min?: NestedBigIntFilter<$PrismaModel>
+    _max?: NestedBigIntFilter<$PrismaModel>
+  }
+
+  export type ProviderAPIKeyScalarRelationFilter = {
+    is?: ProviderAPIKeyWhereInput
+    isNot?: ProviderAPIKeyWhereInput
+  }
+
+  export type UsageMetricOrderByRelevanceInput = {
+    fields: UsageMetricOrderByRelevanceFieldEnum | UsageMetricOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
+  }
+
+  export type UsageMetricKeyIdDateCompoundUniqueInput = {
+    keyId: string
+    date: Date | string
+  }
+
+  export type UsageMetricCountOrderByAggregateInput = {
+    id?: SortOrder
+    workspaceId?: SortOrder
+    keyId?: SortOrder
+    date?: SortOrder
+    requestCount?: SortOrder
+    successCount?: SortOrder
+    errorCount?: SortOrder
+    promptTokens?: SortOrder
+    completionTokens?: SortOrder
+    totalTokens?: SortOrder
+    estimatedCost?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type UsageMetricAvgOrderByAggregateInput = {
+    requestCount?: SortOrder
+    successCount?: SortOrder
+    errorCount?: SortOrder
+    promptTokens?: SortOrder
+    completionTokens?: SortOrder
+    totalTokens?: SortOrder
+    estimatedCost?: SortOrder
+  }
+
+  export type UsageMetricMaxOrderByAggregateInput = {
+    id?: SortOrder
+    workspaceId?: SortOrder
+    keyId?: SortOrder
+    date?: SortOrder
+    requestCount?: SortOrder
+    successCount?: SortOrder
+    errorCount?: SortOrder
+    promptTokens?: SortOrder
+    completionTokens?: SortOrder
+    totalTokens?: SortOrder
+    estimatedCost?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type UsageMetricMinOrderByAggregateInput = {
+    id?: SortOrder
+    workspaceId?: SortOrder
+    keyId?: SortOrder
+    date?: SortOrder
+    requestCount?: SortOrder
+    successCount?: SortOrder
+    errorCount?: SortOrder
+    promptTokens?: SortOrder
+    completionTokens?: SortOrder
+    totalTokens?: SortOrder
+    estimatedCost?: SortOrder
+    createdAt?: SortOrder
+    updatedAt?: SortOrder
+  }
+
+  export type UsageMetricSumOrderByAggregateInput = {
+    requestCount?: SortOrder
+    successCount?: SortOrder
+    errorCount?: SortOrder
+    promptTokens?: SortOrder
+    completionTokens?: SortOrder
+    totalTokens?: SortOrder
+    estimatedCost?: SortOrder
   }
 
   export type EnumShareableAssetTypeFilter<$PrismaModel = never> = {
@@ -61497,6 +63588,12 @@ export namespace Prisma {
     connect?: PodWhereUniqueInput
   }
 
+  export type ProviderAPIKeyCreateNestedOneWithoutPodExecutionsInput = {
+    create?: XOR<ProviderAPIKeyCreateWithoutPodExecutionsInput, ProviderAPIKeyUncheckedCreateWithoutPodExecutionsInput>
+    connectOrCreate?: ProviderAPIKeyCreateOrConnectWithoutPodExecutionsInput
+    connect?: ProviderAPIKeyWhereUniqueInput
+  }
+
   export type NullableDecimalFieldUpdateOperationsInput = {
     set?: Decimal | DecimalJsLike | number | string | null
     increment?: Decimal | DecimalJsLike | number | string
@@ -61513,6 +63610,16 @@ export namespace Prisma {
     update?: XOR<XOR<PodUpdateToOneWithWhereWithoutExecutionsInput, PodUpdateWithoutExecutionsInput>, PodUncheckedUpdateWithoutExecutionsInput>
   }
 
+  export type ProviderAPIKeyUpdateOneWithoutPodExecutionsNestedInput = {
+    create?: XOR<ProviderAPIKeyCreateWithoutPodExecutionsInput, ProviderAPIKeyUncheckedCreateWithoutPodExecutionsInput>
+    connectOrCreate?: ProviderAPIKeyCreateOrConnectWithoutPodExecutionsInput
+    upsert?: ProviderAPIKeyUpsertWithoutPodExecutionsInput
+    disconnect?: ProviderAPIKeyWhereInput | boolean
+    delete?: ProviderAPIKeyWhereInput | boolean
+    connect?: ProviderAPIKeyWhereUniqueInput
+    update?: XOR<XOR<ProviderAPIKeyUpdateToOneWithWhereWithoutPodExecutionsInput, ProviderAPIKeyUpdateWithoutPodExecutionsInput>, ProviderAPIKeyUncheckedUpdateWithoutPodExecutionsInput>
+  }
+
   export type PodCreateNestedOneWithoutUsageLogsInput = {
     create?: XOR<PodCreateWithoutUsageLogsInput, PodUncheckedCreateWithoutUsageLogsInput>
     connectOrCreate?: PodCreateOrConnectWithoutUsageLogsInput
@@ -61523,6 +63630,12 @@ export namespace Prisma {
     create?: XOR<SubscriptionCreateWithoutUsageLogsInput, SubscriptionUncheckedCreateWithoutUsageLogsInput>
     connectOrCreate?: SubscriptionCreateOrConnectWithoutUsageLogsInput
     connect?: SubscriptionWhereUniqueInput
+  }
+
+  export type ProviderAPIKeyCreateNestedOneWithoutPodUsageLogsInput = {
+    create?: XOR<ProviderAPIKeyCreateWithoutPodUsageLogsInput, ProviderAPIKeyUncheckedCreateWithoutPodUsageLogsInput>
+    connectOrCreate?: ProviderAPIKeyCreateOrConnectWithoutPodUsageLogsInput
+    connect?: ProviderAPIKeyWhereUniqueInput
   }
 
   export type PodUpdateOneRequiredWithoutUsageLogsNestedInput = {
@@ -61539,6 +63652,16 @@ export namespace Prisma {
     upsert?: SubscriptionUpsertWithoutUsageLogsInput
     connect?: SubscriptionWhereUniqueInput
     update?: XOR<XOR<SubscriptionUpdateToOneWithWhereWithoutUsageLogsInput, SubscriptionUpdateWithoutUsageLogsInput>, SubscriptionUncheckedUpdateWithoutUsageLogsInput>
+  }
+
+  export type ProviderAPIKeyUpdateOneWithoutPodUsageLogsNestedInput = {
+    create?: XOR<ProviderAPIKeyCreateWithoutPodUsageLogsInput, ProviderAPIKeyUncheckedCreateWithoutPodUsageLogsInput>
+    connectOrCreate?: ProviderAPIKeyCreateOrConnectWithoutPodUsageLogsInput
+    upsert?: ProviderAPIKeyUpsertWithoutPodUsageLogsInput
+    disconnect?: ProviderAPIKeyWhereInput | boolean
+    delete?: ProviderAPIKeyWhereInput | boolean
+    connect?: ProviderAPIKeyWhereUniqueInput
+    update?: XOR<XOR<ProviderAPIKeyUpdateToOneWithWhereWithoutPodUsageLogsInput, ProviderAPIKeyUpdateWithoutPodUsageLogsInput>, ProviderAPIKeyUncheckedUpdateWithoutPodUsageLogsInput>
   }
 
   export type WorkspaceCreateNestedOneWithoutContextModulesInput = {
@@ -61627,6 +63750,13 @@ export namespace Prisma {
     connect?: FlowInvitationWhereUniqueInput | FlowInvitationWhereUniqueInput[]
   }
 
+  export type ProviderAPIKeyCreateNestedManyWithoutCreatedByInput = {
+    create?: XOR<ProviderAPIKeyCreateWithoutCreatedByInput, ProviderAPIKeyUncheckedCreateWithoutCreatedByInput> | ProviderAPIKeyCreateWithoutCreatedByInput[] | ProviderAPIKeyUncheckedCreateWithoutCreatedByInput[]
+    connectOrCreate?: ProviderAPIKeyCreateOrConnectWithoutCreatedByInput | ProviderAPIKeyCreateOrConnectWithoutCreatedByInput[]
+    createMany?: ProviderAPIKeyCreateManyCreatedByInputEnvelope
+    connect?: ProviderAPIKeyWhereUniqueInput | ProviderAPIKeyWhereUniqueInput[]
+  }
+
   export type AccountUncheckedCreateNestedManyWithoutUserInput = {
     create?: XOR<AccountCreateWithoutUserInput, AccountUncheckedCreateWithoutUserInput> | AccountCreateWithoutUserInput[] | AccountUncheckedCreateWithoutUserInput[]
     connectOrCreate?: AccountCreateOrConnectWithoutUserInput | AccountCreateOrConnectWithoutUserInput[]
@@ -61681,6 +63811,13 @@ export namespace Prisma {
     connectOrCreate?: FlowInvitationCreateOrConnectWithoutInvitedUserInput | FlowInvitationCreateOrConnectWithoutInvitedUserInput[]
     createMany?: FlowInvitationCreateManyInvitedUserInputEnvelope
     connect?: FlowInvitationWhereUniqueInput | FlowInvitationWhereUniqueInput[]
+  }
+
+  export type ProviderAPIKeyUncheckedCreateNestedManyWithoutCreatedByInput = {
+    create?: XOR<ProviderAPIKeyCreateWithoutCreatedByInput, ProviderAPIKeyUncheckedCreateWithoutCreatedByInput> | ProviderAPIKeyCreateWithoutCreatedByInput[] | ProviderAPIKeyUncheckedCreateWithoutCreatedByInput[]
+    connectOrCreate?: ProviderAPIKeyCreateOrConnectWithoutCreatedByInput | ProviderAPIKeyCreateOrConnectWithoutCreatedByInput[]
+    createMany?: ProviderAPIKeyCreateManyCreatedByInputEnvelope
+    connect?: ProviderAPIKeyWhereUniqueInput | ProviderAPIKeyWhereUniqueInput[]
   }
 
   export type AccountUpdateManyWithoutUserNestedInput = {
@@ -61795,6 +63932,20 @@ export namespace Prisma {
     deleteMany?: FlowInvitationScalarWhereInput | FlowInvitationScalarWhereInput[]
   }
 
+  export type ProviderAPIKeyUpdateManyWithoutCreatedByNestedInput = {
+    create?: XOR<ProviderAPIKeyCreateWithoutCreatedByInput, ProviderAPIKeyUncheckedCreateWithoutCreatedByInput> | ProviderAPIKeyCreateWithoutCreatedByInput[] | ProviderAPIKeyUncheckedCreateWithoutCreatedByInput[]
+    connectOrCreate?: ProviderAPIKeyCreateOrConnectWithoutCreatedByInput | ProviderAPIKeyCreateOrConnectWithoutCreatedByInput[]
+    upsert?: ProviderAPIKeyUpsertWithWhereUniqueWithoutCreatedByInput | ProviderAPIKeyUpsertWithWhereUniqueWithoutCreatedByInput[]
+    createMany?: ProviderAPIKeyCreateManyCreatedByInputEnvelope
+    set?: ProviderAPIKeyWhereUniqueInput | ProviderAPIKeyWhereUniqueInput[]
+    disconnect?: ProviderAPIKeyWhereUniqueInput | ProviderAPIKeyWhereUniqueInput[]
+    delete?: ProviderAPIKeyWhereUniqueInput | ProviderAPIKeyWhereUniqueInput[]
+    connect?: ProviderAPIKeyWhereUniqueInput | ProviderAPIKeyWhereUniqueInput[]
+    update?: ProviderAPIKeyUpdateWithWhereUniqueWithoutCreatedByInput | ProviderAPIKeyUpdateWithWhereUniqueWithoutCreatedByInput[]
+    updateMany?: ProviderAPIKeyUpdateManyWithWhereWithoutCreatedByInput | ProviderAPIKeyUpdateManyWithWhereWithoutCreatedByInput[]
+    deleteMany?: ProviderAPIKeyScalarWhereInput | ProviderAPIKeyScalarWhereInput[]
+  }
+
   export type AccountUncheckedUpdateManyWithoutUserNestedInput = {
     create?: XOR<AccountCreateWithoutUserInput, AccountUncheckedCreateWithoutUserInput> | AccountCreateWithoutUserInput[] | AccountUncheckedCreateWithoutUserInput[]
     connectOrCreate?: AccountCreateOrConnectWithoutUserInput | AccountCreateOrConnectWithoutUserInput[]
@@ -61907,6 +64058,20 @@ export namespace Prisma {
     deleteMany?: FlowInvitationScalarWhereInput | FlowInvitationScalarWhereInput[]
   }
 
+  export type ProviderAPIKeyUncheckedUpdateManyWithoutCreatedByNestedInput = {
+    create?: XOR<ProviderAPIKeyCreateWithoutCreatedByInput, ProviderAPIKeyUncheckedCreateWithoutCreatedByInput> | ProviderAPIKeyCreateWithoutCreatedByInput[] | ProviderAPIKeyUncheckedCreateWithoutCreatedByInput[]
+    connectOrCreate?: ProviderAPIKeyCreateOrConnectWithoutCreatedByInput | ProviderAPIKeyCreateOrConnectWithoutCreatedByInput[]
+    upsert?: ProviderAPIKeyUpsertWithWhereUniqueWithoutCreatedByInput | ProviderAPIKeyUpsertWithWhereUniqueWithoutCreatedByInput[]
+    createMany?: ProviderAPIKeyCreateManyCreatedByInputEnvelope
+    set?: ProviderAPIKeyWhereUniqueInput | ProviderAPIKeyWhereUniqueInput[]
+    disconnect?: ProviderAPIKeyWhereUniqueInput | ProviderAPIKeyWhereUniqueInput[]
+    delete?: ProviderAPIKeyWhereUniqueInput | ProviderAPIKeyWhereUniqueInput[]
+    connect?: ProviderAPIKeyWhereUniqueInput | ProviderAPIKeyWhereUniqueInput[]
+    update?: ProviderAPIKeyUpdateWithWhereUniqueWithoutCreatedByInput | ProviderAPIKeyUpdateWithWhereUniqueWithoutCreatedByInput[]
+    updateMany?: ProviderAPIKeyUpdateManyWithWhereWithoutCreatedByInput | ProviderAPIKeyUpdateManyWithWhereWithoutCreatedByInput[]
+    deleteMany?: ProviderAPIKeyScalarWhereInput | ProviderAPIKeyScalarWhereInput[]
+  }
+
   export type UserCreateNestedOneWithoutRefreshTokensInput = {
     create?: XOR<UserCreateWithoutRefreshTokensInput, UserUncheckedCreateWithoutRefreshTokensInput>
     connectOrCreate?: UserCreateOrConnectWithoutRefreshTokensInput
@@ -62008,6 +64173,13 @@ export namespace Prisma {
     connect?: WorkspaceInvitationWhereUniqueInput | WorkspaceInvitationWhereUniqueInput[]
   }
 
+  export type UsageMetricCreateNestedManyWithoutWorkspaceInput = {
+    create?: XOR<UsageMetricCreateWithoutWorkspaceInput, UsageMetricUncheckedCreateWithoutWorkspaceInput> | UsageMetricCreateWithoutWorkspaceInput[] | UsageMetricUncheckedCreateWithoutWorkspaceInput[]
+    connectOrCreate?: UsageMetricCreateOrConnectWithoutWorkspaceInput | UsageMetricCreateOrConnectWithoutWorkspaceInput[]
+    createMany?: UsageMetricCreateManyWorkspaceInputEnvelope
+    connect?: UsageMetricWhereUniqueInput | UsageMetricWhereUniqueInput[]
+  }
+
   export type WorkspaceUserUncheckedCreateNestedManyWithoutWorkspaceInput = {
     create?: XOR<WorkspaceUserCreateWithoutWorkspaceInput, WorkspaceUserUncheckedCreateWithoutWorkspaceInput> | WorkspaceUserCreateWithoutWorkspaceInput[] | WorkspaceUserUncheckedCreateWithoutWorkspaceInput[]
     connectOrCreate?: WorkspaceUserCreateOrConnectWithoutWorkspaceInput | WorkspaceUserCreateOrConnectWithoutWorkspaceInput[]
@@ -62075,6 +64247,13 @@ export namespace Prisma {
     connectOrCreate?: WorkspaceInvitationCreateOrConnectWithoutWorkspaceInput | WorkspaceInvitationCreateOrConnectWithoutWorkspaceInput[]
     createMany?: WorkspaceInvitationCreateManyWorkspaceInputEnvelope
     connect?: WorkspaceInvitationWhereUniqueInput | WorkspaceInvitationWhereUniqueInput[]
+  }
+
+  export type UsageMetricUncheckedCreateNestedManyWithoutWorkspaceInput = {
+    create?: XOR<UsageMetricCreateWithoutWorkspaceInput, UsageMetricUncheckedCreateWithoutWorkspaceInput> | UsageMetricCreateWithoutWorkspaceInput[] | UsageMetricUncheckedCreateWithoutWorkspaceInput[]
+    connectOrCreate?: UsageMetricCreateOrConnectWithoutWorkspaceInput | UsageMetricCreateOrConnectWithoutWorkspaceInput[]
+    createMany?: UsageMetricCreateManyWorkspaceInputEnvelope
+    connect?: UsageMetricWhereUniqueInput | UsageMetricWhereUniqueInput[]
   }
 
   export type EnumWorkspaceTypeFieldUpdateOperationsInput = {
@@ -62217,6 +64396,20 @@ export namespace Prisma {
     deleteMany?: WorkspaceInvitationScalarWhereInput | WorkspaceInvitationScalarWhereInput[]
   }
 
+  export type UsageMetricUpdateManyWithoutWorkspaceNestedInput = {
+    create?: XOR<UsageMetricCreateWithoutWorkspaceInput, UsageMetricUncheckedCreateWithoutWorkspaceInput> | UsageMetricCreateWithoutWorkspaceInput[] | UsageMetricUncheckedCreateWithoutWorkspaceInput[]
+    connectOrCreate?: UsageMetricCreateOrConnectWithoutWorkspaceInput | UsageMetricCreateOrConnectWithoutWorkspaceInput[]
+    upsert?: UsageMetricUpsertWithWhereUniqueWithoutWorkspaceInput | UsageMetricUpsertWithWhereUniqueWithoutWorkspaceInput[]
+    createMany?: UsageMetricCreateManyWorkspaceInputEnvelope
+    set?: UsageMetricWhereUniqueInput | UsageMetricWhereUniqueInput[]
+    disconnect?: UsageMetricWhereUniqueInput | UsageMetricWhereUniqueInput[]
+    delete?: UsageMetricWhereUniqueInput | UsageMetricWhereUniqueInput[]
+    connect?: UsageMetricWhereUniqueInput | UsageMetricWhereUniqueInput[]
+    update?: UsageMetricUpdateWithWhereUniqueWithoutWorkspaceInput | UsageMetricUpdateWithWhereUniqueWithoutWorkspaceInput[]
+    updateMany?: UsageMetricUpdateManyWithWhereWithoutWorkspaceInput | UsageMetricUpdateManyWithWhereWithoutWorkspaceInput[]
+    deleteMany?: UsageMetricScalarWhereInput | UsageMetricScalarWhereInput[]
+  }
+
   export type WorkspaceUserUncheckedUpdateManyWithoutWorkspaceNestedInput = {
     create?: XOR<WorkspaceUserCreateWithoutWorkspaceInput, WorkspaceUserUncheckedCreateWithoutWorkspaceInput> | WorkspaceUserCreateWithoutWorkspaceInput[] | WorkspaceUserUncheckedCreateWithoutWorkspaceInput[]
     connectOrCreate?: WorkspaceUserCreateOrConnectWithoutWorkspaceInput | WorkspaceUserCreateOrConnectWithoutWorkspaceInput[]
@@ -62353,6 +64546,20 @@ export namespace Prisma {
     deleteMany?: WorkspaceInvitationScalarWhereInput | WorkspaceInvitationScalarWhereInput[]
   }
 
+  export type UsageMetricUncheckedUpdateManyWithoutWorkspaceNestedInput = {
+    create?: XOR<UsageMetricCreateWithoutWorkspaceInput, UsageMetricUncheckedCreateWithoutWorkspaceInput> | UsageMetricCreateWithoutWorkspaceInput[] | UsageMetricUncheckedCreateWithoutWorkspaceInput[]
+    connectOrCreate?: UsageMetricCreateOrConnectWithoutWorkspaceInput | UsageMetricCreateOrConnectWithoutWorkspaceInput[]
+    upsert?: UsageMetricUpsertWithWhereUniqueWithoutWorkspaceInput | UsageMetricUpsertWithWhereUniqueWithoutWorkspaceInput[]
+    createMany?: UsageMetricCreateManyWorkspaceInputEnvelope
+    set?: UsageMetricWhereUniqueInput | UsageMetricWhereUniqueInput[]
+    disconnect?: UsageMetricWhereUniqueInput | UsageMetricWhereUniqueInput[]
+    delete?: UsageMetricWhereUniqueInput | UsageMetricWhereUniqueInput[]
+    connect?: UsageMetricWhereUniqueInput | UsageMetricWhereUniqueInput[]
+    update?: UsageMetricUpdateWithWhereUniqueWithoutWorkspaceInput | UsageMetricUpdateWithWhereUniqueWithoutWorkspaceInput[]
+    updateMany?: UsageMetricUpdateManyWithWhereWithoutWorkspaceInput | UsageMetricUpdateManyWithWhereWithoutWorkspaceInput[]
+    deleteMany?: UsageMetricScalarWhereInput | UsageMetricScalarWhereInput[]
+  }
+
   export type UserCreateNestedOneWithoutWorkspacesInput = {
     create?: XOR<UserCreateWithoutWorkspacesInput, UserUncheckedCreateWithoutWorkspacesInput>
     connectOrCreate?: UserCreateOrConnectWithoutWorkspacesInput
@@ -62435,8 +64642,60 @@ export namespace Prisma {
     connect?: WorkspaceWhereUniqueInput
   }
 
-  export type EnumAuthTypeFieldUpdateOperationsInput = {
-    set?: $Enums.AuthType
+  export type UserCreateNestedOneWithoutCreatedApiKeysInput = {
+    create?: XOR<UserCreateWithoutCreatedApiKeysInput, UserUncheckedCreateWithoutCreatedApiKeysInput>
+    connectOrCreate?: UserCreateOrConnectWithoutCreatedApiKeysInput
+    connect?: UserWhereUniqueInput
+  }
+
+  export type UsageMetricCreateNestedManyWithoutApiKeyInput = {
+    create?: XOR<UsageMetricCreateWithoutApiKeyInput, UsageMetricUncheckedCreateWithoutApiKeyInput> | UsageMetricCreateWithoutApiKeyInput[] | UsageMetricUncheckedCreateWithoutApiKeyInput[]
+    connectOrCreate?: UsageMetricCreateOrConnectWithoutApiKeyInput | UsageMetricCreateOrConnectWithoutApiKeyInput[]
+    createMany?: UsageMetricCreateManyApiKeyInputEnvelope
+    connect?: UsageMetricWhereUniqueInput | UsageMetricWhereUniqueInput[]
+  }
+
+  export type PodExecutionCreateNestedManyWithoutApiKeyInput = {
+    create?: XOR<PodExecutionCreateWithoutApiKeyInput, PodExecutionUncheckedCreateWithoutApiKeyInput> | PodExecutionCreateWithoutApiKeyInput[] | PodExecutionUncheckedCreateWithoutApiKeyInput[]
+    connectOrCreate?: PodExecutionCreateOrConnectWithoutApiKeyInput | PodExecutionCreateOrConnectWithoutApiKeyInput[]
+    createMany?: PodExecutionCreateManyApiKeyInputEnvelope
+    connect?: PodExecutionWhereUniqueInput | PodExecutionWhereUniqueInput[]
+  }
+
+  export type PodUsageLogCreateNestedManyWithoutApiKeyInput = {
+    create?: XOR<PodUsageLogCreateWithoutApiKeyInput, PodUsageLogUncheckedCreateWithoutApiKeyInput> | PodUsageLogCreateWithoutApiKeyInput[] | PodUsageLogUncheckedCreateWithoutApiKeyInput[]
+    connectOrCreate?: PodUsageLogCreateOrConnectWithoutApiKeyInput | PodUsageLogCreateOrConnectWithoutApiKeyInput[]
+    createMany?: PodUsageLogCreateManyApiKeyInputEnvelope
+    connect?: PodUsageLogWhereUniqueInput | PodUsageLogWhereUniqueInput[]
+  }
+
+  export type UsageMetricUncheckedCreateNestedManyWithoutApiKeyInput = {
+    create?: XOR<UsageMetricCreateWithoutApiKeyInput, UsageMetricUncheckedCreateWithoutApiKeyInput> | UsageMetricCreateWithoutApiKeyInput[] | UsageMetricUncheckedCreateWithoutApiKeyInput[]
+    connectOrCreate?: UsageMetricCreateOrConnectWithoutApiKeyInput | UsageMetricCreateOrConnectWithoutApiKeyInput[]
+    createMany?: UsageMetricCreateManyApiKeyInputEnvelope
+    connect?: UsageMetricWhereUniqueInput | UsageMetricWhereUniqueInput[]
+  }
+
+  export type PodExecutionUncheckedCreateNestedManyWithoutApiKeyInput = {
+    create?: XOR<PodExecutionCreateWithoutApiKeyInput, PodExecutionUncheckedCreateWithoutApiKeyInput> | PodExecutionCreateWithoutApiKeyInput[] | PodExecutionUncheckedCreateWithoutApiKeyInput[]
+    connectOrCreate?: PodExecutionCreateOrConnectWithoutApiKeyInput | PodExecutionCreateOrConnectWithoutApiKeyInput[]
+    createMany?: PodExecutionCreateManyApiKeyInputEnvelope
+    connect?: PodExecutionWhereUniqueInput | PodExecutionWhereUniqueInput[]
+  }
+
+  export type PodUsageLogUncheckedCreateNestedManyWithoutApiKeyInput = {
+    create?: XOR<PodUsageLogCreateWithoutApiKeyInput, PodUsageLogUncheckedCreateWithoutApiKeyInput> | PodUsageLogCreateWithoutApiKeyInput[] | PodUsageLogUncheckedCreateWithoutApiKeyInput[]
+    connectOrCreate?: PodUsageLogCreateOrConnectWithoutApiKeyInput | PodUsageLogCreateOrConnectWithoutApiKeyInput[]
+    createMany?: PodUsageLogCreateManyApiKeyInputEnvelope
+    connect?: PodUsageLogWhereUniqueInput | PodUsageLogWhereUniqueInput[]
+  }
+
+  export type BigIntFieldUpdateOperationsInput = {
+    set?: bigint | number
+    increment?: bigint | number
+    decrement?: bigint | number
+    multiply?: bigint | number
+    divide?: bigint | number
   }
 
   export type WorkspaceUpdateOneRequiredWithoutApiKeysNestedInput = {
@@ -62445,6 +64704,126 @@ export namespace Prisma {
     upsert?: WorkspaceUpsertWithoutApiKeysInput
     connect?: WorkspaceWhereUniqueInput
     update?: XOR<XOR<WorkspaceUpdateToOneWithWhereWithoutApiKeysInput, WorkspaceUpdateWithoutApiKeysInput>, WorkspaceUncheckedUpdateWithoutApiKeysInput>
+  }
+
+  export type UserUpdateOneRequiredWithoutCreatedApiKeysNestedInput = {
+    create?: XOR<UserCreateWithoutCreatedApiKeysInput, UserUncheckedCreateWithoutCreatedApiKeysInput>
+    connectOrCreate?: UserCreateOrConnectWithoutCreatedApiKeysInput
+    upsert?: UserUpsertWithoutCreatedApiKeysInput
+    connect?: UserWhereUniqueInput
+    update?: XOR<XOR<UserUpdateToOneWithWhereWithoutCreatedApiKeysInput, UserUpdateWithoutCreatedApiKeysInput>, UserUncheckedUpdateWithoutCreatedApiKeysInput>
+  }
+
+  export type UsageMetricUpdateManyWithoutApiKeyNestedInput = {
+    create?: XOR<UsageMetricCreateWithoutApiKeyInput, UsageMetricUncheckedCreateWithoutApiKeyInput> | UsageMetricCreateWithoutApiKeyInput[] | UsageMetricUncheckedCreateWithoutApiKeyInput[]
+    connectOrCreate?: UsageMetricCreateOrConnectWithoutApiKeyInput | UsageMetricCreateOrConnectWithoutApiKeyInput[]
+    upsert?: UsageMetricUpsertWithWhereUniqueWithoutApiKeyInput | UsageMetricUpsertWithWhereUniqueWithoutApiKeyInput[]
+    createMany?: UsageMetricCreateManyApiKeyInputEnvelope
+    set?: UsageMetricWhereUniqueInput | UsageMetricWhereUniqueInput[]
+    disconnect?: UsageMetricWhereUniqueInput | UsageMetricWhereUniqueInput[]
+    delete?: UsageMetricWhereUniqueInput | UsageMetricWhereUniqueInput[]
+    connect?: UsageMetricWhereUniqueInput | UsageMetricWhereUniqueInput[]
+    update?: UsageMetricUpdateWithWhereUniqueWithoutApiKeyInput | UsageMetricUpdateWithWhereUniqueWithoutApiKeyInput[]
+    updateMany?: UsageMetricUpdateManyWithWhereWithoutApiKeyInput | UsageMetricUpdateManyWithWhereWithoutApiKeyInput[]
+    deleteMany?: UsageMetricScalarWhereInput | UsageMetricScalarWhereInput[]
+  }
+
+  export type PodExecutionUpdateManyWithoutApiKeyNestedInput = {
+    create?: XOR<PodExecutionCreateWithoutApiKeyInput, PodExecutionUncheckedCreateWithoutApiKeyInput> | PodExecutionCreateWithoutApiKeyInput[] | PodExecutionUncheckedCreateWithoutApiKeyInput[]
+    connectOrCreate?: PodExecutionCreateOrConnectWithoutApiKeyInput | PodExecutionCreateOrConnectWithoutApiKeyInput[]
+    upsert?: PodExecutionUpsertWithWhereUniqueWithoutApiKeyInput | PodExecutionUpsertWithWhereUniqueWithoutApiKeyInput[]
+    createMany?: PodExecutionCreateManyApiKeyInputEnvelope
+    set?: PodExecutionWhereUniqueInput | PodExecutionWhereUniqueInput[]
+    disconnect?: PodExecutionWhereUniqueInput | PodExecutionWhereUniqueInput[]
+    delete?: PodExecutionWhereUniqueInput | PodExecutionWhereUniqueInput[]
+    connect?: PodExecutionWhereUniqueInput | PodExecutionWhereUniqueInput[]
+    update?: PodExecutionUpdateWithWhereUniqueWithoutApiKeyInput | PodExecutionUpdateWithWhereUniqueWithoutApiKeyInput[]
+    updateMany?: PodExecutionUpdateManyWithWhereWithoutApiKeyInput | PodExecutionUpdateManyWithWhereWithoutApiKeyInput[]
+    deleteMany?: PodExecutionScalarWhereInput | PodExecutionScalarWhereInput[]
+  }
+
+  export type PodUsageLogUpdateManyWithoutApiKeyNestedInput = {
+    create?: XOR<PodUsageLogCreateWithoutApiKeyInput, PodUsageLogUncheckedCreateWithoutApiKeyInput> | PodUsageLogCreateWithoutApiKeyInput[] | PodUsageLogUncheckedCreateWithoutApiKeyInput[]
+    connectOrCreate?: PodUsageLogCreateOrConnectWithoutApiKeyInput | PodUsageLogCreateOrConnectWithoutApiKeyInput[]
+    upsert?: PodUsageLogUpsertWithWhereUniqueWithoutApiKeyInput | PodUsageLogUpsertWithWhereUniqueWithoutApiKeyInput[]
+    createMany?: PodUsageLogCreateManyApiKeyInputEnvelope
+    set?: PodUsageLogWhereUniqueInput | PodUsageLogWhereUniqueInput[]
+    disconnect?: PodUsageLogWhereUniqueInput | PodUsageLogWhereUniqueInput[]
+    delete?: PodUsageLogWhereUniqueInput | PodUsageLogWhereUniqueInput[]
+    connect?: PodUsageLogWhereUniqueInput | PodUsageLogWhereUniqueInput[]
+    update?: PodUsageLogUpdateWithWhereUniqueWithoutApiKeyInput | PodUsageLogUpdateWithWhereUniqueWithoutApiKeyInput[]
+    updateMany?: PodUsageLogUpdateManyWithWhereWithoutApiKeyInput | PodUsageLogUpdateManyWithWhereWithoutApiKeyInput[]
+    deleteMany?: PodUsageLogScalarWhereInput | PodUsageLogScalarWhereInput[]
+  }
+
+  export type UsageMetricUncheckedUpdateManyWithoutApiKeyNestedInput = {
+    create?: XOR<UsageMetricCreateWithoutApiKeyInput, UsageMetricUncheckedCreateWithoutApiKeyInput> | UsageMetricCreateWithoutApiKeyInput[] | UsageMetricUncheckedCreateWithoutApiKeyInput[]
+    connectOrCreate?: UsageMetricCreateOrConnectWithoutApiKeyInput | UsageMetricCreateOrConnectWithoutApiKeyInput[]
+    upsert?: UsageMetricUpsertWithWhereUniqueWithoutApiKeyInput | UsageMetricUpsertWithWhereUniqueWithoutApiKeyInput[]
+    createMany?: UsageMetricCreateManyApiKeyInputEnvelope
+    set?: UsageMetricWhereUniqueInput | UsageMetricWhereUniqueInput[]
+    disconnect?: UsageMetricWhereUniqueInput | UsageMetricWhereUniqueInput[]
+    delete?: UsageMetricWhereUniqueInput | UsageMetricWhereUniqueInput[]
+    connect?: UsageMetricWhereUniqueInput | UsageMetricWhereUniqueInput[]
+    update?: UsageMetricUpdateWithWhereUniqueWithoutApiKeyInput | UsageMetricUpdateWithWhereUniqueWithoutApiKeyInput[]
+    updateMany?: UsageMetricUpdateManyWithWhereWithoutApiKeyInput | UsageMetricUpdateManyWithWhereWithoutApiKeyInput[]
+    deleteMany?: UsageMetricScalarWhereInput | UsageMetricScalarWhereInput[]
+  }
+
+  export type PodExecutionUncheckedUpdateManyWithoutApiKeyNestedInput = {
+    create?: XOR<PodExecutionCreateWithoutApiKeyInput, PodExecutionUncheckedCreateWithoutApiKeyInput> | PodExecutionCreateWithoutApiKeyInput[] | PodExecutionUncheckedCreateWithoutApiKeyInput[]
+    connectOrCreate?: PodExecutionCreateOrConnectWithoutApiKeyInput | PodExecutionCreateOrConnectWithoutApiKeyInput[]
+    upsert?: PodExecutionUpsertWithWhereUniqueWithoutApiKeyInput | PodExecutionUpsertWithWhereUniqueWithoutApiKeyInput[]
+    createMany?: PodExecutionCreateManyApiKeyInputEnvelope
+    set?: PodExecutionWhereUniqueInput | PodExecutionWhereUniqueInput[]
+    disconnect?: PodExecutionWhereUniqueInput | PodExecutionWhereUniqueInput[]
+    delete?: PodExecutionWhereUniqueInput | PodExecutionWhereUniqueInput[]
+    connect?: PodExecutionWhereUniqueInput | PodExecutionWhereUniqueInput[]
+    update?: PodExecutionUpdateWithWhereUniqueWithoutApiKeyInput | PodExecutionUpdateWithWhereUniqueWithoutApiKeyInput[]
+    updateMany?: PodExecutionUpdateManyWithWhereWithoutApiKeyInput | PodExecutionUpdateManyWithWhereWithoutApiKeyInput[]
+    deleteMany?: PodExecutionScalarWhereInput | PodExecutionScalarWhereInput[]
+  }
+
+  export type PodUsageLogUncheckedUpdateManyWithoutApiKeyNestedInput = {
+    create?: XOR<PodUsageLogCreateWithoutApiKeyInput, PodUsageLogUncheckedCreateWithoutApiKeyInput> | PodUsageLogCreateWithoutApiKeyInput[] | PodUsageLogUncheckedCreateWithoutApiKeyInput[]
+    connectOrCreate?: PodUsageLogCreateOrConnectWithoutApiKeyInput | PodUsageLogCreateOrConnectWithoutApiKeyInput[]
+    upsert?: PodUsageLogUpsertWithWhereUniqueWithoutApiKeyInput | PodUsageLogUpsertWithWhereUniqueWithoutApiKeyInput[]
+    createMany?: PodUsageLogCreateManyApiKeyInputEnvelope
+    set?: PodUsageLogWhereUniqueInput | PodUsageLogWhereUniqueInput[]
+    disconnect?: PodUsageLogWhereUniqueInput | PodUsageLogWhereUniqueInput[]
+    delete?: PodUsageLogWhereUniqueInput | PodUsageLogWhereUniqueInput[]
+    connect?: PodUsageLogWhereUniqueInput | PodUsageLogWhereUniqueInput[]
+    update?: PodUsageLogUpdateWithWhereUniqueWithoutApiKeyInput | PodUsageLogUpdateWithWhereUniqueWithoutApiKeyInput[]
+    updateMany?: PodUsageLogUpdateManyWithWhereWithoutApiKeyInput | PodUsageLogUpdateManyWithWhereWithoutApiKeyInput[]
+    deleteMany?: PodUsageLogScalarWhereInput | PodUsageLogScalarWhereInput[]
+  }
+
+  export type WorkspaceCreateNestedOneWithoutUsageMetricsInput = {
+    create?: XOR<WorkspaceCreateWithoutUsageMetricsInput, WorkspaceUncheckedCreateWithoutUsageMetricsInput>
+    connectOrCreate?: WorkspaceCreateOrConnectWithoutUsageMetricsInput
+    connect?: WorkspaceWhereUniqueInput
+  }
+
+  export type ProviderAPIKeyCreateNestedOneWithoutUsageMetricsInput = {
+    create?: XOR<ProviderAPIKeyCreateWithoutUsageMetricsInput, ProviderAPIKeyUncheckedCreateWithoutUsageMetricsInput>
+    connectOrCreate?: ProviderAPIKeyCreateOrConnectWithoutUsageMetricsInput
+    connect?: ProviderAPIKeyWhereUniqueInput
+  }
+
+  export type WorkspaceUpdateOneRequiredWithoutUsageMetricsNestedInput = {
+    create?: XOR<WorkspaceCreateWithoutUsageMetricsInput, WorkspaceUncheckedCreateWithoutUsageMetricsInput>
+    connectOrCreate?: WorkspaceCreateOrConnectWithoutUsageMetricsInput
+    upsert?: WorkspaceUpsertWithoutUsageMetricsInput
+    connect?: WorkspaceWhereUniqueInput
+    update?: XOR<XOR<WorkspaceUpdateToOneWithWhereWithoutUsageMetricsInput, WorkspaceUpdateWithoutUsageMetricsInput>, WorkspaceUncheckedUpdateWithoutUsageMetricsInput>
+  }
+
+  export type ProviderAPIKeyUpdateOneRequiredWithoutUsageMetricsNestedInput = {
+    create?: XOR<ProviderAPIKeyCreateWithoutUsageMetricsInput, ProviderAPIKeyUncheckedCreateWithoutUsageMetricsInput>
+    connectOrCreate?: ProviderAPIKeyCreateOrConnectWithoutUsageMetricsInput
+    upsert?: ProviderAPIKeyUpsertWithoutUsageMetricsInput
+    connect?: ProviderAPIKeyWhereUniqueInput
+    update?: XOR<XOR<ProviderAPIKeyUpdateToOneWithWhereWithoutUsageMetricsInput, ProviderAPIKeyUpdateWithoutUsageMetricsInput>, ProviderAPIKeyUncheckedUpdateWithoutUsageMetricsInput>
   }
 
   export type WorkspaceCreateNestedOneWithoutShareLinksInput = {
@@ -63463,21 +65842,31 @@ export namespace Prisma {
     _max?: NestedEnumWorkspaceRoleFilter<$PrismaModel>
   }
 
-  export type NestedEnumAuthTypeFilter<$PrismaModel = never> = {
-    equals?: $Enums.AuthType | EnumAuthTypeFieldRefInput<$PrismaModel>
-    in?: $Enums.AuthType[] | ListEnumAuthTypeFieldRefInput<$PrismaModel>
-    notIn?: $Enums.AuthType[] | ListEnumAuthTypeFieldRefInput<$PrismaModel>
-    not?: NestedEnumAuthTypeFilter<$PrismaModel> | $Enums.AuthType
+  export type NestedBigIntFilter<$PrismaModel = never> = {
+    equals?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    in?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
+    notIn?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
+    lt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    lte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    gt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    gte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    not?: NestedBigIntFilter<$PrismaModel> | bigint | number
   }
 
-  export type NestedEnumAuthTypeWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: $Enums.AuthType | EnumAuthTypeFieldRefInput<$PrismaModel>
-    in?: $Enums.AuthType[] | ListEnumAuthTypeFieldRefInput<$PrismaModel>
-    notIn?: $Enums.AuthType[] | ListEnumAuthTypeFieldRefInput<$PrismaModel>
-    not?: NestedEnumAuthTypeWithAggregatesFilter<$PrismaModel> | $Enums.AuthType
+  export type NestedBigIntWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    in?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
+    notIn?: bigint[] | number[] | ListBigIntFieldRefInput<$PrismaModel>
+    lt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    lte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    gt?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    gte?: bigint | number | BigIntFieldRefInput<$PrismaModel>
+    not?: NestedBigIntWithAggregatesFilter<$PrismaModel> | bigint | number
     _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedEnumAuthTypeFilter<$PrismaModel>
-    _max?: NestedEnumAuthTypeFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedBigIntFilter<$PrismaModel>
+    _min?: NestedBigIntFilter<$PrismaModel>
+    _max?: NestedBigIntFilter<$PrismaModel>
   }
 
   export type NestedEnumShareableAssetTypeFilter<$PrismaModel = never> = {
@@ -64652,6 +67041,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkCreateNestedManyWithoutWorkspaceInput
     apiKeys?: ProviderAPIKeyCreateNestedManyWithoutWorkspaceInput
     invitations?: WorkspaceInvitationCreateNestedManyWithoutWorkspaceInput
+    usageMetrics?: UsageMetricCreateNestedManyWithoutWorkspaceInput
   }
 
   export type WorkspaceUncheckedCreateWithoutSubscriptionInput = {
@@ -64669,6 +67059,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkUncheckedCreateNestedManyWithoutWorkspaceInput
     apiKeys?: ProviderAPIKeyUncheckedCreateNestedManyWithoutWorkspaceInput
     invitations?: WorkspaceInvitationUncheckedCreateNestedManyWithoutWorkspaceInput
+    usageMetrics?: UsageMetricUncheckedCreateNestedManyWithoutWorkspaceInput
   }
 
   export type WorkspaceCreateOrConnectWithoutSubscriptionInput = {
@@ -64696,6 +67087,7 @@ export namespace Prisma {
     totalCostInUsd: Decimal | DecimalJsLike | number | string
     executedAt?: Date | string
     pod: PodCreateNestedOneWithoutUsageLogsInput
+    apiKey?: ProviderAPIKeyCreateNestedOneWithoutPodUsageLogsInput
   }
 
   export type PodUsageLogUncheckedCreateWithoutSubscriptionInput = {
@@ -64704,6 +67096,7 @@ export namespace Prisma {
     executionId: string
     flowId: string
     workspaceId: string
+    apiKeyId?: string | null
     provider: $Enums.LLMProvider
     modelId: string
     modelName?: string | null
@@ -64868,6 +67261,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkUpdateManyWithoutWorkspaceNestedInput
     apiKeys?: ProviderAPIKeyUpdateManyWithoutWorkspaceNestedInput
     invitations?: WorkspaceInvitationUpdateManyWithoutWorkspaceNestedInput
+    usageMetrics?: UsageMetricUpdateManyWithoutWorkspaceNestedInput
   }
 
   export type WorkspaceUncheckedUpdateWithoutSubscriptionInput = {
@@ -64885,6 +67279,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkUncheckedUpdateManyWithoutWorkspaceNestedInput
     apiKeys?: ProviderAPIKeyUncheckedUpdateManyWithoutWorkspaceNestedInput
     invitations?: WorkspaceInvitationUncheckedUpdateManyWithoutWorkspaceNestedInput
+    usageMetrics?: UsageMetricUncheckedUpdateManyWithoutWorkspaceNestedInput
   }
 
   export type PodUsageLogUpsertWithWhereUniqueWithoutSubscriptionInput = {
@@ -64913,6 +67308,7 @@ export namespace Prisma {
     flowId?: StringFilter<"PodUsageLog"> | string
     workspaceId?: StringFilter<"PodUsageLog"> | string
     subscriptionId?: StringFilter<"PodUsageLog"> | string
+    apiKeyId?: StringNullableFilter<"PodUsageLog"> | string | null
     provider?: EnumLLMProviderFilter<"PodUsageLog"> | $Enums.LLMProvider
     modelId?: StringFilter<"PodUsageLog"> | string
     modelName?: StringNullableFilter<"PodUsageLog"> | string | null
@@ -65333,6 +67729,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkCreateNestedManyWithoutWorkspaceInput
     apiKeys?: ProviderAPIKeyCreateNestedManyWithoutWorkspaceInput
     invitations?: WorkspaceInvitationCreateNestedManyWithoutWorkspaceInput
+    usageMetrics?: UsageMetricCreateNestedManyWithoutWorkspaceInput
   }
 
   export type WorkspaceUncheckedCreateWithoutSpacesInput = {
@@ -65350,6 +67747,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkUncheckedCreateNestedManyWithoutWorkspaceInput
     apiKeys?: ProviderAPIKeyUncheckedCreateNestedManyWithoutWorkspaceInput
     invitations?: WorkspaceInvitationUncheckedCreateNestedManyWithoutWorkspaceInput
+    usageMetrics?: UsageMetricUncheckedCreateNestedManyWithoutWorkspaceInput
   }
 
   export type WorkspaceCreateOrConnectWithoutSpacesInput = {
@@ -65439,6 +67837,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkUpdateManyWithoutWorkspaceNestedInput
     apiKeys?: ProviderAPIKeyUpdateManyWithoutWorkspaceNestedInput
     invitations?: WorkspaceInvitationUpdateManyWithoutWorkspaceNestedInput
+    usageMetrics?: UsageMetricUpdateManyWithoutWorkspaceNestedInput
   }
 
   export type WorkspaceUncheckedUpdateWithoutSpacesInput = {
@@ -65456,6 +67855,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkUncheckedUpdateManyWithoutWorkspaceNestedInput
     apiKeys?: ProviderAPIKeyUncheckedUpdateManyWithoutWorkspaceNestedInput
     invitations?: WorkspaceInvitationUncheckedUpdateManyWithoutWorkspaceNestedInput
+    usageMetrics?: UsageMetricUncheckedUpdateManyWithoutWorkspaceNestedInput
   }
 
   export type FlowUpsertWithWhereUniqueWithoutSpaceInput = {
@@ -65507,6 +67907,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkCreateNestedManyWithoutWorkspaceInput
     apiKeys?: ProviderAPIKeyCreateNestedManyWithoutWorkspaceInput
     invitations?: WorkspaceInvitationCreateNestedManyWithoutWorkspaceInput
+    usageMetrics?: UsageMetricCreateNestedManyWithoutWorkspaceInput
   }
 
   export type WorkspaceUncheckedCreateWithoutFlowsInput = {
@@ -65524,6 +67925,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkUncheckedCreateNestedManyWithoutWorkspaceInput
     apiKeys?: ProviderAPIKeyUncheckedCreateNestedManyWithoutWorkspaceInput
     invitations?: WorkspaceInvitationUncheckedCreateNestedManyWithoutWorkspaceInput
+    usageMetrics?: UsageMetricUncheckedCreateNestedManyWithoutWorkspaceInput
   }
 
   export type WorkspaceCreateOrConnectWithoutFlowsInput = {
@@ -65946,6 +68348,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkUpdateManyWithoutWorkspaceNestedInput
     apiKeys?: ProviderAPIKeyUpdateManyWithoutWorkspaceNestedInput
     invitations?: WorkspaceInvitationUpdateManyWithoutWorkspaceNestedInput
+    usageMetrics?: UsageMetricUpdateManyWithoutWorkspaceNestedInput
   }
 
   export type WorkspaceUncheckedUpdateWithoutFlowsInput = {
@@ -65963,6 +68366,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkUncheckedUpdateManyWithoutWorkspaceNestedInput
     apiKeys?: ProviderAPIKeyUncheckedUpdateManyWithoutWorkspaceNestedInput
     invitations?: WorkspaceInvitationUncheckedUpdateManyWithoutWorkspaceNestedInput
+    usageMetrics?: UsageMetricUncheckedUpdateManyWithoutWorkspaceNestedInput
   }
 
   export type SpaceUpsertWithoutFlowsInput = {
@@ -66352,6 +68756,7 @@ export namespace Prisma {
     sentWorkspaceInvites?: WorkspaceInvitationCreateNestedManyWithoutInviterInput
     receivedWorkspaceInvites?: WorkspaceInvitationCreateNestedManyWithoutInvitedUserInput
     receivedFlowInvites?: FlowInvitationCreateNestedManyWithoutInvitedUserInput
+    createdApiKeys?: ProviderAPIKeyCreateNestedManyWithoutCreatedByInput
   }
 
   export type UserUncheckedCreateWithoutSentFlowInvitesInput = {
@@ -66369,6 +68774,7 @@ export namespace Prisma {
     sentWorkspaceInvites?: WorkspaceInvitationUncheckedCreateNestedManyWithoutInviterInput
     receivedWorkspaceInvites?: WorkspaceInvitationUncheckedCreateNestedManyWithoutInvitedUserInput
     receivedFlowInvites?: FlowInvitationUncheckedCreateNestedManyWithoutInvitedUserInput
+    createdApiKeys?: ProviderAPIKeyUncheckedCreateNestedManyWithoutCreatedByInput
   }
 
   export type UserCreateOrConnectWithoutSentFlowInvitesInput = {
@@ -66391,6 +68797,7 @@ export namespace Prisma {
     sentWorkspaceInvites?: WorkspaceInvitationCreateNestedManyWithoutInviterInput
     receivedWorkspaceInvites?: WorkspaceInvitationCreateNestedManyWithoutInvitedUserInput
     sentFlowInvites?: FlowInvitationCreateNestedManyWithoutInviterInput
+    createdApiKeys?: ProviderAPIKeyCreateNestedManyWithoutCreatedByInput
   }
 
   export type UserUncheckedCreateWithoutReceivedFlowInvitesInput = {
@@ -66408,6 +68815,7 @@ export namespace Prisma {
     sentWorkspaceInvites?: WorkspaceInvitationUncheckedCreateNestedManyWithoutInviterInput
     receivedWorkspaceInvites?: WorkspaceInvitationUncheckedCreateNestedManyWithoutInvitedUserInput
     sentFlowInvites?: FlowInvitationUncheckedCreateNestedManyWithoutInviterInput
+    createdApiKeys?: ProviderAPIKeyUncheckedCreateNestedManyWithoutCreatedByInput
   }
 
   export type UserCreateOrConnectWithoutReceivedFlowInvitesInput = {
@@ -66498,6 +68906,7 @@ export namespace Prisma {
     sentWorkspaceInvites?: WorkspaceInvitationUpdateManyWithoutInviterNestedInput
     receivedWorkspaceInvites?: WorkspaceInvitationUpdateManyWithoutInvitedUserNestedInput
     receivedFlowInvites?: FlowInvitationUpdateManyWithoutInvitedUserNestedInput
+    createdApiKeys?: ProviderAPIKeyUpdateManyWithoutCreatedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutSentFlowInvitesInput = {
@@ -66515,6 +68924,7 @@ export namespace Prisma {
     sentWorkspaceInvites?: WorkspaceInvitationUncheckedUpdateManyWithoutInviterNestedInput
     receivedWorkspaceInvites?: WorkspaceInvitationUncheckedUpdateManyWithoutInvitedUserNestedInput
     receivedFlowInvites?: FlowInvitationUncheckedUpdateManyWithoutInvitedUserNestedInput
+    createdApiKeys?: ProviderAPIKeyUncheckedUpdateManyWithoutCreatedByNestedInput
   }
 
   export type UserUpsertWithoutReceivedFlowInvitesInput = {
@@ -66543,6 +68953,7 @@ export namespace Prisma {
     sentWorkspaceInvites?: WorkspaceInvitationUpdateManyWithoutInviterNestedInput
     receivedWorkspaceInvites?: WorkspaceInvitationUpdateManyWithoutInvitedUserNestedInput
     sentFlowInvites?: FlowInvitationUpdateManyWithoutInviterNestedInput
+    createdApiKeys?: ProviderAPIKeyUpdateManyWithoutCreatedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutReceivedFlowInvitesInput = {
@@ -66560,6 +68971,7 @@ export namespace Prisma {
     sentWorkspaceInvites?: WorkspaceInvitationUncheckedUpdateManyWithoutInviterNestedInput
     receivedWorkspaceInvites?: WorkspaceInvitationUncheckedUpdateManyWithoutInvitedUserNestedInput
     sentFlowInvites?: FlowInvitationUncheckedUpdateManyWithoutInviterNestedInput
+    createdApiKeys?: ProviderAPIKeyUncheckedUpdateManyWithoutCreatedByNestedInput
   }
 
   export type FlowCreateWithoutCollaboratorsInput = {
@@ -66628,6 +69040,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: WorkspaceInvitationCreateNestedManyWithoutInvitedUserInput
     sentFlowInvites?: FlowInvitationCreateNestedManyWithoutInviterInput
     receivedFlowInvites?: FlowInvitationCreateNestedManyWithoutInvitedUserInput
+    createdApiKeys?: ProviderAPIKeyCreateNestedManyWithoutCreatedByInput
   }
 
   export type UserUncheckedCreateWithoutFlowCollaborationsInput = {
@@ -66645,6 +69058,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: WorkspaceInvitationUncheckedCreateNestedManyWithoutInvitedUserInput
     sentFlowInvites?: FlowInvitationUncheckedCreateNestedManyWithoutInviterInput
     receivedFlowInvites?: FlowInvitationUncheckedCreateNestedManyWithoutInvitedUserInput
+    createdApiKeys?: ProviderAPIKeyUncheckedCreateNestedManyWithoutCreatedByInput
   }
 
   export type UserCreateOrConnectWithoutFlowCollaborationsInput = {
@@ -66735,6 +69149,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: WorkspaceInvitationUpdateManyWithoutInvitedUserNestedInput
     sentFlowInvites?: FlowInvitationUpdateManyWithoutInviterNestedInput
     receivedFlowInvites?: FlowInvitationUpdateManyWithoutInvitedUserNestedInput
+    createdApiKeys?: ProviderAPIKeyUpdateManyWithoutCreatedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutFlowCollaborationsInput = {
@@ -66752,6 +69167,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: WorkspaceInvitationUncheckedUpdateManyWithoutInvitedUserNestedInput
     sentFlowInvites?: FlowInvitationUncheckedUpdateManyWithoutInviterNestedInput
     receivedFlowInvites?: FlowInvitationUncheckedUpdateManyWithoutInvitedUserNestedInput
+    createdApiKeys?: ProviderAPIKeyUncheckedUpdateManyWithoutCreatedByNestedInput
   }
 
   export type FlowCreateWithoutSessionsInput = {
@@ -67312,6 +69728,7 @@ export namespace Prisma {
     reasoningTokens?: number
     creditsConsumed?: number
     costInUsd?: Decimal | DecimalJsLike | number | string | null
+    apiKey?: ProviderAPIKeyCreateNestedOneWithoutPodExecutionsInput
   }
 
   export type PodExecutionUncheckedCreateWithoutPodInput = {
@@ -67322,6 +69739,7 @@ export namespace Prisma {
     startedAt?: Date | string
     finishedAt?: Date | string | null
     runtimeInMs?: number | null
+    apiKeyId?: string | null
     provider: $Enums.LLMProvider
     modelId: string
     modelName?: string | null
@@ -67367,6 +69785,7 @@ export namespace Prisma {
     totalCostInUsd: Decimal | DecimalJsLike | number | string
     executedAt?: Date | string
     subscription: SubscriptionCreateNestedOneWithoutUsageLogsInput
+    apiKey?: ProviderAPIKeyCreateNestedOneWithoutPodUsageLogsInput
   }
 
   export type PodUsageLogUncheckedCreateWithoutPodInput = {
@@ -67375,6 +69794,7 @@ export namespace Prisma {
     flowId: string
     workspaceId: string
     subscriptionId: string
+    apiKeyId?: string | null
     provider: $Enums.LLMProvider
     modelId: string
     modelName?: string | null
@@ -67632,6 +70052,7 @@ export namespace Prisma {
     startedAt?: DateTimeFilter<"PodExecution"> | Date | string
     finishedAt?: DateTimeNullableFilter<"PodExecution"> | Date | string | null
     runtimeInMs?: IntNullableFilter<"PodExecution"> | number | null
+    apiKeyId?: StringNullableFilter<"PodExecution"> | string | null
     provider?: EnumLLMProviderFilter<"PodExecution"> | $Enums.LLMProvider
     modelId?: StringFilter<"PodExecution"> | string
     modelName?: StringNullableFilter<"PodExecution"> | string | null
@@ -68028,6 +70449,47 @@ export namespace Prisma {
     create: XOR<PodCreateWithoutExecutionsInput, PodUncheckedCreateWithoutExecutionsInput>
   }
 
+  export type ProviderAPIKeyCreateWithoutPodExecutionsInput = {
+    id?: string
+    provider: $Enums.LLMProvider
+    displayName: string
+    keyHash: string
+    isActive?: boolean
+    lastUsedAt?: Date | string | null
+    usageCount?: number
+    totalTokens?: bigint | number
+    totalCost?: Decimal | DecimalJsLike | number | string
+    lastErrorAt?: Date | string | null
+    createdAt?: Date | string
+    workspace: WorkspaceCreateNestedOneWithoutApiKeysInput
+    createdBy: UserCreateNestedOneWithoutCreatedApiKeysInput
+    usageMetrics?: UsageMetricCreateNestedManyWithoutApiKeyInput
+    podUsageLogs?: PodUsageLogCreateNestedManyWithoutApiKeyInput
+  }
+
+  export type ProviderAPIKeyUncheckedCreateWithoutPodExecutionsInput = {
+    id?: string
+    workspaceId: string
+    provider: $Enums.LLMProvider
+    displayName: string
+    keyHash: string
+    isActive?: boolean
+    lastUsedAt?: Date | string | null
+    usageCount?: number
+    totalTokens?: bigint | number
+    totalCost?: Decimal | DecimalJsLike | number | string
+    lastErrorAt?: Date | string | null
+    createdById: string
+    createdAt?: Date | string
+    usageMetrics?: UsageMetricUncheckedCreateNestedManyWithoutApiKeyInput
+    podUsageLogs?: PodUsageLogUncheckedCreateNestedManyWithoutApiKeyInput
+  }
+
+  export type ProviderAPIKeyCreateOrConnectWithoutPodExecutionsInput = {
+    where: ProviderAPIKeyWhereUniqueInput
+    create: XOR<ProviderAPIKeyCreateWithoutPodExecutionsInput, ProviderAPIKeyUncheckedCreateWithoutPodExecutionsInput>
+  }
+
   export type PodUpsertWithoutExecutionsInput = {
     update: XOR<PodUpdateWithoutExecutionsInput, PodUncheckedUpdateWithoutExecutionsInput>
     create: XOR<PodCreateWithoutExecutionsInput, PodUncheckedCreateWithoutExecutionsInput>
@@ -68081,6 +70543,53 @@ export namespace Prisma {
     sourceEdges?: EdgeUncheckedUpdateManyWithoutSourcePodNestedInput
     targetEdges?: EdgeUncheckedUpdateManyWithoutTargetPodNestedInput
     usageLogs?: PodUsageLogUncheckedUpdateManyWithoutPodNestedInput
+  }
+
+  export type ProviderAPIKeyUpsertWithoutPodExecutionsInput = {
+    update: XOR<ProviderAPIKeyUpdateWithoutPodExecutionsInput, ProviderAPIKeyUncheckedUpdateWithoutPodExecutionsInput>
+    create: XOR<ProviderAPIKeyCreateWithoutPodExecutionsInput, ProviderAPIKeyUncheckedCreateWithoutPodExecutionsInput>
+    where?: ProviderAPIKeyWhereInput
+  }
+
+  export type ProviderAPIKeyUpdateToOneWithWhereWithoutPodExecutionsInput = {
+    where?: ProviderAPIKeyWhereInput
+    data: XOR<ProviderAPIKeyUpdateWithoutPodExecutionsInput, ProviderAPIKeyUncheckedUpdateWithoutPodExecutionsInput>
+  }
+
+  export type ProviderAPIKeyUpdateWithoutPodExecutionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
+    displayName?: StringFieldUpdateOperationsInput | string
+    keyHash?: StringFieldUpdateOperationsInput | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    lastUsedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    usageCount?: IntFieldUpdateOperationsInput | number
+    totalTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    totalCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    lastErrorAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    workspace?: WorkspaceUpdateOneRequiredWithoutApiKeysNestedInput
+    createdBy?: UserUpdateOneRequiredWithoutCreatedApiKeysNestedInput
+    usageMetrics?: UsageMetricUpdateManyWithoutApiKeyNestedInput
+    podUsageLogs?: PodUsageLogUpdateManyWithoutApiKeyNestedInput
+  }
+
+  export type ProviderAPIKeyUncheckedUpdateWithoutPodExecutionsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    workspaceId?: StringFieldUpdateOperationsInput | string
+    provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
+    displayName?: StringFieldUpdateOperationsInput | string
+    keyHash?: StringFieldUpdateOperationsInput | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    lastUsedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    usageCount?: IntFieldUpdateOperationsInput | number
+    totalTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    totalCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    lastErrorAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdById?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    usageMetrics?: UsageMetricUncheckedUpdateManyWithoutApiKeyNestedInput
+    podUsageLogs?: PodUsageLogUncheckedUpdateManyWithoutApiKeyNestedInput
   }
 
   export type PodCreateWithoutUsageLogsInput = {
@@ -68199,6 +70708,47 @@ export namespace Prisma {
   export type SubscriptionCreateOrConnectWithoutUsageLogsInput = {
     where: SubscriptionWhereUniqueInput
     create: XOR<SubscriptionCreateWithoutUsageLogsInput, SubscriptionUncheckedCreateWithoutUsageLogsInput>
+  }
+
+  export type ProviderAPIKeyCreateWithoutPodUsageLogsInput = {
+    id?: string
+    provider: $Enums.LLMProvider
+    displayName: string
+    keyHash: string
+    isActive?: boolean
+    lastUsedAt?: Date | string | null
+    usageCount?: number
+    totalTokens?: bigint | number
+    totalCost?: Decimal | DecimalJsLike | number | string
+    lastErrorAt?: Date | string | null
+    createdAt?: Date | string
+    workspace: WorkspaceCreateNestedOneWithoutApiKeysInput
+    createdBy: UserCreateNestedOneWithoutCreatedApiKeysInput
+    usageMetrics?: UsageMetricCreateNestedManyWithoutApiKeyInput
+    podExecutions?: PodExecutionCreateNestedManyWithoutApiKeyInput
+  }
+
+  export type ProviderAPIKeyUncheckedCreateWithoutPodUsageLogsInput = {
+    id?: string
+    workspaceId: string
+    provider: $Enums.LLMProvider
+    displayName: string
+    keyHash: string
+    isActive?: boolean
+    lastUsedAt?: Date | string | null
+    usageCount?: number
+    totalTokens?: bigint | number
+    totalCost?: Decimal | DecimalJsLike | number | string
+    lastErrorAt?: Date | string | null
+    createdById: string
+    createdAt?: Date | string
+    usageMetrics?: UsageMetricUncheckedCreateNestedManyWithoutApiKeyInput
+    podExecutions?: PodExecutionUncheckedCreateNestedManyWithoutApiKeyInput
+  }
+
+  export type ProviderAPIKeyCreateOrConnectWithoutPodUsageLogsInput = {
+    where: ProviderAPIKeyWhereUniqueInput
+    create: XOR<ProviderAPIKeyCreateWithoutPodUsageLogsInput, ProviderAPIKeyUncheckedCreateWithoutPodUsageLogsInput>
   }
 
   export type PodUpsertWithoutUsageLogsInput = {
@@ -68331,6 +70881,53 @@ export namespace Prisma {
     documentProcessingCost?: DocumentProcessingCostUncheckedUpdateManyWithoutSubscriptionNestedInput
   }
 
+  export type ProviderAPIKeyUpsertWithoutPodUsageLogsInput = {
+    update: XOR<ProviderAPIKeyUpdateWithoutPodUsageLogsInput, ProviderAPIKeyUncheckedUpdateWithoutPodUsageLogsInput>
+    create: XOR<ProviderAPIKeyCreateWithoutPodUsageLogsInput, ProviderAPIKeyUncheckedCreateWithoutPodUsageLogsInput>
+    where?: ProviderAPIKeyWhereInput
+  }
+
+  export type ProviderAPIKeyUpdateToOneWithWhereWithoutPodUsageLogsInput = {
+    where?: ProviderAPIKeyWhereInput
+    data: XOR<ProviderAPIKeyUpdateWithoutPodUsageLogsInput, ProviderAPIKeyUncheckedUpdateWithoutPodUsageLogsInput>
+  }
+
+  export type ProviderAPIKeyUpdateWithoutPodUsageLogsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
+    displayName?: StringFieldUpdateOperationsInput | string
+    keyHash?: StringFieldUpdateOperationsInput | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    lastUsedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    usageCount?: IntFieldUpdateOperationsInput | number
+    totalTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    totalCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    lastErrorAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    workspace?: WorkspaceUpdateOneRequiredWithoutApiKeysNestedInput
+    createdBy?: UserUpdateOneRequiredWithoutCreatedApiKeysNestedInput
+    usageMetrics?: UsageMetricUpdateManyWithoutApiKeyNestedInput
+    podExecutions?: PodExecutionUpdateManyWithoutApiKeyNestedInput
+  }
+
+  export type ProviderAPIKeyUncheckedUpdateWithoutPodUsageLogsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    workspaceId?: StringFieldUpdateOperationsInput | string
+    provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
+    displayName?: StringFieldUpdateOperationsInput | string
+    keyHash?: StringFieldUpdateOperationsInput | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    lastUsedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    usageCount?: IntFieldUpdateOperationsInput | number
+    totalTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    totalCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    lastErrorAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdById?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    usageMetrics?: UsageMetricUncheckedUpdateManyWithoutApiKeyNestedInput
+    podExecutions?: PodExecutionUncheckedUpdateManyWithoutApiKeyNestedInput
+  }
+
   export type WorkspaceCreateWithoutContextModulesInput = {
     id?: string
     name: string
@@ -68346,6 +70943,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkCreateNestedManyWithoutWorkspaceInput
     apiKeys?: ProviderAPIKeyCreateNestedManyWithoutWorkspaceInput
     invitations?: WorkspaceInvitationCreateNestedManyWithoutWorkspaceInput
+    usageMetrics?: UsageMetricCreateNestedManyWithoutWorkspaceInput
   }
 
   export type WorkspaceUncheckedCreateWithoutContextModulesInput = {
@@ -68363,6 +70961,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkUncheckedCreateNestedManyWithoutWorkspaceInput
     apiKeys?: ProviderAPIKeyUncheckedCreateNestedManyWithoutWorkspaceInput
     invitations?: WorkspaceInvitationUncheckedCreateNestedManyWithoutWorkspaceInput
+    usageMetrics?: UsageMetricUncheckedCreateNestedManyWithoutWorkspaceInput
   }
 
   export type WorkspaceCreateOrConnectWithoutContextModulesInput = {
@@ -68447,6 +71046,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkUpdateManyWithoutWorkspaceNestedInput
     apiKeys?: ProviderAPIKeyUpdateManyWithoutWorkspaceNestedInput
     invitations?: WorkspaceInvitationUpdateManyWithoutWorkspaceNestedInput
+    usageMetrics?: UsageMetricUpdateManyWithoutWorkspaceNestedInput
   }
 
   export type WorkspaceUncheckedUpdateWithoutContextModulesInput = {
@@ -68464,6 +71064,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkUncheckedUpdateManyWithoutWorkspaceNestedInput
     apiKeys?: ProviderAPIKeyUncheckedUpdateManyWithoutWorkspaceNestedInput
     invitations?: WorkspaceInvitationUncheckedUpdateManyWithoutWorkspaceNestedInput
+    usageMetrics?: UsageMetricUncheckedUpdateManyWithoutWorkspaceNestedInput
   }
 
   export type FlowUpsertWithoutContextModulesInput = {
@@ -68809,6 +71410,52 @@ export namespace Prisma {
     skipDuplicates?: boolean
   }
 
+  export type ProviderAPIKeyCreateWithoutCreatedByInput = {
+    id?: string
+    provider: $Enums.LLMProvider
+    displayName: string
+    keyHash: string
+    isActive?: boolean
+    lastUsedAt?: Date | string | null
+    usageCount?: number
+    totalTokens?: bigint | number
+    totalCost?: Decimal | DecimalJsLike | number | string
+    lastErrorAt?: Date | string | null
+    createdAt?: Date | string
+    workspace: WorkspaceCreateNestedOneWithoutApiKeysInput
+    usageMetrics?: UsageMetricCreateNestedManyWithoutApiKeyInput
+    podExecutions?: PodExecutionCreateNestedManyWithoutApiKeyInput
+    podUsageLogs?: PodUsageLogCreateNestedManyWithoutApiKeyInput
+  }
+
+  export type ProviderAPIKeyUncheckedCreateWithoutCreatedByInput = {
+    id?: string
+    workspaceId: string
+    provider: $Enums.LLMProvider
+    displayName: string
+    keyHash: string
+    isActive?: boolean
+    lastUsedAt?: Date | string | null
+    usageCount?: number
+    totalTokens?: bigint | number
+    totalCost?: Decimal | DecimalJsLike | number | string
+    lastErrorAt?: Date | string | null
+    createdAt?: Date | string
+    usageMetrics?: UsageMetricUncheckedCreateNestedManyWithoutApiKeyInput
+    podExecutions?: PodExecutionUncheckedCreateNestedManyWithoutApiKeyInput
+    podUsageLogs?: PodUsageLogUncheckedCreateNestedManyWithoutApiKeyInput
+  }
+
+  export type ProviderAPIKeyCreateOrConnectWithoutCreatedByInput = {
+    where: ProviderAPIKeyWhereUniqueInput
+    create: XOR<ProviderAPIKeyCreateWithoutCreatedByInput, ProviderAPIKeyUncheckedCreateWithoutCreatedByInput>
+  }
+
+  export type ProviderAPIKeyCreateManyCreatedByInputEnvelope = {
+    data: ProviderAPIKeyCreateManyCreatedByInput | ProviderAPIKeyCreateManyCreatedByInput[]
+    skipDuplicates?: boolean
+  }
+
   export type AccountUpsertWithWhereUniqueWithoutUserInput = {
     where: AccountWhereUniqueInput
     update: XOR<AccountUpdateWithoutUserInput, AccountUncheckedUpdateWithoutUserInput>
@@ -69000,6 +71647,41 @@ export namespace Prisma {
     data: XOR<FlowInvitationUpdateManyMutationInput, FlowInvitationUncheckedUpdateManyWithoutInvitedUserInput>
   }
 
+  export type ProviderAPIKeyUpsertWithWhereUniqueWithoutCreatedByInput = {
+    where: ProviderAPIKeyWhereUniqueInput
+    update: XOR<ProviderAPIKeyUpdateWithoutCreatedByInput, ProviderAPIKeyUncheckedUpdateWithoutCreatedByInput>
+    create: XOR<ProviderAPIKeyCreateWithoutCreatedByInput, ProviderAPIKeyUncheckedCreateWithoutCreatedByInput>
+  }
+
+  export type ProviderAPIKeyUpdateWithWhereUniqueWithoutCreatedByInput = {
+    where: ProviderAPIKeyWhereUniqueInput
+    data: XOR<ProviderAPIKeyUpdateWithoutCreatedByInput, ProviderAPIKeyUncheckedUpdateWithoutCreatedByInput>
+  }
+
+  export type ProviderAPIKeyUpdateManyWithWhereWithoutCreatedByInput = {
+    where: ProviderAPIKeyScalarWhereInput
+    data: XOR<ProviderAPIKeyUpdateManyMutationInput, ProviderAPIKeyUncheckedUpdateManyWithoutCreatedByInput>
+  }
+
+  export type ProviderAPIKeyScalarWhereInput = {
+    AND?: ProviderAPIKeyScalarWhereInput | ProviderAPIKeyScalarWhereInput[]
+    OR?: ProviderAPIKeyScalarWhereInput[]
+    NOT?: ProviderAPIKeyScalarWhereInput | ProviderAPIKeyScalarWhereInput[]
+    id?: StringFilter<"ProviderAPIKey"> | string
+    workspaceId?: StringFilter<"ProviderAPIKey"> | string
+    provider?: EnumLLMProviderFilter<"ProviderAPIKey"> | $Enums.LLMProvider
+    displayName?: StringFilter<"ProviderAPIKey"> | string
+    keyHash?: StringFilter<"ProviderAPIKey"> | string
+    isActive?: BoolFilter<"ProviderAPIKey"> | boolean
+    lastUsedAt?: DateTimeNullableFilter<"ProviderAPIKey"> | Date | string | null
+    usageCount?: IntFilter<"ProviderAPIKey"> | number
+    totalTokens?: BigIntFilter<"ProviderAPIKey"> | bigint | number
+    totalCost?: DecimalFilter<"ProviderAPIKey"> | Decimal | DecimalJsLike | number | string
+    lastErrorAt?: DateTimeNullableFilter<"ProviderAPIKey"> | Date | string | null
+    createdById?: StringFilter<"ProviderAPIKey"> | string
+    createdAt?: DateTimeFilter<"ProviderAPIKey"> | Date | string
+  }
+
   export type UserCreateWithoutRefreshTokensInput = {
     id?: string
     email: string
@@ -69015,6 +71697,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: WorkspaceInvitationCreateNestedManyWithoutInvitedUserInput
     sentFlowInvites?: FlowInvitationCreateNestedManyWithoutInviterInput
     receivedFlowInvites?: FlowInvitationCreateNestedManyWithoutInvitedUserInput
+    createdApiKeys?: ProviderAPIKeyCreateNestedManyWithoutCreatedByInput
   }
 
   export type UserUncheckedCreateWithoutRefreshTokensInput = {
@@ -69032,6 +71715,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: WorkspaceInvitationUncheckedCreateNestedManyWithoutInvitedUserInput
     sentFlowInvites?: FlowInvitationUncheckedCreateNestedManyWithoutInviterInput
     receivedFlowInvites?: FlowInvitationUncheckedCreateNestedManyWithoutInvitedUserInput
+    createdApiKeys?: ProviderAPIKeyUncheckedCreateNestedManyWithoutCreatedByInput
   }
 
   export type UserCreateOrConnectWithoutRefreshTokensInput = {
@@ -69065,6 +71749,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: WorkspaceInvitationUpdateManyWithoutInvitedUserNestedInput
     sentFlowInvites?: FlowInvitationUpdateManyWithoutInviterNestedInput
     receivedFlowInvites?: FlowInvitationUpdateManyWithoutInvitedUserNestedInput
+    createdApiKeys?: ProviderAPIKeyUpdateManyWithoutCreatedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutRefreshTokensInput = {
@@ -69082,6 +71767,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: WorkspaceInvitationUncheckedUpdateManyWithoutInvitedUserNestedInput
     sentFlowInvites?: FlowInvitationUncheckedUpdateManyWithoutInviterNestedInput
     receivedFlowInvites?: FlowInvitationUncheckedUpdateManyWithoutInvitedUserNestedInput
+    createdApiKeys?: ProviderAPIKeyUncheckedUpdateManyWithoutCreatedByNestedInput
   }
 
   export type UserCreateWithoutAccountsInput = {
@@ -69099,6 +71785,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: WorkspaceInvitationCreateNestedManyWithoutInvitedUserInput
     sentFlowInvites?: FlowInvitationCreateNestedManyWithoutInviterInput
     receivedFlowInvites?: FlowInvitationCreateNestedManyWithoutInvitedUserInput
+    createdApiKeys?: ProviderAPIKeyCreateNestedManyWithoutCreatedByInput
   }
 
   export type UserUncheckedCreateWithoutAccountsInput = {
@@ -69116,6 +71803,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: WorkspaceInvitationUncheckedCreateNestedManyWithoutInvitedUserInput
     sentFlowInvites?: FlowInvitationUncheckedCreateNestedManyWithoutInviterInput
     receivedFlowInvites?: FlowInvitationUncheckedCreateNestedManyWithoutInvitedUserInput
+    createdApiKeys?: ProviderAPIKeyUncheckedCreateNestedManyWithoutCreatedByInput
   }
 
   export type UserCreateOrConnectWithoutAccountsInput = {
@@ -69149,6 +71837,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: WorkspaceInvitationUpdateManyWithoutInvitedUserNestedInput
     sentFlowInvites?: FlowInvitationUpdateManyWithoutInviterNestedInput
     receivedFlowInvites?: FlowInvitationUpdateManyWithoutInvitedUserNestedInput
+    createdApiKeys?: ProviderAPIKeyUpdateManyWithoutCreatedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutAccountsInput = {
@@ -69166,6 +71855,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: WorkspaceInvitationUncheckedUpdateManyWithoutInvitedUserNestedInput
     sentFlowInvites?: FlowInvitationUncheckedUpdateManyWithoutInviterNestedInput
     receivedFlowInvites?: FlowInvitationUncheckedUpdateManyWithoutInvitedUserNestedInput
+    createdApiKeys?: ProviderAPIKeyUncheckedUpdateManyWithoutCreatedByNestedInput
   }
 
   export type WorkspaceUserCreateWithoutWorkspaceInput = {
@@ -69536,13 +72226,17 @@ export namespace Prisma {
     provider: $Enums.LLMProvider
     displayName: string
     keyHash: string
-    providerConfig?: NullableJsonNullValueInput | InputJsonValue
-    endpoint?: string | null
-    authType?: $Enums.AuthType
     isActive?: boolean
     lastUsedAt?: Date | string | null
+    usageCount?: number
+    totalTokens?: bigint | number
+    totalCost?: Decimal | DecimalJsLike | number | string
+    lastErrorAt?: Date | string | null
     createdAt?: Date | string
-    expiresAt?: Date | string | null
+    createdBy: UserCreateNestedOneWithoutCreatedApiKeysInput
+    usageMetrics?: UsageMetricCreateNestedManyWithoutApiKeyInput
+    podExecutions?: PodExecutionCreateNestedManyWithoutApiKeyInput
+    podUsageLogs?: PodUsageLogCreateNestedManyWithoutApiKeyInput
   }
 
   export type ProviderAPIKeyUncheckedCreateWithoutWorkspaceInput = {
@@ -69550,13 +72244,17 @@ export namespace Prisma {
     provider: $Enums.LLMProvider
     displayName: string
     keyHash: string
-    providerConfig?: NullableJsonNullValueInput | InputJsonValue
-    endpoint?: string | null
-    authType?: $Enums.AuthType
     isActive?: boolean
     lastUsedAt?: Date | string | null
+    usageCount?: number
+    totalTokens?: bigint | number
+    totalCost?: Decimal | DecimalJsLike | number | string
+    lastErrorAt?: Date | string | null
+    createdById: string
     createdAt?: Date | string
-    expiresAt?: Date | string | null
+    usageMetrics?: UsageMetricUncheckedCreateNestedManyWithoutApiKeyInput
+    podExecutions?: PodExecutionUncheckedCreateNestedManyWithoutApiKeyInput
+    podUsageLogs?: PodUsageLogUncheckedCreateNestedManyWithoutApiKeyInput
   }
 
   export type ProviderAPIKeyCreateOrConnectWithoutWorkspaceInput = {
@@ -69604,6 +72302,46 @@ export namespace Prisma {
 
   export type WorkspaceInvitationCreateManyWorkspaceInputEnvelope = {
     data: WorkspaceInvitationCreateManyWorkspaceInput | WorkspaceInvitationCreateManyWorkspaceInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type UsageMetricCreateWithoutWorkspaceInput = {
+    id?: string
+    date: Date | string
+    requestCount?: number
+    successCount?: number
+    errorCount?: number
+    promptTokens?: bigint | number
+    completionTokens?: bigint | number
+    totalTokens?: bigint | number
+    estimatedCost?: Decimal | DecimalJsLike | number | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    apiKey: ProviderAPIKeyCreateNestedOneWithoutUsageMetricsInput
+  }
+
+  export type UsageMetricUncheckedCreateWithoutWorkspaceInput = {
+    id?: string
+    keyId: string
+    date: Date | string
+    requestCount?: number
+    successCount?: number
+    errorCount?: number
+    promptTokens?: bigint | number
+    completionTokens?: bigint | number
+    totalTokens?: bigint | number
+    estimatedCost?: Decimal | DecimalJsLike | number | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type UsageMetricCreateOrConnectWithoutWorkspaceInput = {
+    where: UsageMetricWhereUniqueInput
+    create: XOR<UsageMetricCreateWithoutWorkspaceInput, UsageMetricUncheckedCreateWithoutWorkspaceInput>
+  }
+
+  export type UsageMetricCreateManyWorkspaceInputEnvelope = {
+    data: UsageMetricCreateManyWorkspaceInput | UsageMetricCreateManyWorkspaceInput[]
     skipDuplicates?: boolean
   }
 
@@ -69884,24 +72622,6 @@ export namespace Prisma {
     data: XOR<ProviderAPIKeyUpdateManyMutationInput, ProviderAPIKeyUncheckedUpdateManyWithoutWorkspaceInput>
   }
 
-  export type ProviderAPIKeyScalarWhereInput = {
-    AND?: ProviderAPIKeyScalarWhereInput | ProviderAPIKeyScalarWhereInput[]
-    OR?: ProviderAPIKeyScalarWhereInput[]
-    NOT?: ProviderAPIKeyScalarWhereInput | ProviderAPIKeyScalarWhereInput[]
-    id?: StringFilter<"ProviderAPIKey"> | string
-    workspaceId?: StringFilter<"ProviderAPIKey"> | string
-    provider?: EnumLLMProviderFilter<"ProviderAPIKey"> | $Enums.LLMProvider
-    displayName?: StringFilter<"ProviderAPIKey"> | string
-    keyHash?: StringFilter<"ProviderAPIKey"> | string
-    providerConfig?: JsonNullableFilter<"ProviderAPIKey">
-    endpoint?: StringNullableFilter<"ProviderAPIKey"> | string | null
-    authType?: EnumAuthTypeFilter<"ProviderAPIKey"> | $Enums.AuthType
-    isActive?: BoolFilter<"ProviderAPIKey"> | boolean
-    lastUsedAt?: DateTimeNullableFilter<"ProviderAPIKey"> | Date | string | null
-    createdAt?: DateTimeFilter<"ProviderAPIKey"> | Date | string
-    expiresAt?: DateTimeNullableFilter<"ProviderAPIKey"> | Date | string | null
-  }
-
   export type WorkspaceInvitationUpsertWithWhereUniqueWithoutWorkspaceInput = {
     where: WorkspaceInvitationWhereUniqueInput
     update: XOR<WorkspaceInvitationUpdateWithoutWorkspaceInput, WorkspaceInvitationUncheckedUpdateWithoutWorkspaceInput>
@@ -69916,6 +72636,41 @@ export namespace Prisma {
   export type WorkspaceInvitationUpdateManyWithWhereWithoutWorkspaceInput = {
     where: WorkspaceInvitationScalarWhereInput
     data: XOR<WorkspaceInvitationUpdateManyMutationInput, WorkspaceInvitationUncheckedUpdateManyWithoutWorkspaceInput>
+  }
+
+  export type UsageMetricUpsertWithWhereUniqueWithoutWorkspaceInput = {
+    where: UsageMetricWhereUniqueInput
+    update: XOR<UsageMetricUpdateWithoutWorkspaceInput, UsageMetricUncheckedUpdateWithoutWorkspaceInput>
+    create: XOR<UsageMetricCreateWithoutWorkspaceInput, UsageMetricUncheckedCreateWithoutWorkspaceInput>
+  }
+
+  export type UsageMetricUpdateWithWhereUniqueWithoutWorkspaceInput = {
+    where: UsageMetricWhereUniqueInput
+    data: XOR<UsageMetricUpdateWithoutWorkspaceInput, UsageMetricUncheckedUpdateWithoutWorkspaceInput>
+  }
+
+  export type UsageMetricUpdateManyWithWhereWithoutWorkspaceInput = {
+    where: UsageMetricScalarWhereInput
+    data: XOR<UsageMetricUpdateManyMutationInput, UsageMetricUncheckedUpdateManyWithoutWorkspaceInput>
+  }
+
+  export type UsageMetricScalarWhereInput = {
+    AND?: UsageMetricScalarWhereInput | UsageMetricScalarWhereInput[]
+    OR?: UsageMetricScalarWhereInput[]
+    NOT?: UsageMetricScalarWhereInput | UsageMetricScalarWhereInput[]
+    id?: StringFilter<"UsageMetric"> | string
+    workspaceId?: StringFilter<"UsageMetric"> | string
+    keyId?: StringFilter<"UsageMetric"> | string
+    date?: DateTimeFilter<"UsageMetric"> | Date | string
+    requestCount?: IntFilter<"UsageMetric"> | number
+    successCount?: IntFilter<"UsageMetric"> | number
+    errorCount?: IntFilter<"UsageMetric"> | number
+    promptTokens?: BigIntFilter<"UsageMetric"> | bigint | number
+    completionTokens?: BigIntFilter<"UsageMetric"> | bigint | number
+    totalTokens?: BigIntFilter<"UsageMetric"> | bigint | number
+    estimatedCost?: DecimalFilter<"UsageMetric"> | Decimal | DecimalJsLike | number | string
+    createdAt?: DateTimeFilter<"UsageMetric"> | Date | string
+    updatedAt?: DateTimeFilter<"UsageMetric"> | Date | string
   }
 
   export type UserCreateWithoutWorkspacesInput = {
@@ -69933,6 +72688,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: WorkspaceInvitationCreateNestedManyWithoutInvitedUserInput
     sentFlowInvites?: FlowInvitationCreateNestedManyWithoutInviterInput
     receivedFlowInvites?: FlowInvitationCreateNestedManyWithoutInvitedUserInput
+    createdApiKeys?: ProviderAPIKeyCreateNestedManyWithoutCreatedByInput
   }
 
   export type UserUncheckedCreateWithoutWorkspacesInput = {
@@ -69950,6 +72706,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: WorkspaceInvitationUncheckedCreateNestedManyWithoutInvitedUserInput
     sentFlowInvites?: FlowInvitationUncheckedCreateNestedManyWithoutInviterInput
     receivedFlowInvites?: FlowInvitationUncheckedCreateNestedManyWithoutInvitedUserInput
+    createdApiKeys?: ProviderAPIKeyUncheckedCreateNestedManyWithoutCreatedByInput
   }
 
   export type UserCreateOrConnectWithoutWorkspacesInput = {
@@ -69972,6 +72729,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkCreateNestedManyWithoutWorkspaceInput
     apiKeys?: ProviderAPIKeyCreateNestedManyWithoutWorkspaceInput
     invitations?: WorkspaceInvitationCreateNestedManyWithoutWorkspaceInput
+    usageMetrics?: UsageMetricCreateNestedManyWithoutWorkspaceInput
   }
 
   export type WorkspaceUncheckedCreateWithoutMembersInput = {
@@ -69989,6 +72747,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkUncheckedCreateNestedManyWithoutWorkspaceInput
     apiKeys?: ProviderAPIKeyUncheckedCreateNestedManyWithoutWorkspaceInput
     invitations?: WorkspaceInvitationUncheckedCreateNestedManyWithoutWorkspaceInput
+    usageMetrics?: UsageMetricUncheckedCreateNestedManyWithoutWorkspaceInput
   }
 
   export type WorkspaceCreateOrConnectWithoutMembersInput = {
@@ -70022,6 +72781,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: WorkspaceInvitationUpdateManyWithoutInvitedUserNestedInput
     sentFlowInvites?: FlowInvitationUpdateManyWithoutInviterNestedInput
     receivedFlowInvites?: FlowInvitationUpdateManyWithoutInvitedUserNestedInput
+    createdApiKeys?: ProviderAPIKeyUpdateManyWithoutCreatedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutWorkspacesInput = {
@@ -70039,6 +72799,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: WorkspaceInvitationUncheckedUpdateManyWithoutInvitedUserNestedInput
     sentFlowInvites?: FlowInvitationUncheckedUpdateManyWithoutInviterNestedInput
     receivedFlowInvites?: FlowInvitationUncheckedUpdateManyWithoutInvitedUserNestedInput
+    createdApiKeys?: ProviderAPIKeyUncheckedUpdateManyWithoutCreatedByNestedInput
   }
 
   export type WorkspaceUpsertWithoutMembersInput = {
@@ -70067,6 +72828,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkUpdateManyWithoutWorkspaceNestedInput
     apiKeys?: ProviderAPIKeyUpdateManyWithoutWorkspaceNestedInput
     invitations?: WorkspaceInvitationUpdateManyWithoutWorkspaceNestedInput
+    usageMetrics?: UsageMetricUpdateManyWithoutWorkspaceNestedInput
   }
 
   export type WorkspaceUncheckedUpdateWithoutMembersInput = {
@@ -70084,6 +72846,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkUncheckedUpdateManyWithoutWorkspaceNestedInput
     apiKeys?: ProviderAPIKeyUncheckedUpdateManyWithoutWorkspaceNestedInput
     invitations?: WorkspaceInvitationUncheckedUpdateManyWithoutWorkspaceNestedInput
+    usageMetrics?: UsageMetricUncheckedUpdateManyWithoutWorkspaceNestedInput
   }
 
   export type WorkspaceCreateWithoutInvitationsInput = {
@@ -70101,6 +72864,7 @@ export namespace Prisma {
     contextModules?: ContextModuleCreateNestedManyWithoutWorkspaceInput
     shareLinks?: ShareLinkCreateNestedManyWithoutWorkspaceInput
     apiKeys?: ProviderAPIKeyCreateNestedManyWithoutWorkspaceInput
+    usageMetrics?: UsageMetricCreateNestedManyWithoutWorkspaceInput
   }
 
   export type WorkspaceUncheckedCreateWithoutInvitationsInput = {
@@ -70118,6 +72882,7 @@ export namespace Prisma {
     contextModules?: ContextModuleUncheckedCreateNestedManyWithoutWorkspaceInput
     shareLinks?: ShareLinkUncheckedCreateNestedManyWithoutWorkspaceInput
     apiKeys?: ProviderAPIKeyUncheckedCreateNestedManyWithoutWorkspaceInput
+    usageMetrics?: UsageMetricUncheckedCreateNestedManyWithoutWorkspaceInput
   }
 
   export type WorkspaceCreateOrConnectWithoutInvitationsInput = {
@@ -70140,6 +72905,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: WorkspaceInvitationCreateNestedManyWithoutInvitedUserInput
     sentFlowInvites?: FlowInvitationCreateNestedManyWithoutInviterInput
     receivedFlowInvites?: FlowInvitationCreateNestedManyWithoutInvitedUserInput
+    createdApiKeys?: ProviderAPIKeyCreateNestedManyWithoutCreatedByInput
   }
 
   export type UserUncheckedCreateWithoutSentWorkspaceInvitesInput = {
@@ -70157,6 +72923,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: WorkspaceInvitationUncheckedCreateNestedManyWithoutInvitedUserInput
     sentFlowInvites?: FlowInvitationUncheckedCreateNestedManyWithoutInviterInput
     receivedFlowInvites?: FlowInvitationUncheckedCreateNestedManyWithoutInvitedUserInput
+    createdApiKeys?: ProviderAPIKeyUncheckedCreateNestedManyWithoutCreatedByInput
   }
 
   export type UserCreateOrConnectWithoutSentWorkspaceInvitesInput = {
@@ -70179,6 +72946,7 @@ export namespace Prisma {
     sentWorkspaceInvites?: WorkspaceInvitationCreateNestedManyWithoutInviterInput
     sentFlowInvites?: FlowInvitationCreateNestedManyWithoutInviterInput
     receivedFlowInvites?: FlowInvitationCreateNestedManyWithoutInvitedUserInput
+    createdApiKeys?: ProviderAPIKeyCreateNestedManyWithoutCreatedByInput
   }
 
   export type UserUncheckedCreateWithoutReceivedWorkspaceInvitesInput = {
@@ -70196,6 +72964,7 @@ export namespace Prisma {
     sentWorkspaceInvites?: WorkspaceInvitationUncheckedCreateNestedManyWithoutInviterInput
     sentFlowInvites?: FlowInvitationUncheckedCreateNestedManyWithoutInviterInput
     receivedFlowInvites?: FlowInvitationUncheckedCreateNestedManyWithoutInvitedUserInput
+    createdApiKeys?: ProviderAPIKeyUncheckedCreateNestedManyWithoutCreatedByInput
   }
 
   export type UserCreateOrConnectWithoutReceivedWorkspaceInvitesInput = {
@@ -70229,6 +72998,7 @@ export namespace Prisma {
     contextModules?: ContextModuleUpdateManyWithoutWorkspaceNestedInput
     shareLinks?: ShareLinkUpdateManyWithoutWorkspaceNestedInput
     apiKeys?: ProviderAPIKeyUpdateManyWithoutWorkspaceNestedInput
+    usageMetrics?: UsageMetricUpdateManyWithoutWorkspaceNestedInput
   }
 
   export type WorkspaceUncheckedUpdateWithoutInvitationsInput = {
@@ -70246,6 +73016,7 @@ export namespace Prisma {
     contextModules?: ContextModuleUncheckedUpdateManyWithoutWorkspaceNestedInput
     shareLinks?: ShareLinkUncheckedUpdateManyWithoutWorkspaceNestedInput
     apiKeys?: ProviderAPIKeyUncheckedUpdateManyWithoutWorkspaceNestedInput
+    usageMetrics?: UsageMetricUncheckedUpdateManyWithoutWorkspaceNestedInput
   }
 
   export type UserUpsertWithoutSentWorkspaceInvitesInput = {
@@ -70274,6 +73045,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: WorkspaceInvitationUpdateManyWithoutInvitedUserNestedInput
     sentFlowInvites?: FlowInvitationUpdateManyWithoutInviterNestedInput
     receivedFlowInvites?: FlowInvitationUpdateManyWithoutInvitedUserNestedInput
+    createdApiKeys?: ProviderAPIKeyUpdateManyWithoutCreatedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutSentWorkspaceInvitesInput = {
@@ -70291,6 +73063,7 @@ export namespace Prisma {
     receivedWorkspaceInvites?: WorkspaceInvitationUncheckedUpdateManyWithoutInvitedUserNestedInput
     sentFlowInvites?: FlowInvitationUncheckedUpdateManyWithoutInviterNestedInput
     receivedFlowInvites?: FlowInvitationUncheckedUpdateManyWithoutInvitedUserNestedInput
+    createdApiKeys?: ProviderAPIKeyUncheckedUpdateManyWithoutCreatedByNestedInput
   }
 
   export type UserUpsertWithoutReceivedWorkspaceInvitesInput = {
@@ -70319,6 +73092,7 @@ export namespace Prisma {
     sentWorkspaceInvites?: WorkspaceInvitationUpdateManyWithoutInviterNestedInput
     sentFlowInvites?: FlowInvitationUpdateManyWithoutInviterNestedInput
     receivedFlowInvites?: FlowInvitationUpdateManyWithoutInvitedUserNestedInput
+    createdApiKeys?: ProviderAPIKeyUpdateManyWithoutCreatedByNestedInput
   }
 
   export type UserUncheckedUpdateWithoutReceivedWorkspaceInvitesInput = {
@@ -70336,6 +73110,7 @@ export namespace Prisma {
     sentWorkspaceInvites?: WorkspaceInvitationUncheckedUpdateManyWithoutInviterNestedInput
     sentFlowInvites?: FlowInvitationUncheckedUpdateManyWithoutInviterNestedInput
     receivedFlowInvites?: FlowInvitationUncheckedUpdateManyWithoutInvitedUserNestedInput
+    createdApiKeys?: ProviderAPIKeyUncheckedUpdateManyWithoutCreatedByNestedInput
   }
 
   export type WorkspaceCreateWithoutApiKeysInput = {
@@ -70353,6 +73128,7 @@ export namespace Prisma {
     contextModules?: ContextModuleCreateNestedManyWithoutWorkspaceInput
     shareLinks?: ShareLinkCreateNestedManyWithoutWorkspaceInput
     invitations?: WorkspaceInvitationCreateNestedManyWithoutWorkspaceInput
+    usageMetrics?: UsageMetricCreateNestedManyWithoutWorkspaceInput
   }
 
   export type WorkspaceUncheckedCreateWithoutApiKeysInput = {
@@ -70370,11 +73146,207 @@ export namespace Prisma {
     contextModules?: ContextModuleUncheckedCreateNestedManyWithoutWorkspaceInput
     shareLinks?: ShareLinkUncheckedCreateNestedManyWithoutWorkspaceInput
     invitations?: WorkspaceInvitationUncheckedCreateNestedManyWithoutWorkspaceInput
+    usageMetrics?: UsageMetricUncheckedCreateNestedManyWithoutWorkspaceInput
   }
 
   export type WorkspaceCreateOrConnectWithoutApiKeysInput = {
     where: WorkspaceWhereUniqueInput
     create: XOR<WorkspaceCreateWithoutApiKeysInput, WorkspaceUncheckedCreateWithoutApiKeysInput>
+  }
+
+  export type UserCreateWithoutCreatedApiKeysInput = {
+    id?: string
+    email: string
+    name?: string | null
+    image?: string | null
+    hash?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    accounts?: AccountCreateNestedManyWithoutUserInput
+    workspaces?: WorkspaceUserCreateNestedManyWithoutUserInput
+    refreshTokens?: RefreshTokenCreateNestedManyWithoutUserInput
+    flowCollaborations?: FlowCollaboratorCreateNestedManyWithoutUserInput
+    sentWorkspaceInvites?: WorkspaceInvitationCreateNestedManyWithoutInviterInput
+    receivedWorkspaceInvites?: WorkspaceInvitationCreateNestedManyWithoutInvitedUserInput
+    sentFlowInvites?: FlowInvitationCreateNestedManyWithoutInviterInput
+    receivedFlowInvites?: FlowInvitationCreateNestedManyWithoutInvitedUserInput
+  }
+
+  export type UserUncheckedCreateWithoutCreatedApiKeysInput = {
+    id?: string
+    email: string
+    name?: string | null
+    image?: string | null
+    hash?: string | null
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    accounts?: AccountUncheckedCreateNestedManyWithoutUserInput
+    workspaces?: WorkspaceUserUncheckedCreateNestedManyWithoutUserInput
+    refreshTokens?: RefreshTokenUncheckedCreateNestedManyWithoutUserInput
+    flowCollaborations?: FlowCollaboratorUncheckedCreateNestedManyWithoutUserInput
+    sentWorkspaceInvites?: WorkspaceInvitationUncheckedCreateNestedManyWithoutInviterInput
+    receivedWorkspaceInvites?: WorkspaceInvitationUncheckedCreateNestedManyWithoutInvitedUserInput
+    sentFlowInvites?: FlowInvitationUncheckedCreateNestedManyWithoutInviterInput
+    receivedFlowInvites?: FlowInvitationUncheckedCreateNestedManyWithoutInvitedUserInput
+  }
+
+  export type UserCreateOrConnectWithoutCreatedApiKeysInput = {
+    where: UserWhereUniqueInput
+    create: XOR<UserCreateWithoutCreatedApiKeysInput, UserUncheckedCreateWithoutCreatedApiKeysInput>
+  }
+
+  export type UsageMetricCreateWithoutApiKeyInput = {
+    id?: string
+    date: Date | string
+    requestCount?: number
+    successCount?: number
+    errorCount?: number
+    promptTokens?: bigint | number
+    completionTokens?: bigint | number
+    totalTokens?: bigint | number
+    estimatedCost?: Decimal | DecimalJsLike | number | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    workspace: WorkspaceCreateNestedOneWithoutUsageMetricsInput
+  }
+
+  export type UsageMetricUncheckedCreateWithoutApiKeyInput = {
+    id?: string
+    workspaceId: string
+    date: Date | string
+    requestCount?: number
+    successCount?: number
+    errorCount?: number
+    promptTokens?: bigint | number
+    completionTokens?: bigint | number
+    totalTokens?: bigint | number
+    estimatedCost?: Decimal | DecimalJsLike | number | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type UsageMetricCreateOrConnectWithoutApiKeyInput = {
+    where: UsageMetricWhereUniqueInput
+    create: XOR<UsageMetricCreateWithoutApiKeyInput, UsageMetricUncheckedCreateWithoutApiKeyInput>
+  }
+
+  export type UsageMetricCreateManyApiKeyInputEnvelope = {
+    data: UsageMetricCreateManyApiKeyInput | UsageMetricCreateManyApiKeyInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type PodExecutionCreateWithoutApiKeyInput = {
+    id?: string
+    flowId: string
+    workspaceId: string
+    status?: $Enums.PodExecutionStatus
+    startedAt?: Date | string
+    finishedAt?: Date | string | null
+    runtimeInMs?: number | null
+    provider: $Enums.LLMProvider
+    modelId: string
+    modelName?: string | null
+    providerMetadata?: NullableJsonNullValueInput | InputJsonValue
+    requestMetadata?: NullableJsonNullValueInput | InputJsonValue
+    responseMetadata?: NullableJsonNullValueInput | InputJsonValue
+    errorMessage?: string | null
+    errorCode?: string | null
+    inputTokens?: number
+    outputTokens?: number
+    reasoningTokens?: number
+    creditsConsumed?: number
+    costInUsd?: Decimal | DecimalJsLike | number | string | null
+    pod: PodCreateNestedOneWithoutExecutionsInput
+  }
+
+  export type PodExecutionUncheckedCreateWithoutApiKeyInput = {
+    id?: string
+    podId: string
+    flowId: string
+    workspaceId: string
+    status?: $Enums.PodExecutionStatus
+    startedAt?: Date | string
+    finishedAt?: Date | string | null
+    runtimeInMs?: number | null
+    provider: $Enums.LLMProvider
+    modelId: string
+    modelName?: string | null
+    providerMetadata?: NullableJsonNullValueInput | InputJsonValue
+    requestMetadata?: NullableJsonNullValueInput | InputJsonValue
+    responseMetadata?: NullableJsonNullValueInput | InputJsonValue
+    errorMessage?: string | null
+    errorCode?: string | null
+    inputTokens?: number
+    outputTokens?: number
+    reasoningTokens?: number
+    creditsConsumed?: number
+    costInUsd?: Decimal | DecimalJsLike | number | string | null
+  }
+
+  export type PodExecutionCreateOrConnectWithoutApiKeyInput = {
+    where: PodExecutionWhereUniqueInput
+    create: XOR<PodExecutionCreateWithoutApiKeyInput, PodExecutionUncheckedCreateWithoutApiKeyInput>
+  }
+
+  export type PodExecutionCreateManyApiKeyInputEnvelope = {
+    data: PodExecutionCreateManyApiKeyInput | PodExecutionCreateManyApiKeyInput[]
+    skipDuplicates?: boolean
+  }
+
+  export type PodUsageLogCreateWithoutApiKeyInput = {
+    id?: string
+    executionId: string
+    flowId: string
+    workspaceId: string
+    provider: $Enums.LLMProvider
+    modelId: string
+    modelName?: string | null
+    providerMetadata?: NullableJsonNullValueInput | InputJsonValue
+    inputTokens?: number
+    outputTokens?: number
+    reasoningTokens?: number
+    creditsConsumed?: number
+    runtimeInMs?: number | null
+    inputTokenCost: Decimal | DecimalJsLike | number | string
+    outputTokenCost: Decimal | DecimalJsLike | number | string
+    reasoningTokenCost: Decimal | DecimalJsLike | number | string
+    totalCostInUsd: Decimal | DecimalJsLike | number | string
+    executedAt?: Date | string
+    pod: PodCreateNestedOneWithoutUsageLogsInput
+    subscription: SubscriptionCreateNestedOneWithoutUsageLogsInput
+  }
+
+  export type PodUsageLogUncheckedCreateWithoutApiKeyInput = {
+    id?: string
+    podId: string
+    executionId: string
+    flowId: string
+    workspaceId: string
+    subscriptionId: string
+    provider: $Enums.LLMProvider
+    modelId: string
+    modelName?: string | null
+    providerMetadata?: NullableJsonNullValueInput | InputJsonValue
+    inputTokens?: number
+    outputTokens?: number
+    reasoningTokens?: number
+    creditsConsumed?: number
+    runtimeInMs?: number | null
+    inputTokenCost: Decimal | DecimalJsLike | number | string
+    outputTokenCost: Decimal | DecimalJsLike | number | string
+    reasoningTokenCost: Decimal | DecimalJsLike | number | string
+    totalCostInUsd: Decimal | DecimalJsLike | number | string
+    executedAt?: Date | string
+  }
+
+  export type PodUsageLogCreateOrConnectWithoutApiKeyInput = {
+    where: PodUsageLogWhereUniqueInput
+    create: XOR<PodUsageLogCreateWithoutApiKeyInput, PodUsageLogUncheckedCreateWithoutApiKeyInput>
+  }
+
+  export type PodUsageLogCreateManyApiKeyInputEnvelope = {
+    data: PodUsageLogCreateManyApiKeyInput | PodUsageLogCreateManyApiKeyInput[]
+    skipDuplicates?: boolean
   }
 
   export type WorkspaceUpsertWithoutApiKeysInput = {
@@ -70403,6 +73375,7 @@ export namespace Prisma {
     contextModules?: ContextModuleUpdateManyWithoutWorkspaceNestedInput
     shareLinks?: ShareLinkUpdateManyWithoutWorkspaceNestedInput
     invitations?: WorkspaceInvitationUpdateManyWithoutWorkspaceNestedInput
+    usageMetrics?: UsageMetricUpdateManyWithoutWorkspaceNestedInput
   }
 
   export type WorkspaceUncheckedUpdateWithoutApiKeysInput = {
@@ -70420,6 +73393,278 @@ export namespace Prisma {
     contextModules?: ContextModuleUncheckedUpdateManyWithoutWorkspaceNestedInput
     shareLinks?: ShareLinkUncheckedUpdateManyWithoutWorkspaceNestedInput
     invitations?: WorkspaceInvitationUncheckedUpdateManyWithoutWorkspaceNestedInput
+    usageMetrics?: UsageMetricUncheckedUpdateManyWithoutWorkspaceNestedInput
+  }
+
+  export type UserUpsertWithoutCreatedApiKeysInput = {
+    update: XOR<UserUpdateWithoutCreatedApiKeysInput, UserUncheckedUpdateWithoutCreatedApiKeysInput>
+    create: XOR<UserCreateWithoutCreatedApiKeysInput, UserUncheckedCreateWithoutCreatedApiKeysInput>
+    where?: UserWhereInput
+  }
+
+  export type UserUpdateToOneWithWhereWithoutCreatedApiKeysInput = {
+    where?: UserWhereInput
+    data: XOR<UserUpdateWithoutCreatedApiKeysInput, UserUncheckedUpdateWithoutCreatedApiKeysInput>
+  }
+
+  export type UserUpdateWithoutCreatedApiKeysInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    name?: NullableStringFieldUpdateOperationsInput | string | null
+    image?: NullableStringFieldUpdateOperationsInput | string | null
+    hash?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    accounts?: AccountUpdateManyWithoutUserNestedInput
+    workspaces?: WorkspaceUserUpdateManyWithoutUserNestedInput
+    refreshTokens?: RefreshTokenUpdateManyWithoutUserNestedInput
+    flowCollaborations?: FlowCollaboratorUpdateManyWithoutUserNestedInput
+    sentWorkspaceInvites?: WorkspaceInvitationUpdateManyWithoutInviterNestedInput
+    receivedWorkspaceInvites?: WorkspaceInvitationUpdateManyWithoutInvitedUserNestedInput
+    sentFlowInvites?: FlowInvitationUpdateManyWithoutInviterNestedInput
+    receivedFlowInvites?: FlowInvitationUpdateManyWithoutInvitedUserNestedInput
+  }
+
+  export type UserUncheckedUpdateWithoutCreatedApiKeysInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    email?: StringFieldUpdateOperationsInput | string
+    name?: NullableStringFieldUpdateOperationsInput | string | null
+    image?: NullableStringFieldUpdateOperationsInput | string | null
+    hash?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    accounts?: AccountUncheckedUpdateManyWithoutUserNestedInput
+    workspaces?: WorkspaceUserUncheckedUpdateManyWithoutUserNestedInput
+    refreshTokens?: RefreshTokenUncheckedUpdateManyWithoutUserNestedInput
+    flowCollaborations?: FlowCollaboratorUncheckedUpdateManyWithoutUserNestedInput
+    sentWorkspaceInvites?: WorkspaceInvitationUncheckedUpdateManyWithoutInviterNestedInput
+    receivedWorkspaceInvites?: WorkspaceInvitationUncheckedUpdateManyWithoutInvitedUserNestedInput
+    sentFlowInvites?: FlowInvitationUncheckedUpdateManyWithoutInviterNestedInput
+    receivedFlowInvites?: FlowInvitationUncheckedUpdateManyWithoutInvitedUserNestedInput
+  }
+
+  export type UsageMetricUpsertWithWhereUniqueWithoutApiKeyInput = {
+    where: UsageMetricWhereUniqueInput
+    update: XOR<UsageMetricUpdateWithoutApiKeyInput, UsageMetricUncheckedUpdateWithoutApiKeyInput>
+    create: XOR<UsageMetricCreateWithoutApiKeyInput, UsageMetricUncheckedCreateWithoutApiKeyInput>
+  }
+
+  export type UsageMetricUpdateWithWhereUniqueWithoutApiKeyInput = {
+    where: UsageMetricWhereUniqueInput
+    data: XOR<UsageMetricUpdateWithoutApiKeyInput, UsageMetricUncheckedUpdateWithoutApiKeyInput>
+  }
+
+  export type UsageMetricUpdateManyWithWhereWithoutApiKeyInput = {
+    where: UsageMetricScalarWhereInput
+    data: XOR<UsageMetricUpdateManyMutationInput, UsageMetricUncheckedUpdateManyWithoutApiKeyInput>
+  }
+
+  export type PodExecutionUpsertWithWhereUniqueWithoutApiKeyInput = {
+    where: PodExecutionWhereUniqueInput
+    update: XOR<PodExecutionUpdateWithoutApiKeyInput, PodExecutionUncheckedUpdateWithoutApiKeyInput>
+    create: XOR<PodExecutionCreateWithoutApiKeyInput, PodExecutionUncheckedCreateWithoutApiKeyInput>
+  }
+
+  export type PodExecutionUpdateWithWhereUniqueWithoutApiKeyInput = {
+    where: PodExecutionWhereUniqueInput
+    data: XOR<PodExecutionUpdateWithoutApiKeyInput, PodExecutionUncheckedUpdateWithoutApiKeyInput>
+  }
+
+  export type PodExecutionUpdateManyWithWhereWithoutApiKeyInput = {
+    where: PodExecutionScalarWhereInput
+    data: XOR<PodExecutionUpdateManyMutationInput, PodExecutionUncheckedUpdateManyWithoutApiKeyInput>
+  }
+
+  export type PodUsageLogUpsertWithWhereUniqueWithoutApiKeyInput = {
+    where: PodUsageLogWhereUniqueInput
+    update: XOR<PodUsageLogUpdateWithoutApiKeyInput, PodUsageLogUncheckedUpdateWithoutApiKeyInput>
+    create: XOR<PodUsageLogCreateWithoutApiKeyInput, PodUsageLogUncheckedCreateWithoutApiKeyInput>
+  }
+
+  export type PodUsageLogUpdateWithWhereUniqueWithoutApiKeyInput = {
+    where: PodUsageLogWhereUniqueInput
+    data: XOR<PodUsageLogUpdateWithoutApiKeyInput, PodUsageLogUncheckedUpdateWithoutApiKeyInput>
+  }
+
+  export type PodUsageLogUpdateManyWithWhereWithoutApiKeyInput = {
+    where: PodUsageLogScalarWhereInput
+    data: XOR<PodUsageLogUpdateManyMutationInput, PodUsageLogUncheckedUpdateManyWithoutApiKeyInput>
+  }
+
+  export type WorkspaceCreateWithoutUsageMetricsInput = {
+    id?: string
+    name: string
+    type?: $Enums.WorkspaceType
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    members?: WorkspaceUserCreateNestedManyWithoutWorkspaceInput
+    spaces?: SpaceCreateNestedManyWithoutWorkspaceInput
+    flows?: FlowCreateNestedManyWithoutWorkspaceInput
+    documents?: DocumentCreateNestedManyWithoutWorkspaceInput
+    documentFolders?: DocumentFolderCreateNestedManyWithoutWorkspaceInput
+    subscription?: SubscriptionCreateNestedOneWithoutWorkspaceInput
+    contextModules?: ContextModuleCreateNestedManyWithoutWorkspaceInput
+    shareLinks?: ShareLinkCreateNestedManyWithoutWorkspaceInput
+    apiKeys?: ProviderAPIKeyCreateNestedManyWithoutWorkspaceInput
+    invitations?: WorkspaceInvitationCreateNestedManyWithoutWorkspaceInput
+  }
+
+  export type WorkspaceUncheckedCreateWithoutUsageMetricsInput = {
+    id?: string
+    name: string
+    type?: $Enums.WorkspaceType
+    createdAt?: Date | string
+    updatedAt?: Date | string
+    members?: WorkspaceUserUncheckedCreateNestedManyWithoutWorkspaceInput
+    spaces?: SpaceUncheckedCreateNestedManyWithoutWorkspaceInput
+    flows?: FlowUncheckedCreateNestedManyWithoutWorkspaceInput
+    documents?: DocumentUncheckedCreateNestedManyWithoutWorkspaceInput
+    documentFolders?: DocumentFolderUncheckedCreateNestedManyWithoutWorkspaceInput
+    subscription?: SubscriptionUncheckedCreateNestedOneWithoutWorkspaceInput
+    contextModules?: ContextModuleUncheckedCreateNestedManyWithoutWorkspaceInput
+    shareLinks?: ShareLinkUncheckedCreateNestedManyWithoutWorkspaceInput
+    apiKeys?: ProviderAPIKeyUncheckedCreateNestedManyWithoutWorkspaceInput
+    invitations?: WorkspaceInvitationUncheckedCreateNestedManyWithoutWorkspaceInput
+  }
+
+  export type WorkspaceCreateOrConnectWithoutUsageMetricsInput = {
+    where: WorkspaceWhereUniqueInput
+    create: XOR<WorkspaceCreateWithoutUsageMetricsInput, WorkspaceUncheckedCreateWithoutUsageMetricsInput>
+  }
+
+  export type ProviderAPIKeyCreateWithoutUsageMetricsInput = {
+    id?: string
+    provider: $Enums.LLMProvider
+    displayName: string
+    keyHash: string
+    isActive?: boolean
+    lastUsedAt?: Date | string | null
+    usageCount?: number
+    totalTokens?: bigint | number
+    totalCost?: Decimal | DecimalJsLike | number | string
+    lastErrorAt?: Date | string | null
+    createdAt?: Date | string
+    workspace: WorkspaceCreateNestedOneWithoutApiKeysInput
+    createdBy: UserCreateNestedOneWithoutCreatedApiKeysInput
+    podExecutions?: PodExecutionCreateNestedManyWithoutApiKeyInput
+    podUsageLogs?: PodUsageLogCreateNestedManyWithoutApiKeyInput
+  }
+
+  export type ProviderAPIKeyUncheckedCreateWithoutUsageMetricsInput = {
+    id?: string
+    workspaceId: string
+    provider: $Enums.LLMProvider
+    displayName: string
+    keyHash: string
+    isActive?: boolean
+    lastUsedAt?: Date | string | null
+    usageCount?: number
+    totalTokens?: bigint | number
+    totalCost?: Decimal | DecimalJsLike | number | string
+    lastErrorAt?: Date | string | null
+    createdById: string
+    createdAt?: Date | string
+    podExecutions?: PodExecutionUncheckedCreateNestedManyWithoutApiKeyInput
+    podUsageLogs?: PodUsageLogUncheckedCreateNestedManyWithoutApiKeyInput
+  }
+
+  export type ProviderAPIKeyCreateOrConnectWithoutUsageMetricsInput = {
+    where: ProviderAPIKeyWhereUniqueInput
+    create: XOR<ProviderAPIKeyCreateWithoutUsageMetricsInput, ProviderAPIKeyUncheckedCreateWithoutUsageMetricsInput>
+  }
+
+  export type WorkspaceUpsertWithoutUsageMetricsInput = {
+    update: XOR<WorkspaceUpdateWithoutUsageMetricsInput, WorkspaceUncheckedUpdateWithoutUsageMetricsInput>
+    create: XOR<WorkspaceCreateWithoutUsageMetricsInput, WorkspaceUncheckedCreateWithoutUsageMetricsInput>
+    where?: WorkspaceWhereInput
+  }
+
+  export type WorkspaceUpdateToOneWithWhereWithoutUsageMetricsInput = {
+    where?: WorkspaceWhereInput
+    data: XOR<WorkspaceUpdateWithoutUsageMetricsInput, WorkspaceUncheckedUpdateWithoutUsageMetricsInput>
+  }
+
+  export type WorkspaceUpdateWithoutUsageMetricsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    type?: EnumWorkspaceTypeFieldUpdateOperationsInput | $Enums.WorkspaceType
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    members?: WorkspaceUserUpdateManyWithoutWorkspaceNestedInput
+    spaces?: SpaceUpdateManyWithoutWorkspaceNestedInput
+    flows?: FlowUpdateManyWithoutWorkspaceNestedInput
+    documents?: DocumentUpdateManyWithoutWorkspaceNestedInput
+    documentFolders?: DocumentFolderUpdateManyWithoutWorkspaceNestedInput
+    subscription?: SubscriptionUpdateOneWithoutWorkspaceNestedInput
+    contextModules?: ContextModuleUpdateManyWithoutWorkspaceNestedInput
+    shareLinks?: ShareLinkUpdateManyWithoutWorkspaceNestedInput
+    apiKeys?: ProviderAPIKeyUpdateManyWithoutWorkspaceNestedInput
+    invitations?: WorkspaceInvitationUpdateManyWithoutWorkspaceNestedInput
+  }
+
+  export type WorkspaceUncheckedUpdateWithoutUsageMetricsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    name?: StringFieldUpdateOperationsInput | string
+    type?: EnumWorkspaceTypeFieldUpdateOperationsInput | $Enums.WorkspaceType
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    members?: WorkspaceUserUncheckedUpdateManyWithoutWorkspaceNestedInput
+    spaces?: SpaceUncheckedUpdateManyWithoutWorkspaceNestedInput
+    flows?: FlowUncheckedUpdateManyWithoutWorkspaceNestedInput
+    documents?: DocumentUncheckedUpdateManyWithoutWorkspaceNestedInput
+    documentFolders?: DocumentFolderUncheckedUpdateManyWithoutWorkspaceNestedInput
+    subscription?: SubscriptionUncheckedUpdateOneWithoutWorkspaceNestedInput
+    contextModules?: ContextModuleUncheckedUpdateManyWithoutWorkspaceNestedInput
+    shareLinks?: ShareLinkUncheckedUpdateManyWithoutWorkspaceNestedInput
+    apiKeys?: ProviderAPIKeyUncheckedUpdateManyWithoutWorkspaceNestedInput
+    invitations?: WorkspaceInvitationUncheckedUpdateManyWithoutWorkspaceNestedInput
+  }
+
+  export type ProviderAPIKeyUpsertWithoutUsageMetricsInput = {
+    update: XOR<ProviderAPIKeyUpdateWithoutUsageMetricsInput, ProviderAPIKeyUncheckedUpdateWithoutUsageMetricsInput>
+    create: XOR<ProviderAPIKeyCreateWithoutUsageMetricsInput, ProviderAPIKeyUncheckedCreateWithoutUsageMetricsInput>
+    where?: ProviderAPIKeyWhereInput
+  }
+
+  export type ProviderAPIKeyUpdateToOneWithWhereWithoutUsageMetricsInput = {
+    where?: ProviderAPIKeyWhereInput
+    data: XOR<ProviderAPIKeyUpdateWithoutUsageMetricsInput, ProviderAPIKeyUncheckedUpdateWithoutUsageMetricsInput>
+  }
+
+  export type ProviderAPIKeyUpdateWithoutUsageMetricsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
+    displayName?: StringFieldUpdateOperationsInput | string
+    keyHash?: StringFieldUpdateOperationsInput | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    lastUsedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    usageCount?: IntFieldUpdateOperationsInput | number
+    totalTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    totalCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    lastErrorAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    workspace?: WorkspaceUpdateOneRequiredWithoutApiKeysNestedInput
+    createdBy?: UserUpdateOneRequiredWithoutCreatedApiKeysNestedInput
+    podExecutions?: PodExecutionUpdateManyWithoutApiKeyNestedInput
+    podUsageLogs?: PodUsageLogUpdateManyWithoutApiKeyNestedInput
+  }
+
+  export type ProviderAPIKeyUncheckedUpdateWithoutUsageMetricsInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    workspaceId?: StringFieldUpdateOperationsInput | string
+    provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
+    displayName?: StringFieldUpdateOperationsInput | string
+    keyHash?: StringFieldUpdateOperationsInput | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    lastUsedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    usageCount?: IntFieldUpdateOperationsInput | number
+    totalTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    totalCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    lastErrorAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdById?: StringFieldUpdateOperationsInput | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    podExecutions?: PodExecutionUncheckedUpdateManyWithoutApiKeyNestedInput
+    podUsageLogs?: PodUsageLogUncheckedUpdateManyWithoutApiKeyNestedInput
   }
 
   export type WorkspaceCreateWithoutShareLinksInput = {
@@ -70437,6 +73682,7 @@ export namespace Prisma {
     contextModules?: ContextModuleCreateNestedManyWithoutWorkspaceInput
     apiKeys?: ProviderAPIKeyCreateNestedManyWithoutWorkspaceInput
     invitations?: WorkspaceInvitationCreateNestedManyWithoutWorkspaceInput
+    usageMetrics?: UsageMetricCreateNestedManyWithoutWorkspaceInput
   }
 
   export type WorkspaceUncheckedCreateWithoutShareLinksInput = {
@@ -70454,6 +73700,7 @@ export namespace Prisma {
     contextModules?: ContextModuleUncheckedCreateNestedManyWithoutWorkspaceInput
     apiKeys?: ProviderAPIKeyUncheckedCreateNestedManyWithoutWorkspaceInput
     invitations?: WorkspaceInvitationUncheckedCreateNestedManyWithoutWorkspaceInput
+    usageMetrics?: UsageMetricUncheckedCreateNestedManyWithoutWorkspaceInput
   }
 
   export type WorkspaceCreateOrConnectWithoutShareLinksInput = {
@@ -70487,6 +73734,7 @@ export namespace Prisma {
     contextModules?: ContextModuleUpdateManyWithoutWorkspaceNestedInput
     apiKeys?: ProviderAPIKeyUpdateManyWithoutWorkspaceNestedInput
     invitations?: WorkspaceInvitationUpdateManyWithoutWorkspaceNestedInput
+    usageMetrics?: UsageMetricUpdateManyWithoutWorkspaceNestedInput
   }
 
   export type WorkspaceUncheckedUpdateWithoutShareLinksInput = {
@@ -70504,6 +73752,7 @@ export namespace Prisma {
     contextModules?: ContextModuleUncheckedUpdateManyWithoutWorkspaceNestedInput
     apiKeys?: ProviderAPIKeyUncheckedUpdateManyWithoutWorkspaceNestedInput
     invitations?: WorkspaceInvitationUncheckedUpdateManyWithoutWorkspaceNestedInput
+    usageMetrics?: UsageMetricUncheckedUpdateManyWithoutWorkspaceNestedInput
   }
 
   export type DocumentFolderCreateWithoutChildrenInput = {
@@ -70592,6 +73841,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkCreateNestedManyWithoutWorkspaceInput
     apiKeys?: ProviderAPIKeyCreateNestedManyWithoutWorkspaceInput
     invitations?: WorkspaceInvitationCreateNestedManyWithoutWorkspaceInput
+    usageMetrics?: UsageMetricCreateNestedManyWithoutWorkspaceInput
   }
 
   export type WorkspaceUncheckedCreateWithoutDocumentFoldersInput = {
@@ -70609,6 +73859,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkUncheckedCreateNestedManyWithoutWorkspaceInput
     apiKeys?: ProviderAPIKeyUncheckedCreateNestedManyWithoutWorkspaceInput
     invitations?: WorkspaceInvitationUncheckedCreateNestedManyWithoutWorkspaceInput
+    usageMetrics?: UsageMetricUncheckedCreateNestedManyWithoutWorkspaceInput
   }
 
   export type WorkspaceCreateOrConnectWithoutDocumentFoldersInput = {
@@ -70753,6 +74004,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkUpdateManyWithoutWorkspaceNestedInput
     apiKeys?: ProviderAPIKeyUpdateManyWithoutWorkspaceNestedInput
     invitations?: WorkspaceInvitationUpdateManyWithoutWorkspaceNestedInput
+    usageMetrics?: UsageMetricUpdateManyWithoutWorkspaceNestedInput
   }
 
   export type WorkspaceUncheckedUpdateWithoutDocumentFoldersInput = {
@@ -70770,6 +74022,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkUncheckedUpdateManyWithoutWorkspaceNestedInput
     apiKeys?: ProviderAPIKeyUncheckedUpdateManyWithoutWorkspaceNestedInput
     invitations?: WorkspaceInvitationUncheckedUpdateManyWithoutWorkspaceNestedInput
+    usageMetrics?: UsageMetricUncheckedUpdateManyWithoutWorkspaceNestedInput
   }
 
   export type DocumentUpsertWithWhereUniqueWithoutFolderInput = {
@@ -70803,6 +74056,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkCreateNestedManyWithoutWorkspaceInput
     apiKeys?: ProviderAPIKeyCreateNestedManyWithoutWorkspaceInput
     invitations?: WorkspaceInvitationCreateNestedManyWithoutWorkspaceInput
+    usageMetrics?: UsageMetricCreateNestedManyWithoutWorkspaceInput
   }
 
   export type WorkspaceUncheckedCreateWithoutDocumentsInput = {
@@ -70820,6 +74074,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkUncheckedCreateNestedManyWithoutWorkspaceInput
     apiKeys?: ProviderAPIKeyUncheckedCreateNestedManyWithoutWorkspaceInput
     invitations?: WorkspaceInvitationUncheckedCreateNestedManyWithoutWorkspaceInput
+    usageMetrics?: UsageMetricUncheckedCreateNestedManyWithoutWorkspaceInput
   }
 
   export type WorkspaceCreateOrConnectWithoutDocumentsInput = {
@@ -71016,6 +74271,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkUpdateManyWithoutWorkspaceNestedInput
     apiKeys?: ProviderAPIKeyUpdateManyWithoutWorkspaceNestedInput
     invitations?: WorkspaceInvitationUpdateManyWithoutWorkspaceNestedInput
+    usageMetrics?: UsageMetricUpdateManyWithoutWorkspaceNestedInput
   }
 
   export type WorkspaceUncheckedUpdateWithoutDocumentsInput = {
@@ -71033,6 +74289,7 @@ export namespace Prisma {
     shareLinks?: ShareLinkUncheckedUpdateManyWithoutWorkspaceNestedInput
     apiKeys?: ProviderAPIKeyUncheckedUpdateManyWithoutWorkspaceNestedInput
     invitations?: WorkspaceInvitationUncheckedUpdateManyWithoutWorkspaceNestedInput
+    usageMetrics?: UsageMetricUncheckedUpdateManyWithoutWorkspaceNestedInput
   }
 
   export type DocumentFolderUpsertWithoutDocumentsInput = {
@@ -71764,6 +75021,7 @@ export namespace Prisma {
     executionId: string
     flowId: string
     workspaceId: string
+    apiKeyId?: string | null
     provider: $Enums.LLMProvider
     modelId: string
     modelName?: string | null
@@ -71841,6 +75099,7 @@ export namespace Prisma {
     totalCostInUsd?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     executedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     pod?: PodUpdateOneRequiredWithoutUsageLogsNestedInput
+    apiKey?: ProviderAPIKeyUpdateOneWithoutPodUsageLogsNestedInput
   }
 
   export type PodUsageLogUncheckedUpdateWithoutSubscriptionInput = {
@@ -71849,6 +75108,7 @@ export namespace Prisma {
     executionId?: StringFieldUpdateOperationsInput | string
     flowId?: StringFieldUpdateOperationsInput | string
     workspaceId?: StringFieldUpdateOperationsInput | string
+    apiKeyId?: NullableStringFieldUpdateOperationsInput | string | null
     provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
     modelId?: StringFieldUpdateOperationsInput | string
     modelName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -71871,6 +75131,7 @@ export namespace Prisma {
     executionId?: StringFieldUpdateOperationsInput | string
     flowId?: StringFieldUpdateOperationsInput | string
     workspaceId?: StringFieldUpdateOperationsInput | string
+    apiKeyId?: NullableStringFieldUpdateOperationsInput | string | null
     provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
     modelId?: StringFieldUpdateOperationsInput | string
     modelName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -72632,6 +75893,7 @@ export namespace Prisma {
     startedAt?: Date | string
     finishedAt?: Date | string | null
     runtimeInMs?: number | null
+    apiKeyId?: string | null
     provider: $Enums.LLMProvider
     modelId: string
     modelName?: string | null
@@ -72653,6 +75915,7 @@ export namespace Prisma {
     flowId: string
     workspaceId: string
     subscriptionId: string
+    apiKeyId?: string | null
     provider: $Enums.LLMProvider
     modelId: string
     modelName?: string | null
@@ -72750,6 +76013,7 @@ export namespace Prisma {
     reasoningTokens?: IntFieldUpdateOperationsInput | number
     creditsConsumed?: IntFieldUpdateOperationsInput | number
     costInUsd?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    apiKey?: ProviderAPIKeyUpdateOneWithoutPodExecutionsNestedInput
   }
 
   export type PodExecutionUncheckedUpdateWithoutPodInput = {
@@ -72760,6 +76024,7 @@ export namespace Prisma {
     startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     finishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     runtimeInMs?: NullableIntFieldUpdateOperationsInput | number | null
+    apiKeyId?: NullableStringFieldUpdateOperationsInput | string | null
     provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
     modelId?: StringFieldUpdateOperationsInput | string
     modelName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -72783,6 +76048,7 @@ export namespace Prisma {
     startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     finishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     runtimeInMs?: NullableIntFieldUpdateOperationsInput | number | null
+    apiKeyId?: NullableStringFieldUpdateOperationsInput | string | null
     provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
     modelId?: StringFieldUpdateOperationsInput | string
     modelName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -72818,6 +76084,7 @@ export namespace Prisma {
     totalCostInUsd?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
     executedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     subscription?: SubscriptionUpdateOneRequiredWithoutUsageLogsNestedInput
+    apiKey?: ProviderAPIKeyUpdateOneWithoutPodUsageLogsNestedInput
   }
 
   export type PodUsageLogUncheckedUpdateWithoutPodInput = {
@@ -72826,6 +76093,7 @@ export namespace Prisma {
     flowId?: StringFieldUpdateOperationsInput | string
     workspaceId?: StringFieldUpdateOperationsInput | string
     subscriptionId?: StringFieldUpdateOperationsInput | string
+    apiKeyId?: NullableStringFieldUpdateOperationsInput | string | null
     provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
     modelId?: StringFieldUpdateOperationsInput | string
     modelName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -72848,6 +76116,7 @@ export namespace Prisma {
     flowId?: StringFieldUpdateOperationsInput | string
     workspaceId?: StringFieldUpdateOperationsInput | string
     subscriptionId?: StringFieldUpdateOperationsInput | string
+    apiKeyId?: NullableStringFieldUpdateOperationsInput | string | null
     provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
     modelId?: StringFieldUpdateOperationsInput | string
     modelName?: NullableStringFieldUpdateOperationsInput | string | null
@@ -72965,6 +76234,21 @@ export namespace Prisma {
     createdAt?: Date | string
     expiresAt: Date | string
     acceptedAt?: Date | string | null
+  }
+
+  export type ProviderAPIKeyCreateManyCreatedByInput = {
+    id?: string
+    workspaceId: string
+    provider: $Enums.LLMProvider
+    displayName: string
+    keyHash: string
+    isActive?: boolean
+    lastUsedAt?: Date | string | null
+    usageCount?: number
+    totalTokens?: bigint | number
+    totalCost?: Decimal | DecimalJsLike | number | string
+    lastErrorAt?: Date | string | null
+    createdAt?: Date | string
   }
 
   export type AccountUpdateWithoutUserInput = {
@@ -73276,6 +76560,57 @@ export namespace Prisma {
     acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   }
 
+  export type ProviderAPIKeyUpdateWithoutCreatedByInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
+    displayName?: StringFieldUpdateOperationsInput | string
+    keyHash?: StringFieldUpdateOperationsInput | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    lastUsedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    usageCount?: IntFieldUpdateOperationsInput | number
+    totalTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    totalCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    lastErrorAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    workspace?: WorkspaceUpdateOneRequiredWithoutApiKeysNestedInput
+    usageMetrics?: UsageMetricUpdateManyWithoutApiKeyNestedInput
+    podExecutions?: PodExecutionUpdateManyWithoutApiKeyNestedInput
+    podUsageLogs?: PodUsageLogUpdateManyWithoutApiKeyNestedInput
+  }
+
+  export type ProviderAPIKeyUncheckedUpdateWithoutCreatedByInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    workspaceId?: StringFieldUpdateOperationsInput | string
+    provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
+    displayName?: StringFieldUpdateOperationsInput | string
+    keyHash?: StringFieldUpdateOperationsInput | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    lastUsedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    usageCount?: IntFieldUpdateOperationsInput | number
+    totalTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    totalCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    lastErrorAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    usageMetrics?: UsageMetricUncheckedUpdateManyWithoutApiKeyNestedInput
+    podExecutions?: PodExecutionUncheckedUpdateManyWithoutApiKeyNestedInput
+    podUsageLogs?: PodUsageLogUncheckedUpdateManyWithoutApiKeyNestedInput
+  }
+
+  export type ProviderAPIKeyUncheckedUpdateManyWithoutCreatedByInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    workspaceId?: StringFieldUpdateOperationsInput | string
+    provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
+    displayName?: StringFieldUpdateOperationsInput | string
+    keyHash?: StringFieldUpdateOperationsInput | string
+    isActive?: BoolFieldUpdateOperationsInput | boolean
+    lastUsedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    usageCount?: IntFieldUpdateOperationsInput | number
+    totalTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    totalCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    lastErrorAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type WorkspaceUserCreateManyWorkspaceInput = {
     id?: string
     userId: string
@@ -73378,13 +76713,14 @@ export namespace Prisma {
     provider: $Enums.LLMProvider
     displayName: string
     keyHash: string
-    providerConfig?: NullableJsonNullValueInput | InputJsonValue
-    endpoint?: string | null
-    authType?: $Enums.AuthType
     isActive?: boolean
     lastUsedAt?: Date | string | null
+    usageCount?: number
+    totalTokens?: bigint | number
+    totalCost?: Decimal | DecimalJsLike | number | string
+    lastErrorAt?: Date | string | null
+    createdById: string
     createdAt?: Date | string
-    expiresAt?: Date | string | null
   }
 
   export type WorkspaceInvitationCreateManyWorkspaceInput = {
@@ -73399,6 +76735,21 @@ export namespace Prisma {
     createdAt?: Date | string
     expiresAt: Date | string
     acceptedAt?: Date | string | null
+  }
+
+  export type UsageMetricCreateManyWorkspaceInput = {
+    id?: string
+    keyId: string
+    date: Date | string
+    requestCount?: number
+    successCount?: number
+    errorCount?: number
+    promptTokens?: bigint | number
+    completionTokens?: bigint | number
+    totalTokens?: bigint | number
+    estimatedCost?: Decimal | DecimalJsLike | number | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
   }
 
   export type WorkspaceUserUpdateWithoutWorkspaceInput = {
@@ -73727,13 +77078,17 @@ export namespace Prisma {
     provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
     displayName?: StringFieldUpdateOperationsInput | string
     keyHash?: StringFieldUpdateOperationsInput | string
-    providerConfig?: NullableJsonNullValueInput | InputJsonValue
-    endpoint?: NullableStringFieldUpdateOperationsInput | string | null
-    authType?: EnumAuthTypeFieldUpdateOperationsInput | $Enums.AuthType
     isActive?: BoolFieldUpdateOperationsInput | boolean
     lastUsedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    usageCount?: IntFieldUpdateOperationsInput | number
+    totalTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    totalCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    lastErrorAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    expiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdBy?: UserUpdateOneRequiredWithoutCreatedApiKeysNestedInput
+    usageMetrics?: UsageMetricUpdateManyWithoutApiKeyNestedInput
+    podExecutions?: PodExecutionUpdateManyWithoutApiKeyNestedInput
+    podUsageLogs?: PodUsageLogUpdateManyWithoutApiKeyNestedInput
   }
 
   export type ProviderAPIKeyUncheckedUpdateWithoutWorkspaceInput = {
@@ -73741,13 +77096,17 @@ export namespace Prisma {
     provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
     displayName?: StringFieldUpdateOperationsInput | string
     keyHash?: StringFieldUpdateOperationsInput | string
-    providerConfig?: NullableJsonNullValueInput | InputJsonValue
-    endpoint?: NullableStringFieldUpdateOperationsInput | string | null
-    authType?: EnumAuthTypeFieldUpdateOperationsInput | $Enums.AuthType
     isActive?: BoolFieldUpdateOperationsInput | boolean
     lastUsedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    usageCount?: IntFieldUpdateOperationsInput | number
+    totalTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    totalCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    lastErrorAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdById?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    expiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    usageMetrics?: UsageMetricUncheckedUpdateManyWithoutApiKeyNestedInput
+    podExecutions?: PodExecutionUncheckedUpdateManyWithoutApiKeyNestedInput
+    podUsageLogs?: PodUsageLogUncheckedUpdateManyWithoutApiKeyNestedInput
   }
 
   export type ProviderAPIKeyUncheckedUpdateManyWithoutWorkspaceInput = {
@@ -73755,13 +77114,14 @@ export namespace Prisma {
     provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
     displayName?: StringFieldUpdateOperationsInput | string
     keyHash?: StringFieldUpdateOperationsInput | string
-    providerConfig?: NullableJsonNullValueInput | InputJsonValue
-    endpoint?: NullableStringFieldUpdateOperationsInput | string | null
-    authType?: EnumAuthTypeFieldUpdateOperationsInput | $Enums.AuthType
     isActive?: BoolFieldUpdateOperationsInput | boolean
     lastUsedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    usageCount?: IntFieldUpdateOperationsInput | number
+    totalTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    totalCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    lastErrorAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    createdById?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
-    expiresAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   }
 
   export type WorkspaceInvitationUpdateWithoutWorkspaceInput = {
@@ -73804,6 +77164,299 @@ export namespace Prisma {
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     expiresAt?: DateTimeFieldUpdateOperationsInput | Date | string
     acceptedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+  }
+
+  export type UsageMetricUpdateWithoutWorkspaceInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    date?: DateTimeFieldUpdateOperationsInput | Date | string
+    requestCount?: IntFieldUpdateOperationsInput | number
+    successCount?: IntFieldUpdateOperationsInput | number
+    errorCount?: IntFieldUpdateOperationsInput | number
+    promptTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    completionTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    totalTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    apiKey?: ProviderAPIKeyUpdateOneRequiredWithoutUsageMetricsNestedInput
+  }
+
+  export type UsageMetricUncheckedUpdateWithoutWorkspaceInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    keyId?: StringFieldUpdateOperationsInput | string
+    date?: DateTimeFieldUpdateOperationsInput | Date | string
+    requestCount?: IntFieldUpdateOperationsInput | number
+    successCount?: IntFieldUpdateOperationsInput | number
+    errorCount?: IntFieldUpdateOperationsInput | number
+    promptTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    completionTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    totalTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type UsageMetricUncheckedUpdateManyWithoutWorkspaceInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    keyId?: StringFieldUpdateOperationsInput | string
+    date?: DateTimeFieldUpdateOperationsInput | Date | string
+    requestCount?: IntFieldUpdateOperationsInput | number
+    successCount?: IntFieldUpdateOperationsInput | number
+    errorCount?: IntFieldUpdateOperationsInput | number
+    promptTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    completionTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    totalTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type UsageMetricCreateManyApiKeyInput = {
+    id?: string
+    workspaceId: string
+    date: Date | string
+    requestCount?: number
+    successCount?: number
+    errorCount?: number
+    promptTokens?: bigint | number
+    completionTokens?: bigint | number
+    totalTokens?: bigint | number
+    estimatedCost?: Decimal | DecimalJsLike | number | string
+    createdAt?: Date | string
+    updatedAt?: Date | string
+  }
+
+  export type PodExecutionCreateManyApiKeyInput = {
+    id?: string
+    podId: string
+    flowId: string
+    workspaceId: string
+    status?: $Enums.PodExecutionStatus
+    startedAt?: Date | string
+    finishedAt?: Date | string | null
+    runtimeInMs?: number | null
+    provider: $Enums.LLMProvider
+    modelId: string
+    modelName?: string | null
+    providerMetadata?: NullableJsonNullValueInput | InputJsonValue
+    requestMetadata?: NullableJsonNullValueInput | InputJsonValue
+    responseMetadata?: NullableJsonNullValueInput | InputJsonValue
+    errorMessage?: string | null
+    errorCode?: string | null
+    inputTokens?: number
+    outputTokens?: number
+    reasoningTokens?: number
+    creditsConsumed?: number
+    costInUsd?: Decimal | DecimalJsLike | number | string | null
+  }
+
+  export type PodUsageLogCreateManyApiKeyInput = {
+    id?: string
+    podId: string
+    executionId: string
+    flowId: string
+    workspaceId: string
+    subscriptionId: string
+    provider: $Enums.LLMProvider
+    modelId: string
+    modelName?: string | null
+    providerMetadata?: NullableJsonNullValueInput | InputJsonValue
+    inputTokens?: number
+    outputTokens?: number
+    reasoningTokens?: number
+    creditsConsumed?: number
+    runtimeInMs?: number | null
+    inputTokenCost: Decimal | DecimalJsLike | number | string
+    outputTokenCost: Decimal | DecimalJsLike | number | string
+    reasoningTokenCost: Decimal | DecimalJsLike | number | string
+    totalCostInUsd: Decimal | DecimalJsLike | number | string
+    executedAt?: Date | string
+  }
+
+  export type UsageMetricUpdateWithoutApiKeyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    date?: DateTimeFieldUpdateOperationsInput | Date | string
+    requestCount?: IntFieldUpdateOperationsInput | number
+    successCount?: IntFieldUpdateOperationsInput | number
+    errorCount?: IntFieldUpdateOperationsInput | number
+    promptTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    completionTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    totalTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    workspace?: WorkspaceUpdateOneRequiredWithoutUsageMetricsNestedInput
+  }
+
+  export type UsageMetricUncheckedUpdateWithoutApiKeyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    workspaceId?: StringFieldUpdateOperationsInput | string
+    date?: DateTimeFieldUpdateOperationsInput | Date | string
+    requestCount?: IntFieldUpdateOperationsInput | number
+    successCount?: IntFieldUpdateOperationsInput | number
+    errorCount?: IntFieldUpdateOperationsInput | number
+    promptTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    completionTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    totalTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type UsageMetricUncheckedUpdateManyWithoutApiKeyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    workspaceId?: StringFieldUpdateOperationsInput | string
+    date?: DateTimeFieldUpdateOperationsInput | Date | string
+    requestCount?: IntFieldUpdateOperationsInput | number
+    successCount?: IntFieldUpdateOperationsInput | number
+    errorCount?: IntFieldUpdateOperationsInput | number
+    promptTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    completionTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    totalTokens?: BigIntFieldUpdateOperationsInput | bigint | number
+    estimatedCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type PodExecutionUpdateWithoutApiKeyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    flowId?: StringFieldUpdateOperationsInput | string
+    workspaceId?: StringFieldUpdateOperationsInput | string
+    status?: EnumPodExecutionStatusFieldUpdateOperationsInput | $Enums.PodExecutionStatus
+    startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    finishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    runtimeInMs?: NullableIntFieldUpdateOperationsInput | number | null
+    provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
+    modelId?: StringFieldUpdateOperationsInput | string
+    modelName?: NullableStringFieldUpdateOperationsInput | string | null
+    providerMetadata?: NullableJsonNullValueInput | InputJsonValue
+    requestMetadata?: NullableJsonNullValueInput | InputJsonValue
+    responseMetadata?: NullableJsonNullValueInput | InputJsonValue
+    errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
+    errorCode?: NullableStringFieldUpdateOperationsInput | string | null
+    inputTokens?: IntFieldUpdateOperationsInput | number
+    outputTokens?: IntFieldUpdateOperationsInput | number
+    reasoningTokens?: IntFieldUpdateOperationsInput | number
+    creditsConsumed?: IntFieldUpdateOperationsInput | number
+    costInUsd?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+    pod?: PodUpdateOneRequiredWithoutExecutionsNestedInput
+  }
+
+  export type PodExecutionUncheckedUpdateWithoutApiKeyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    podId?: StringFieldUpdateOperationsInput | string
+    flowId?: StringFieldUpdateOperationsInput | string
+    workspaceId?: StringFieldUpdateOperationsInput | string
+    status?: EnumPodExecutionStatusFieldUpdateOperationsInput | $Enums.PodExecutionStatus
+    startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    finishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    runtimeInMs?: NullableIntFieldUpdateOperationsInput | number | null
+    provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
+    modelId?: StringFieldUpdateOperationsInput | string
+    modelName?: NullableStringFieldUpdateOperationsInput | string | null
+    providerMetadata?: NullableJsonNullValueInput | InputJsonValue
+    requestMetadata?: NullableJsonNullValueInput | InputJsonValue
+    responseMetadata?: NullableJsonNullValueInput | InputJsonValue
+    errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
+    errorCode?: NullableStringFieldUpdateOperationsInput | string | null
+    inputTokens?: IntFieldUpdateOperationsInput | number
+    outputTokens?: IntFieldUpdateOperationsInput | number
+    reasoningTokens?: IntFieldUpdateOperationsInput | number
+    creditsConsumed?: IntFieldUpdateOperationsInput | number
+    costInUsd?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+  }
+
+  export type PodExecutionUncheckedUpdateManyWithoutApiKeyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    podId?: StringFieldUpdateOperationsInput | string
+    flowId?: StringFieldUpdateOperationsInput | string
+    workspaceId?: StringFieldUpdateOperationsInput | string
+    status?: EnumPodExecutionStatusFieldUpdateOperationsInput | $Enums.PodExecutionStatus
+    startedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    finishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    runtimeInMs?: NullableIntFieldUpdateOperationsInput | number | null
+    provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
+    modelId?: StringFieldUpdateOperationsInput | string
+    modelName?: NullableStringFieldUpdateOperationsInput | string | null
+    providerMetadata?: NullableJsonNullValueInput | InputJsonValue
+    requestMetadata?: NullableJsonNullValueInput | InputJsonValue
+    responseMetadata?: NullableJsonNullValueInput | InputJsonValue
+    errorMessage?: NullableStringFieldUpdateOperationsInput | string | null
+    errorCode?: NullableStringFieldUpdateOperationsInput | string | null
+    inputTokens?: IntFieldUpdateOperationsInput | number
+    outputTokens?: IntFieldUpdateOperationsInput | number
+    reasoningTokens?: IntFieldUpdateOperationsInput | number
+    creditsConsumed?: IntFieldUpdateOperationsInput | number
+    costInUsd?: NullableDecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string | null
+  }
+
+  export type PodUsageLogUpdateWithoutApiKeyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    executionId?: StringFieldUpdateOperationsInput | string
+    flowId?: StringFieldUpdateOperationsInput | string
+    workspaceId?: StringFieldUpdateOperationsInput | string
+    provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
+    modelId?: StringFieldUpdateOperationsInput | string
+    modelName?: NullableStringFieldUpdateOperationsInput | string | null
+    providerMetadata?: NullableJsonNullValueInput | InputJsonValue
+    inputTokens?: IntFieldUpdateOperationsInput | number
+    outputTokens?: IntFieldUpdateOperationsInput | number
+    reasoningTokens?: IntFieldUpdateOperationsInput | number
+    creditsConsumed?: IntFieldUpdateOperationsInput | number
+    runtimeInMs?: NullableIntFieldUpdateOperationsInput | number | null
+    inputTokenCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    outputTokenCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    reasoningTokenCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    totalCostInUsd?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    executedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+    pod?: PodUpdateOneRequiredWithoutUsageLogsNestedInput
+    subscription?: SubscriptionUpdateOneRequiredWithoutUsageLogsNestedInput
+  }
+
+  export type PodUsageLogUncheckedUpdateWithoutApiKeyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    podId?: StringFieldUpdateOperationsInput | string
+    executionId?: StringFieldUpdateOperationsInput | string
+    flowId?: StringFieldUpdateOperationsInput | string
+    workspaceId?: StringFieldUpdateOperationsInput | string
+    subscriptionId?: StringFieldUpdateOperationsInput | string
+    provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
+    modelId?: StringFieldUpdateOperationsInput | string
+    modelName?: NullableStringFieldUpdateOperationsInput | string | null
+    providerMetadata?: NullableJsonNullValueInput | InputJsonValue
+    inputTokens?: IntFieldUpdateOperationsInput | number
+    outputTokens?: IntFieldUpdateOperationsInput | number
+    reasoningTokens?: IntFieldUpdateOperationsInput | number
+    creditsConsumed?: IntFieldUpdateOperationsInput | number
+    runtimeInMs?: NullableIntFieldUpdateOperationsInput | number | null
+    inputTokenCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    outputTokenCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    reasoningTokenCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    totalCostInUsd?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    executedAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type PodUsageLogUncheckedUpdateManyWithoutApiKeyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    podId?: StringFieldUpdateOperationsInput | string
+    executionId?: StringFieldUpdateOperationsInput | string
+    flowId?: StringFieldUpdateOperationsInput | string
+    workspaceId?: StringFieldUpdateOperationsInput | string
+    subscriptionId?: StringFieldUpdateOperationsInput | string
+    provider?: EnumLLMProviderFieldUpdateOperationsInput | $Enums.LLMProvider
+    modelId?: StringFieldUpdateOperationsInput | string
+    modelName?: NullableStringFieldUpdateOperationsInput | string | null
+    providerMetadata?: NullableJsonNullValueInput | InputJsonValue
+    inputTokens?: IntFieldUpdateOperationsInput | number
+    outputTokens?: IntFieldUpdateOperationsInput | number
+    reasoningTokens?: IntFieldUpdateOperationsInput | number
+    creditsConsumed?: IntFieldUpdateOperationsInput | number
+    runtimeInMs?: NullableIntFieldUpdateOperationsInput | number | null
+    inputTokenCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    outputTokenCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    reasoningTokenCost?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    totalCostInUsd?: DecimalFieldUpdateOperationsInput | Decimal | DecimalJsLike | number | string
+    executedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type DocumentFolderCreateManyParentInput = {

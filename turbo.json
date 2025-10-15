@@ -45,6 +45,7 @@
       "persistent": true,
       "dependsOn": ["^db:generate"],
       "env": [
+        "API_KEY_ENCRYPTION_SECRET",
         "DATABASE_URL",
         "NODE_ENV",
         "BACKEND_PORT",

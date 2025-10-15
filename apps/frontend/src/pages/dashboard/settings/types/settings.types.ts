@@ -1,3 +1,8 @@
+// types/settings.types.ts
+
+/**
+ * Workspace member
+ */
 export interface WorkspaceMember {
   userId: string;
   workspaceId: string;
@@ -18,6 +23,9 @@ export interface WorkspaceMember {
   };
 }
 
+/**
+ * Workspace invitation
+ */
 export interface WorkspaceInvitation {
   id: string;
   workspaceId: string;
@@ -33,48 +41,98 @@ export interface WorkspaceInvitation {
   acceptedAt: string | null;
 }
 
+/**
+ * Workspace API key with usage tracking
+ */
 export interface WorkspaceApiKey {
   id: string;
   provider: string;
   displayName: string;
-  endpoint: string | null;
-  authType: string;
-  providerConfig: any;
   isActive: boolean;
   lastUsedAt: string | null;
   createdAt: string;
-  expiresAt: string | null;
+
+  // Usage metrics
+  usageCount: number;
+  totalTokens: string;
+  totalCost: number;
+
+  // Error tracking
+  lastErrorAt: string | null;
+
+  // Creator
+  createdBy: {
+    id: string;
+    name: string | null;
+    email: string;
+  };
 }
 
+/**
+ * API key usage statistics
+ */
+export interface ApiKeyUsageStats {
+  totalKeys: number;
+  activeKeys: number;
+  inactiveKeys: number;
+  providerBreakdown: Record<string, number>;
+  totalUsageCount: number;
+  totalTokensConsumed: string;
+  totalCostIncurred: number;
+}
+
+/**
+ * Daily usage metric
+ */
+export interface UsageMetric {
+  id: string;
+  date: string;
+  requestCount: number;
+  successCount: number;
+  errorCount: number;
+  promptTokens: string;
+  completionTokens: string;
+  totalTokens: string;
+  estimatedCost: number;
+}
+
+/**
+ * Add API key DTO
+ */
+export interface AddApiKeyDto {
+  provider: string;
+  displayName: string;
+  apiKey: string;
+}
+
+/**
+ * Update API key DTO
+ */
+export interface UpdateApiKeyDto {
+  displayName?: string;
+  apiKey?: string;
+  isActive?: boolean;
+}
+
+/**
+ * Add member DTO
+ */
 export interface AddMemberDto {
   email: string;
-  role: 'ADMIN' | 'MEMBER' | 'VIEWER';
+  role?: 'ADMIN' | 'MEMBER' | 'VIEWER';
   canCreateCanvas?: boolean;
   canDeleteCanvas?: boolean;
+  canManageBilling?: boolean;
   canInviteMembers?: boolean;
   canManageMembers?: boolean;
   canManageApiKeys?: boolean;
 }
 
+/**
+ * Send invitation DTO
+ */
 export interface SendInvitationDto {
   email: string;
-  role: 'ADMIN' | 'MEMBER' | 'VIEWER';
+  role?: 'ADMIN' | 'MEMBER' | 'VIEWER';
   permissions?: Record<string, boolean>;
-}
-
-export interface AddApiKeyDto {
-  provider: string;
-  displayName: string;
-  apiKey: string;
-  endpoint?: string;
-  authType?: string;
-  providerConfig?: any;
-}
-
-export interface UpdateApiKeyDto {
-  displayName?: string;
-  apiKey?: string;
-  endpoint?: string;
-  isActive?: boolean;
-  providerConfig?: any;
 }

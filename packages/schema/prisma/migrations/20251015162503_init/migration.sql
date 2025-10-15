@@ -74,10 +74,7 @@ CREATE TYPE "core"."InvitationStatus" AS ENUM ('PENDING', 'ACCEPTED', 'DECLINED'
 CREATE TYPE "core"."ShareAccessLevel" AS ENUM ('VIEW_ONLY', 'COMMENT', 'EDIT');
 
 -- CreateEnum
-CREATE TYPE "core"."LLMProvider" AS ENUM ('OPENAI', 'ANTHROPIC', 'GOOGLE_GEMINI', 'PERPLEXITY', 'MISTRAL', 'META_AI', 'XAI', 'DEEPSEEK', 'COHERE', 'GROQ', 'TOGETHER', 'REPLICATE', 'HUGGINGFACE', 'OPENROUTER', 'BEDROCK', 'OLLAMA', 'VLLM', 'LLAMACPP', 'TEXTGEN_WEBUI', 'CUSTOM');
-
--- CreateEnum
-CREATE TYPE "core"."AuthType" AS ENUM ('BEARER_TOKEN', 'API_KEY_HEADER', 'BASIC_AUTH', 'OAUTH2', 'AWS_SIGV4', 'CUSTOM_HEADER');
+CREATE TYPE "core"."LLMProvider" AS ENUM ('OPENAI', 'ANTHROPIC', 'GOOGLE_GEMINI', 'PERPLEXITY', 'MISTRAL', 'COHERE', 'GROQ', 'XAI', 'DEEPSEEK', 'CUSTOM');
 
 -- CreateEnum
 CREATE TYPE "core"."ShareableAssetType" AS ENUM ('FLOW', 'CONTEXT_MODULE');
@@ -491,6 +488,7 @@ CREATE TABLE "canvas"."PodExecution" (
     "startedAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "finishedAt" TIMESTAMPTZ(6),
     "runtimeInMs" INTEGER,
+    "apiKeyId" TEXT,
     "provider" "core"."LLMProvider" NOT NULL,
     "modelId" VARCHAR(255) NOT NULL,
     "modelName" VARCHAR(255),
@@ -516,6 +514,7 @@ CREATE TABLE "canvas"."PodUsageLog" (
     "flowId" TEXT NOT NULL,
     "workspaceId" TEXT NOT NULL,
     "subscriptionId" TEXT NOT NULL,
+    "apiKeyId" TEXT,
     "provider" "core"."LLMProvider" NOT NULL,
     "modelId" VARCHAR(255) NOT NULL,
     "modelName" VARCHAR(255),
@@ -642,16 +641,36 @@ CREATE TABLE "core"."ProviderAPIKey" (
     "workspaceId" TEXT NOT NULL,
     "provider" "core"."LLMProvider" NOT NULL,
     "displayName" VARCHAR(100) NOT NULL,
-    "keyHash" VARCHAR(255) NOT NULL,
-    "providerConfig" JSONB,
-    "endpoint" VARCHAR(500),
-    "authType" "core"."AuthType" NOT NULL DEFAULT 'BEARER_TOKEN',
+    "keyHash" VARCHAR(500) NOT NULL,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "lastUsedAt" TIMESTAMPTZ(6),
+    "usageCount" INTEGER NOT NULL DEFAULT 0,
+    "totalTokens" BIGINT NOT NULL DEFAULT 0,
+    "totalCost" DECIMAL(12,6) NOT NULL DEFAULT 0,
+    "lastErrorAt" TIMESTAMPTZ(6),
+    "createdById" TEXT NOT NULL,
     "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "expiresAt" TIMESTAMPTZ(6),
 
     CONSTRAINT "ProviderAPIKey_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "core"."UsageMetric" (
+    "id" TEXT NOT NULL,
+    "workspaceId" TEXT NOT NULL,
+    "keyId" TEXT NOT NULL,
+    "date" DATE NOT NULL,
+    "requestCount" INTEGER NOT NULL DEFAULT 0,
+    "successCount" INTEGER NOT NULL DEFAULT 0,
+    "errorCount" INTEGER NOT NULL DEFAULT 0,
+    "promptTokens" BIGINT NOT NULL DEFAULT 0,
+    "completionTokens" BIGINT NOT NULL DEFAULT 0,
+    "totalTokens" BIGINT NOT NULL DEFAULT 0,
+    "estimatedCost" DECIMAL(12,6) NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+
+    CONSTRAINT "UsageMetric_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -1043,6 +1062,9 @@ CREATE INDEX "PodExecution_provider_modelId_startedAt_idx" ON "canvas"."PodExecu
 CREATE INDEX "PodExecution_provider_status_idx" ON "canvas"."PodExecution"("provider", "status");
 
 -- CreateIndex
+CREATE INDEX "PodExecution_apiKeyId_startedAt_idx" ON "canvas"."PodExecution"("apiKeyId", "startedAt" DESC);
+
+-- CreateIndex
 CREATE INDEX "PodUsageLog_workspaceId_executedAt_idx" ON "canvas"."PodUsageLog"("workspaceId", "executedAt" DESC);
 
 -- CreateIndex
@@ -1062,6 +1084,9 @@ CREATE INDEX "PodUsageLog_provider_modelId_executedAt_idx" ON "canvas"."PodUsage
 
 -- CreateIndex
 CREATE INDEX "PodUsageLog_provider_executedAt_idx" ON "canvas"."PodUsageLog"("provider", "executedAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "PodUsageLog_apiKeyId_executedAt_idx" ON "canvas"."PodUsageLog"("apiKeyId", "executedAt" DESC);
 
 -- CreateIndex
 CREATE INDEX "ContextModule_workspaceId_updatedAt_idx" ON "canvas"."ContextModule"("workspaceId", "updatedAt" DESC);
@@ -1121,10 +1146,16 @@ CREATE INDEX "WorkspaceInvitation_token_expiresAt_idx" ON "core"."WorkspaceInvit
 CREATE INDEX "ProviderAPIKey_workspaceId_isActive_idx" ON "core"."ProviderAPIKey"("workspaceId", "isActive");
 
 -- CreateIndex
-CREATE INDEX "ProviderAPIKey_provider_isActive_idx" ON "core"."ProviderAPIKey"("provider", "isActive");
+CREATE UNIQUE INDEX "ProviderAPIKey_workspaceId_provider_displayName_key" ON "core"."ProviderAPIKey"("workspaceId", "provider", "displayName");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ProviderAPIKey_workspaceId_provider_displayName_key" ON "core"."ProviderAPIKey"("workspaceId", "provider", "displayName");
+CREATE INDEX "UsageMetric_workspaceId_date_idx" ON "core"."UsageMetric"("workspaceId", "date");
+
+-- CreateIndex
+CREATE INDEX "UsageMetric_keyId_date_idx" ON "core"."UsageMetric"("keyId", "date");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "UsageMetric_keyId_date_key" ON "core"."UsageMetric"("keyId", "date");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "ShareLink_publicToken_key" ON "core"."ShareLink"("publicToken");
@@ -1283,10 +1314,16 @@ ALTER TABLE "canvas"."Edge" ADD CONSTRAINT "Edge_targetPodId_fkey" FOREIGN KEY (
 ALTER TABLE "canvas"."PodExecution" ADD CONSTRAINT "PodExecution_podId_fkey" FOREIGN KEY ("podId") REFERENCES "canvas"."Pod"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "canvas"."PodExecution" ADD CONSTRAINT "PodExecution_apiKeyId_fkey" FOREIGN KEY ("apiKeyId") REFERENCES "core"."ProviderAPIKey"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "canvas"."PodUsageLog" ADD CONSTRAINT "PodUsageLog_podId_fkey" FOREIGN KEY ("podId") REFERENCES "canvas"."Pod"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "canvas"."PodUsageLog" ADD CONSTRAINT "PodUsageLog_subscriptionId_fkey" FOREIGN KEY ("subscriptionId") REFERENCES "billing"."Subscription"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "canvas"."PodUsageLog" ADD CONSTRAINT "PodUsageLog_apiKeyId_fkey" FOREIGN KEY ("apiKeyId") REFERENCES "core"."ProviderAPIKey"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "canvas"."ContextModule" ADD CONSTRAINT "ContextModule_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "core"."Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1317,6 +1354,15 @@ ALTER TABLE "core"."WorkspaceInvitation" ADD CONSTRAINT "WorkspaceInvitation_inv
 
 -- AddForeignKey
 ALTER TABLE "core"."ProviderAPIKey" ADD CONSTRAINT "ProviderAPIKey_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "core"."Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "core"."ProviderAPIKey" ADD CONSTRAINT "ProviderAPIKey_createdById_fkey" FOREIGN KEY ("createdById") REFERENCES "core"."User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "core"."UsageMetric" ADD CONSTRAINT "UsageMetric_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "core"."Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "core"."UsageMetric" ADD CONSTRAINT "UsageMetric_keyId_fkey" FOREIGN KEY ("keyId") REFERENCES "core"."ProviderAPIKey"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "core"."ShareLink" ADD CONSTRAINT "ShareLink_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "core"."Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;

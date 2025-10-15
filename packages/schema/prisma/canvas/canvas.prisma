@@ -1,7 +1,7 @@
 // /prisma/schemas/canvas.prisma
 
 // ==========================================
-// CANVAS SCHEMA - Spaces, Flows (Canvases), Pods
+// CANVAS SCHEMA - WITH API KEY TRACKING
 // ==========================================
 
 model Space {
@@ -31,7 +31,7 @@ model Space {
 model Flow {
   id          String         @id @default(cuid())
   workspaceId String
-  spaceId     String? // OPTIONAL - Flow can exist without a Space
+  spaceId     String?
   name        String         @db.VarChar(255)
   description String?        @db.VarChar(500)
   version     Int            @default(1)
@@ -263,6 +263,10 @@ model Edge {
   @@schema("canvas")
 }
 
+// ==========================================
+// POD EXECUTION - NOW TRACKS WHICH API KEY WAS USED
+// ==========================================
+
 model PodExecution {
   id          String             @id @default(cuid())
   podId       String
@@ -272,6 +276,9 @@ model PodExecution {
   startedAt   DateTime           @default(now()) @db.Timestamptz(6)
   finishedAt  DateTime?          @db.Timestamptz(6)
   runtimeInMs Int?
+
+  // ✅ NEW: Track which API key was used
+  apiKeyId String? // Which workspace API key was used
 
   provider  LLMProvider
   modelId   String      @db.VarChar(255)
@@ -292,7 +299,8 @@ model PodExecution {
 
   costInUsd Decimal? @db.Decimal(12, 8)
 
-  pod Pod @relation(fields: [podId], references: [id], onDelete: Cascade)
+  pod    Pod             @relation(fields: [podId], references: [id], onDelete: Cascade)
+  apiKey ProviderAPIKey? @relation(fields: [apiKeyId], references: [id], onDelete: SetNull) // ✅ NEW relation
 
   @@index([podId, startedAt(sort: Desc)])
   @@index([workspaceId, status, startedAt(sort: Desc)])
@@ -300,8 +308,13 @@ model PodExecution {
   @@index([status, startedAt])
   @@index([provider, modelId, startedAt(sort: Desc)])
   @@index([provider, status])
+  @@index([apiKeyId, startedAt(sort: Desc)]) // ✅ NEW: Query by API key
   @@schema("canvas")
 }
+
+// ==========================================
+// POD USAGE LOG - NOW TRACKS WHICH API KEY WAS USED
+// ==========================================
 
 model PodUsageLog {
   id             String @id @default(cuid())
@@ -310,6 +323,9 @@ model PodUsageLog {
   flowId         String
   workspaceId    String
   subscriptionId String
+
+  // ✅ NEW: Track which API key was used
+  apiKeyId String? // Which workspace API key was used
 
   provider  LLMProvider
   modelId   String      @db.VarChar(255)
@@ -330,8 +346,9 @@ model PodUsageLog {
 
   executedAt DateTime @default(now()) @db.Timestamptz(6)
 
-  pod          Pod          @relation(fields: [podId], references: [id], onDelete: Cascade)
-  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  pod          Pod             @relation(fields: [podId], references: [id], onDelete: Cascade)
+  subscription Subscription    @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  apiKey       ProviderAPIKey? @relation(fields: [apiKeyId], references: [id], onDelete: SetNull) // ✅ NEW relation
 
   @@index([workspaceId, executedAt(sort: Desc)])
   @@index([subscriptionId, executedAt(sort: Desc)])
@@ -340,6 +357,7 @@ model PodUsageLog {
   @@index([flowId, executedAt(sort: Desc)])
   @@index([provider, modelId, executedAt(sort: Desc)])
   @@index([provider, executedAt(sort: Desc)])
+  @@index([apiKeyId, executedAt(sort: Desc)]) // ✅ NEW: Query by API key
   @@schema("canvas")
 }
 

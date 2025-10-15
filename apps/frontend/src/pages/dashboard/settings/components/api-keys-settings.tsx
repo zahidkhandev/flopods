@@ -1,8 +1,10 @@
+// components/api-keys-settings.tsx
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Key, Trash2, Plus, Zap, Clock } from 'lucide-react';
+import { Key, Trash2, Plus, Zap, Clock, DollarSign, Activity } from 'lucide-react';
 import { useWorkspaceApiKeys } from '../hooks/use-workspace-api-keys';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AddApiKeyDialog } from './add-api-key-dialog';
@@ -19,18 +21,19 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export function ApiKeysSettings({ workspaceId }: { workspaceId: string }) {
-  const { apiKeys, isLoading, deleteApiKey } = useWorkspaceApiKeys(workspaceId);
+  const { apiKeys, stats, isLoading, deleteApiKey } = useWorkspaceApiKeys(workspaceId);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const handleDelete = async () => {
     if (!deleteId) return;
 
-    toast.promise(deleteApiKey(deleteId), {
-      loading: 'Deleting API key...',
-      success: 'API key deleted successfully',
-      error: 'Failed to delete API key',
-    });
+    try {
+      await deleteApiKey(deleteId);
+      toast.success('API key deleted successfully');
+    } catch {
+      // Error handled in hook
+    }
     setDeleteId(null);
   };
 
@@ -54,14 +57,37 @@ export function ApiKeysSettings({ workspaceId }: { workspaceId: string }) {
   return (
     <>
       <div className="space-y-8">
-        {/* Header */}
+        {/* Header with Stats */}
         <div className="flex items-start justify-between">
           <div>
             <h3 className="text-lg font-semibold">API Keys</h3>
             <p className="text-muted-foreground mt-1 text-sm">
-              Manage your LLM provider API keys for integrations ({apiKeysList.length}{' '}
+              Manage your LLM provider API keys ({apiKeysList.length}{' '}
               {apiKeysList.length === 1 ? 'key' : 'keys'})
             </p>
+
+            {/* Usage Stats */}
+            {stats && apiKeysList.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-4">
+                <div className="flex items-center gap-2 text-sm">
+                  <Activity className="text-muted-foreground h-4 w-4" />
+                  <span className="text-muted-foreground">Total Usage:</span>
+                  <span className="font-semibold">{stats.totalUsageCount.toLocaleString()}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <DollarSign className="text-muted-foreground h-4 w-4" />
+                  <span className="text-muted-foreground">Total Cost:</span>
+                  <span className="font-semibold">${stats.totalCostIncurred.toFixed(2)}</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <Zap className="text-muted-foreground h-4 w-4" />
+                  <span className="text-muted-foreground">Active:</span>
+                  <span className="font-semibold">
+                    {stats.activeKeys} / {stats.totalKeys}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
           <Button onClick={() => setIsAddDialogOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
@@ -91,13 +117,14 @@ export function ApiKeysSettings({ workspaceId }: { workspaceId: string }) {
             {apiKeysList.map((apiKey) => (
               <div
                 key={apiKey.id}
-                className="group bg-card hover:border-primary/50 flex items-center justify-between rounded-lg border p-4 transition-all hover:shadow-sm"
+                className="group bg-card hover:border-primary/50 flex items-start justify-between rounded-lg border p-4 transition-all hover:shadow-sm"
               >
-                <div className="flex items-center gap-4">
+                <div className="flex items-start gap-4">
                   <div className="from-primary/20 to-primary/10 rounded-full bg-gradient-to-br p-3">
                     <Zap className="text-primary h-5 w-5" />
                   </div>
-                  <div className="flex-1">
+                  <div className="flex-1 space-y-2">
+                    {/* Title Row */}
                     <div className="flex items-center gap-2">
                       <p className="font-semibold">{apiKey.displayName || 'Unnamed Key'}</p>
                       <Badge
@@ -107,7 +134,9 @@ export function ApiKeysSettings({ workspaceId }: { workspaceId: string }) {
                         {apiKey.isActive ? 'Active' : 'Inactive'}
                       </Badge>
                     </div>
-                    <div className="text-muted-foreground mt-1 flex items-center gap-4 text-sm">
+
+                    {/* Provider & Last Used */}
+                    <div className="text-muted-foreground flex items-center gap-4 text-sm">
                       <span className="flex items-center gap-1">
                         <span className="font-medium">Provider:</span>{' '}
                         {apiKey.provider || 'Unknown'}
@@ -121,6 +150,7 @@ export function ApiKeysSettings({ workspaceId }: { workspaceId: string }) {
                             {new Date(apiKey.lastUsedAt).toLocaleDateString('en-US', {
                               month: 'short',
                               day: 'numeric',
+                              year: 'numeric',
                             })}
                           </span>
                         </>
@@ -131,6 +161,37 @@ export function ApiKeysSettings({ workspaceId }: { workspaceId: string }) {
                         </>
                       )}
                     </div>
+
+                    {/* Usage Stats */}
+                    {apiKey.usageCount > 0 && (
+                      <div className="text-muted-foreground flex items-center gap-4 text-xs">
+                        <span className="flex items-center gap-1">
+                          <Activity className="h-3 w-3" />
+                          {apiKey.usageCount.toLocaleString()} uses
+                        </span>
+                        {apiKey.totalCost > 0 && (
+                          <>
+                            <span>•</span>
+                            <span className="flex items-center gap-1">
+                              <DollarSign className="h-3 w-3" />${apiKey.totalCost.toFixed(2)}
+                            </span>
+                          </>
+                        )}
+                        {apiKey.totalTokens && (
+                          <>
+                            <span>•</span>
+                            <span>{parseInt(apiKey.totalTokens).toLocaleString()} tokens</span>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Creator Info */}
+                    {apiKey.createdBy && (
+                      <div className="text-muted-foreground text-xs">
+                        Added by {apiKey.createdBy.name || apiKey.createdBy.email}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <Button

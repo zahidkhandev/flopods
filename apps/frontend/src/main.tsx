@@ -14,7 +14,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <ThemeProvider defaultTheme="dark">
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={router} />
-        <Toaster position="top-right" richColors />
+        <Toaster position="top-right" richColors closeButton />
         <ReactQueryDevtools />
       </QueryClientProvider>
     </ThemeProvider>

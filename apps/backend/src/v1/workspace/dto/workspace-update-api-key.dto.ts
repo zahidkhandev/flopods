@@ -1,60 +1,31 @@
-import { IsString, IsOptional, IsBoolean, IsObject, MaxLength, IsEnum } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
-import { AuthType } from '@actopod/schema';
+// src/modules/workspace/dto/workspace-update-api-key.dto.ts
 
-/**
- * DTO for updating existing API key
- * All fields are optional (partial update)
- */
+import { IsString, IsOptional, IsBoolean, MaxLength } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+
 export class WorkspaceUpdateApiKeyDto {
-  @ApiProperty({
-    description: 'Updated display name',
-    required: false,
+  @ApiPropertyOptional({
+    description: 'Display name',
+    example: 'Updated Key Name',
+    maxLength: 100,
   })
-  @IsString()
   @IsOptional()
+  @IsString()
   @MaxLength(100)
   displayName?: string;
 
-  @ApiProperty({
-    description: 'Updated API key (will be re-encrypted)',
-    required: false,
+  @ApiPropertyOptional({
+    description: 'New API key (for rotation)',
+    example: 'sk-proj-xyz789...',
   })
-  @IsString()
   @IsOptional()
+  @IsString()
   apiKey?: string;
 
-  @ApiProperty({
-    description: 'Updated endpoint',
-    required: false,
-  })
-  @IsString()
-  @IsOptional()
-  @MaxLength(500)
-  endpoint?: string;
-
-  @ApiProperty({
-    description: 'Updated auth type',
-    enum: AuthType,
-    required: false,
-  })
-  @IsEnum(AuthType)
-  @IsOptional()
-  authType?: AuthType;
-
-  @ApiProperty({
-    description: 'Updated provider config',
-    required: false,
-  })
-  @IsObject()
-  @IsOptional()
-  providerConfig?: Record<string, any>;
-
-  @ApiProperty({
+  @ApiPropertyOptional({
     description: 'Active status',
-    required: false,
   })
-  @IsBoolean()
   @IsOptional()
+  @IsBoolean()
   isActive?: boolean;
 }

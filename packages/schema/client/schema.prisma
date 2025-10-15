@@ -472,7 +472,7 @@ enum ModelCategory {
 // /prisma/schemas/canvas.prisma
 
 // ==========================================
-// CANVAS SCHEMA - Spaces, Flows (Canvases), Pods
+// CANVAS SCHEMA - WITH API KEY TRACKING
 // ==========================================
 
 model Space {
@@ -502,7 +502,7 @@ model Space {
 model Flow {
   id          String         @id @default(cuid())
   workspaceId String
-  spaceId     String? // OPTIONAL - Flow can exist without a Space
+  spaceId     String?
   name        String         @db.VarChar(255)
   description String?        @db.VarChar(500)
   version     Int            @default(1)
@@ -734,6 +734,10 @@ model Edge {
   @@schema("canvas")
 }
 
+// ==========================================
+// POD EXECUTION - NOW TRACKS WHICH API KEY WAS USED
+// ==========================================
+
 model PodExecution {
   id          String             @id @default(cuid())
   podId       String
@@ -743,6 +747,9 @@ model PodExecution {
   startedAt   DateTime           @default(now()) @db.Timestamptz(6)
   finishedAt  DateTime?          @db.Timestamptz(6)
   runtimeInMs Int?
+
+  // ✅ NEW: Track which API key was used
+  apiKeyId String? // Which workspace API key was used
 
   provider  LLMProvider
   modelId   String      @db.VarChar(255)
@@ -763,7 +770,8 @@ model PodExecution {
 
   costInUsd Decimal? @db.Decimal(12, 8)
 
-  pod Pod @relation(fields: [podId], references: [id], onDelete: Cascade)
+  pod    Pod             @relation(fields: [podId], references: [id], onDelete: Cascade)
+  apiKey ProviderAPIKey? @relation(fields: [apiKeyId], references: [id], onDelete: SetNull) // ✅ NEW relation
 
   @@index([podId, startedAt(sort: Desc)])
   @@index([workspaceId, status, startedAt(sort: Desc)])
@@ -771,8 +779,13 @@ model PodExecution {
   @@index([status, startedAt])
   @@index([provider, modelId, startedAt(sort: Desc)])
   @@index([provider, status])
+  @@index([apiKeyId, startedAt(sort: Desc)]) // ✅ NEW: Query by API key
   @@schema("canvas")
 }
+
+// ==========================================
+// POD USAGE LOG - NOW TRACKS WHICH API KEY WAS USED
+// ==========================================
 
 model PodUsageLog {
   id             String @id @default(cuid())
@@ -781,6 +794,9 @@ model PodUsageLog {
   flowId         String
   workspaceId    String
   subscriptionId String
+
+  // ✅ NEW: Track which API key was used
+  apiKeyId String? // Which workspace API key was used
 
   provider  LLMProvider
   modelId   String      @db.VarChar(255)
@@ -801,8 +817,9 @@ model PodUsageLog {
 
   executedAt DateTime @default(now()) @db.Timestamptz(6)
 
-  pod          Pod          @relation(fields: [podId], references: [id], onDelete: Cascade)
-  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  pod          Pod             @relation(fields: [podId], references: [id], onDelete: Cascade)
+  subscription Subscription    @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  apiKey       ProviderAPIKey? @relation(fields: [apiKeyId], references: [id], onDelete: SetNull) // ✅ NEW relation
 
   @@index([workspaceId, executedAt(sort: Desc)])
   @@index([subscriptionId, executedAt(sort: Desc)])
@@ -811,6 +828,7 @@ model PodUsageLog {
   @@index([flowId, executedAt(sort: Desc)])
   @@index([provider, modelId, executedAt(sort: Desc)])
   @@index([provider, executedAt(sort: Desc)])
+  @@index([apiKeyId, executedAt(sort: Desc)]) // ✅ NEW: Query by API key
   @@schema("canvas")
 }
 
@@ -912,7 +930,7 @@ enum FlowActivityAction {
 // /prisma/schemas/core.prisma
 
 // ==========================================
-// CORE SCHEMA - Users, Auth, Workspaces
+// CORE SCHEMA - MINIMAL WITH USAGE TRACKING
 // ==========================================
 
 model User {
@@ -932,6 +950,7 @@ model User {
   receivedWorkspaceInvites WorkspaceInvitation[] @relation("InvitedUser")
   sentFlowInvites          FlowInvitation[]      @relation("FlowInvitedBy")
   receivedFlowInvites      FlowInvitation[]      @relation("FlowInvitedUser")
+  createdApiKeys           ProviderAPIKey[]
 
   @@index([email])
   @@schema("core")
@@ -988,6 +1007,7 @@ model Workspace {
   shareLinks      ShareLink[]
   apiKeys         ProviderAPIKey[]
   invitations     WorkspaceInvitation[]
+  usageMetrics    UsageMetric[]
 
   @@index([type, createdAt])
   @@schema("core")
@@ -1045,28 +1065,79 @@ model WorkspaceInvitation {
   @@schema("core")
 }
 
+// ==========================================
+// API KEY WITH USAGE TRACKING
+// ==========================================
+
 model ProviderAPIKey {
   id          String      @id @default(cuid())
   workspaceId String
   provider    LLMProvider
   displayName String      @db.VarChar(100)
 
-  keyHash String @db.VarChar(255)
+  // Encrypted storage (format: iv:authTag:encrypted)
+  keyHash String @db.VarChar(500)
 
-  providerConfig Json?
-  endpoint       String?  @db.VarChar(500)
-  authType       AuthType @default(BEARER_TOKEN)
+  // Status
+  isActive Boolean @default(true)
 
-  isActive   Boolean   @default(true)
-  lastUsedAt DateTime? @db.Timestamptz(6)
-  createdAt  DateTime  @default(now()) @db.Timestamptz(6)
-  expiresAt  DateTime? @db.Timestamptz(6)
+  // Usage tracking
+  lastUsedAt  DateTime? @db.Timestamptz(6)
+  usageCount  Int       @default(0)
+  totalTokens BigInt    @default(0)
+  totalCost   Decimal   @default(0) @db.Decimal(12, 6)
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  // Error tracking
+  lastErrorAt DateTime? @db.Timestamptz(6)
+
+  // Timestamps
+  createdById String
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy     User           @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  usageMetrics  UsageMetric[]
+  podExecutions PodExecution[]
+  podUsageLogs  PodUsageLog[]
 
   @@unique([workspaceId, provider, displayName])
   @@index([workspaceId, isActive])
-  @@index([provider, isActive])
+  @@schema("core")
+}
+
+// ==========================================
+// USAGE METRICS - DAILY BREAKDOWN
+// ==========================================
+
+model UsageMetric {
+  id          String   @id @default(cuid())
+  workspaceId String
+  keyId       String
+  date        DateTime @db.Date
+
+  // Request counts
+  requestCount Int @default(0)
+  successCount Int @default(0)
+  errorCount   Int @default(0)
+
+  // Token usage
+  promptTokens     BigInt @default(0)
+  completionTokens BigInt @default(0)
+  totalTokens      BigInt @default(0)
+
+  // Cost tracking
+  estimatedCost Decimal @default(0) @db.Decimal(12, 6)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  workspace Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  apiKey    ProviderAPIKey @relation(fields: [keyId], references: [id], onDelete: Cascade)
+
+  @@unique([keyId, date])
+  @@index([workspaceId, date])
+  @@index([keyId, date])
   @@schema("core")
 }
 
@@ -1095,6 +1166,10 @@ model ShareLink {
   @@index([createdBy, createdAt])
   @@schema("core")
 }
+
+// ==========================================
+// ENUMS
+// ==========================================
 
 enum AuthProvider {
   GOOGLE
@@ -1144,32 +1219,11 @@ enum LLMProvider {
   GOOGLE_GEMINI
   PERPLEXITY
   MISTRAL
-  META_AI
-  XAI
-  DEEPSEEK
   COHERE
   GROQ
-  TOGETHER
-  REPLICATE
-  HUGGINGFACE
-  OPENROUTER
-  BEDROCK
-  OLLAMA
-  VLLM
-  LLAMACPP
-  TEXTGEN_WEBUI
+  XAI
+  DEEPSEEK
   CUSTOM
-
-  @@schema("core")
-}
-
-enum AuthType {
-  BEARER_TOKEN
-  API_KEY_HEADER
-  BASIC_AUTH
-  OAUTH2
-  AWS_SIGV4
-  CUSTOM_HEADER
 
   @@schema("core")
 }
