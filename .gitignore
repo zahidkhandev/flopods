@@ -66,6 +66,8 @@ coverage
 *.db
 *.db-journal
 prisma/migrations/**/*.sql
+packages/schema/client
+**/prisma/client
 
 # Temporary files
 *.tmp

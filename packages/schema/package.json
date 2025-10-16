@@ -2,15 +2,22 @@
   "name": "@actopod/schema",
   "version": "0.0.1",
   "private": true,
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./index.js",
+      "require": "./index.js",
+      "types": "./index.d.ts"
+    }
+  },
   "scripts": {
-    "build": "prisma generate && tsc --project tsconfig.json",
+    "build": "prisma generate",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "clean": "rimraf dist node_modules .turbo"
+    "clean": "rimraf node_modules .turbo client"
   },
   "dependencies": {
     "@prisma/client": "^6.17.1"

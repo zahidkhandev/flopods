@@ -1,8 +1,6 @@
-// src/auth/guards/access-token.guard.ts
-
-import { ExecutionContext, Injectable } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+import { Injectable, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { AuthGuard } from '@nestjs/passport';
 import { IS_PUBLIC_KEY } from '../../decorators/common';
 
 @Injectable()
@@ -16,9 +14,11 @@ export class AccessTokenGuard extends AuthGuard('jwt') {
       context.getHandler(),
       context.getClass(),
     ]);
+
     if (isPublic) {
       return true;
     }
+
     return super.canActivate(context);
   }
 }

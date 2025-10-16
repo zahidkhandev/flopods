@@ -4,14 +4,8 @@ import type { ExecutionContext } from '@nestjs/common';
 import { createParamDecorator, UnauthorizedException } from '@nestjs/common';
 
 export const GetCurrentUserId = createParamDecorator(
-  (_data: unknown, context: ExecutionContext): number => {
+  (data: unknown, context: ExecutionContext): string => {
     const request = context.switchToHttp().getRequest();
-    const userId = request.user?.userId;
-
-    if (!userId) {
-      throw new UnauthorizedException('User ID not found in request');
-    }
-
-    return parseInt(userId, 10);
+    return request.user?.userId;
   },
 );

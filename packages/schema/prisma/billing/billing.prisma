@@ -8,45 +8,40 @@ model Subscription {
   tier        SubscriptionTier   @default(HOBBYIST)
   status      SubscriptionStatus @default(ACTIVE)
 
-  // Stripe integration
   stripeCustomerId     String? @unique
   stripeSubscriptionId String? @unique
 
-  // Canvas Credits
   credits            Int       @default(0)
   monthlyCreditQuota Int       @default(0)
   creditResetDate    DateTime? @db.Timestamptz(6)
 
-  // Usage limits per tier
-  maxCanvases                Int  @default(3) // HOBBYIST: 3, PRO: 999
-  maxActionPodsPerCanvas     Int  @default(50) // HOBBYIST: 50, PRO: 999
-  maxDocumentSizeInMB        Int  @default(10) // HOBBYIST: 10MB, PRO: 100MB
-  maxCollaboratorsPerCanvas  Int  @default(0) // HOBBYIST: 0, PRO: 10, TEAM: 999
+  maxCanvases               Int @default(3)
+  maxActionPodsPerCanvas    Int @default(50)
+  maxDocumentSizeInMB       Int @default(10)
+  maxCollaboratorsPerCanvas Int @default(0)
 
-  // Feature flags
-  canInviteToWorkspace Boolean @default(false) // PRO/TEAM only
-  canInviteToCanvas    Boolean @default(false) // PRO/TEAM only
-  canCreatePublicLinks Boolean @default(true) // All tiers
-  canUseAdvancedModels Boolean @default(false) // HOBBYIST: BYOK only
-  canAccessAnalytics   Boolean @default(false) // PRO/TEAM only
-  canExportData        Boolean @default(false) // PRO/TEAM only
+  canInviteToWorkspace Boolean @default(false)
+  canInviteToCanvas    Boolean @default(false)
+  canCreatePublicLinks Boolean @default(true)
+  canUseAdvancedModels Boolean @default(false)
+  canAccessAnalytics   Boolean @default(false)
+  canExportData        Boolean @default(false)
 
-  // Billing cycle
   nextBillingDate    DateTime? @db.Timestamptz(6)
   currentPeriodStart DateTime? @db.Timestamptz(6)
   currentPeriodEnd   DateTime? @db.Timestamptz(6)
   cancelAtPeriodEnd  Boolean   @default(false)
 
-  // BYOK mode
   isByokMode Boolean @default(false)
 
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
-  workspace       Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  usageLogs       PodUsageLog[]
-  creditPurchases CreditPurchase[]
-  creditUsage     CreditUsageLog[]
+  workspace              Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  usageLogs              PodUsageLog[]
+  creditPurchases        CreditPurchase[]
+  creditUsage            CreditUsageLog[]
+  documentProcessingCost DocumentProcessingCost[]
 
   @@index([status, nextBillingDate])
   @@index([tier, status])
@@ -84,8 +79,8 @@ model CreditUsageLog {
   balanceAfter  Int
 
   provider  LLMProvider
-  modelId   String @db.VarChar(255)
-  modelName String? @db.VarChar(255)
+  modelId   String      @db.VarChar(255)
+  modelName String?     @db.VarChar(255)
 
   createdAt DateTime @default(now()) @db.Timestamptz(6)
 
@@ -144,8 +139,8 @@ model ModelPricingTier {
 
 enum SubscriptionTier {
   HOBBYIST // FREE
-  PRO      // $20/month
-  TEAM     // $50/user/month
+  PRO // $20/month
+  TEAM // $50/user/month
 
   @@schema("billing")
 }

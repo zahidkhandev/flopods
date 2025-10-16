@@ -5,8 +5,9 @@
 // Models are organized into separate files for better maintainability.
 
 generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native", "debian-openssl-3.0.x", "rhel-openssl-3.0.x"]
+  provider        = "prisma-client-js"
+  output          = "../client"
+  binaryTargets   = ["native", "debian-openssl-3.0.x", "rhel-openssl-3.0.x"]
   previewFeatures = ["fullTextSearchPostgres"]
 }
 
@@ -15,5 +16,3 @@ datasource db {
   url      = env("DATABASE_URL")
   schemas  = ["core", "canvas", "billing", "documents", "admin"]
 }
-
-

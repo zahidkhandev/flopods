@@ -1,5 +1,7 @@
+// /prisma/schemas/core.prisma
+
 // ==========================================
-// CORE SCHEMA - Users, Auth, Workspaces
+// CORE SCHEMA - MINIMAL WITH USAGE TRACKING
 // ==========================================
 
 model User {
@@ -7,34 +9,36 @@ model User {
   email     String   @unique
   name      String?
   image     String?
+  hash      String?  @db.VarChar(255)
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   accounts                 Account[]
   workspaces               WorkspaceUser[]
   refreshTokens            RefreshToken[]
-  canvasCollaborations     CanvasCollaborator[]
-  sentWorkspaceInvites     WorkspaceInvitation[]   @relation("InvitedBy")
-  receivedWorkspaceInvites WorkspaceInvitation[]   @relation("InvitedUser")
-  sentCanvasInvites        CanvasInvitation[]      @relation("CanvasInvitedBy")
-  receivedCanvasInvites    CanvasInvitation[]      @relation("CanvasInvitedUser")
+  flowCollaborations       FlowCollaborator[]
+  sentWorkspaceInvites     WorkspaceInvitation[] @relation("InvitedBy")
+  receivedWorkspaceInvites WorkspaceInvitation[] @relation("InvitedUser")
+  sentFlowInvites          FlowInvitation[]      @relation("FlowInvitedBy")
+  receivedFlowInvites      FlowInvitation[]      @relation("FlowInvitedUser")
+  createdApiKeys           ProviderAPIKey[]
 
   @@index([email])
   @@schema("core")
 }
 
 model RefreshToken {
-  id        String   @id @default(cuid())
-  token     String   @unique
-  deviceId  String   @db.VarChar(255)
-  userId    String
-  expiresAt DateTime @db.Timestamptz(6)
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  id         String   @id @default(cuid())
+  token      String   @unique
+  deviceName String   @db.VarChar(255)
+  userId     String
+  expiresAt  DateTime @db.Timestamptz(6)
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, deviceId])
+  @@unique([userId, deviceName])
   @@index([userId, expiresAt])
   @@index([token, expiresAt])
   @@schema("core")
@@ -64,14 +68,17 @@ model Workspace {
   createdAt DateTime      @default(now()) @db.Timestamptz(6)
   updatedAt DateTime      @updatedAt @db.Timestamptz(6)
 
-  members        WorkspaceUser[]
-  canvases       Canvas[]
-  documents      Document[]
-  subscription   Subscription?
-  contextModules ContextModule[]
-  shareLinks     ShareLink[]
-  apiKeys        ProviderAPIKey[]
-  invitations    WorkspaceInvitation[]
+  members         WorkspaceUser[]
+  spaces          Space[]
+  flows           Flow[]
+  documents       Document[]
+  documentFolders DocumentFolder[]
+  subscription    Subscription?
+  contextModules  ContextModule[]
+  shareLinks      ShareLink[]
+  apiKeys         ProviderAPIKey[]
+  invitations     WorkspaceInvitation[]
+  usageMetrics    UsageMetric[]
 
   @@index([type, createdAt])
   @@schema("core")
@@ -83,16 +90,15 @@ model WorkspaceUser {
   workspaceId String
   role        WorkspaceRole @default(MEMBER)
 
-  // Granular permissions
   canCreateCanvas  Boolean @default(true)
   canDeleteCanvas  Boolean @default(false)
   canManageBilling Boolean @default(false)
-  canInviteMembers Boolean @default(false) // Requires PAID plan
+  canInviteMembers Boolean @default(false)
   canManageMembers Boolean @default(false)
   canManageApiKeys Boolean @default(false)
 
   joinedAt  DateTime @default(now()) @db.Timestamptz(6)
-  invitedBy String? // userId who invited
+  invitedBy String?
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -104,14 +110,14 @@ model WorkspaceUser {
 }
 
 model WorkspaceInvitation {
-  id            String           @id @default(cuid())
-  workspaceId   String
-  email         String           @db.VarChar(255)
-  role          WorkspaceRole    @default(MEMBER)
-  permissions   Json? // Custom permissions override
+  id          String        @id @default(cuid())
+  workspaceId String
+  email       String        @db.VarChar(255)
+  role        WorkspaceRole @default(MEMBER)
+  permissions Json?
 
   invitedBy     String
-  invitedUserId String? // If user exists in system
+  invitedUserId String?
 
   token  String           @unique @db.VarChar(255)
   status InvitationStatus @default(PENDING)
@@ -130,28 +136,79 @@ model WorkspaceInvitation {
   @@schema("core")
 }
 
+// ==========================================
+// API KEY WITH USAGE TRACKING
+// ==========================================
+
 model ProviderAPIKey {
   id          String      @id @default(cuid())
   workspaceId String
   provider    LLMProvider
   displayName String      @db.VarChar(100)
 
-  keyHash String @db.VarChar(255) // Encrypted
+  // Encrypted storage (format: iv:authTag:encrypted)
+  keyHash String @db.VarChar(500)
 
-  providerConfig Json? // Provider-specific config
-  endpoint       String? @db.VarChar(500)
-  authType       AuthType @default(BEARER_TOKEN)
+  // Status
+  isActive Boolean @default(true)
 
-  isActive   Boolean   @default(true)
-  lastUsedAt DateTime? @db.Timestamptz(6)
-  createdAt  DateTime  @default(now()) @db.Timestamptz(6)
-  expiresAt  DateTime? @db.Timestamptz(6)
+  // Usage tracking
+  lastUsedAt  DateTime? @db.Timestamptz(6)
+  usageCount  Int       @default(0)
+  totalTokens BigInt    @default(0)
+  totalCost   Decimal   @default(0) @db.Decimal(12, 6)
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  // Error tracking
+  lastErrorAt DateTime? @db.Timestamptz(6)
+
+  // Timestamps
+  createdById String
+  createdAt   DateTime @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdBy     User           @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  usageMetrics  UsageMetric[]
+  podExecutions PodExecution[]
+  podUsageLogs  PodUsageLog[]
 
   @@unique([workspaceId, provider, displayName])
   @@index([workspaceId, isActive])
-  @@index([provider, isActive])
+  @@schema("core")
+}
+
+// ==========================================
+// USAGE METRICS - DAILY BREAKDOWN
+// ==========================================
+
+model UsageMetric {
+  id          String   @id @default(cuid())
+  workspaceId String
+  keyId       String
+  date        DateTime @db.Date
+
+  // Request counts
+  requestCount Int @default(0)
+  successCount Int @default(0)
+  errorCount   Int @default(0)
+
+  // Token usage
+  promptTokens     BigInt @default(0)
+  completionTokens BigInt @default(0)
+  totalTokens      BigInt @default(0)
+
+  // Cost tracking
+  estimatedCost Decimal @default(0) @db.Decimal(12, 6)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  workspace Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  apiKey    ProviderAPIKey @relation(fields: [keyId], references: [id], onDelete: Cascade)
+
+  @@unique([keyId, date])
+  @@index([workspaceId, date])
+  @@index([keyId, date])
   @@schema("core")
 }
 
@@ -164,9 +221,8 @@ model ShareLink {
   createdBy   String
 
   accessLevel ShareAccessLevel @default(VIEW_ONLY)
-  password    String? @db.VarChar(255) // Optional password protection (bcrypt hash)
+  password    String?          @db.VarChar(255)
 
-  // Usage tracking
   viewCount    Int       @default(0)
   lastViewedAt DateTime? @db.Timestamptz(6)
 
@@ -181,6 +237,10 @@ model ShareLink {
   @@index([createdBy, createdAt])
   @@schema("core")
 }
+
+// ==========================================
+// ENUMS
+// ==========================================
 
 enum AuthProvider {
   GOOGLE
@@ -217,9 +277,9 @@ enum InvitationStatus {
 }
 
 enum ShareAccessLevel {
-  VIEW_ONLY // FREE
-  COMMENT   // FREE
-  EDIT      // PAID (requires collaborator)
+  VIEW_ONLY
+  COMMENT
+  EDIT
 
   @@schema("core")
 }
@@ -230,38 +290,17 @@ enum LLMProvider {
   GOOGLE_GEMINI
   PERPLEXITY
   MISTRAL
-  META_AI
-  XAI
-  DEEPSEEK
   COHERE
   GROQ
-  TOGETHER
-  REPLICATE
-  HUGGINGFACE
-  OPENROUTER
-  BEDROCK
-  OLLAMA
-  VLLM
-  LLAMACPP
-  TEXTGEN_WEBUI
+  XAI
+  DEEPSEEK
   CUSTOM
 
   @@schema("core")
 }
 
-enum AuthType {
-  BEARER_TOKEN
-  API_KEY_HEADER
-  BASIC_AUTH
-  OAUTH2
-  AWS_SIGV4
-  CUSTOM_HEADER
-
-  @@schema("core")
-}
-
 enum ShareableAssetType {
-  CANVAS
+  FLOW
   CONTEXT_MODULE
 
   @@schema("core")

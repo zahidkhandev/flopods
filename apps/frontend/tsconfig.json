@@ -6,6 +6,6 @@
       "@actopod/schema": ["../../packages/schema/src"]
     }
   },
-  "include": ["src"],
-  "references": [{ "path": "./tsconfig.node.json" }]
+  "include": ["src", "vite-env.d.ts"],
+  "references": [{ "path": "./tsconfig.node.json" }, { "path": "./tsconfig.app.json" }]
 }
