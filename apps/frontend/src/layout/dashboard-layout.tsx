@@ -10,8 +10,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { AppSidebar } from '@/components/common/app-sidebar';
-import { Bell } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { NotificationsDropdown } from '@/components/common/notifications/notifications-dropdown';
 
 export function DashboardLayout() {
   const location = useLocation();
@@ -42,9 +41,9 @@ export function DashboardLayout() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className="bg-background sticky top-0 z-10 flex h-16 shrink-0 items-center gap-4 px-6">
+        <header className="bg-background sticky top-0 z-10 flex h-16 shrink-0 items-center gap-4 border-b px-4 sm:px-6">
           <SidebarTrigger className="-ml-1 translate-y-px cursor-pointer" />
-          <Breadcrumb>
+          <Breadcrumb className="hidden sm:block">
             <BreadcrumbList className="gap-2">
               {breadcrumbs.map((crumb, index) => (
                 <div key={crumb.to} className="flex items-center gap-2">
@@ -63,9 +62,7 @@ export function DashboardLayout() {
             </BreadcrumbList>
           </Breadcrumb>
           <div className="ml-auto flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <Bell className="h-4 w-4" />
-            </Button>
+            <NotificationsDropdown />
             <ThemeToggle />
           </div>
         </header>

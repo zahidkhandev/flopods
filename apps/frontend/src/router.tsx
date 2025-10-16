@@ -16,6 +16,8 @@ import ServerErrorPage from './pages/errors/500';
 import ForbiddenPage from './pages/errors/403';
 import OfflinePage from './pages/errors/offline';
 import MaintenancePage from './pages/errors/maintenance';
+import AcceptInvitationPage from './pages/workspace/invite';
+import FlowsPage from './pages/dashboard/flows';
 
 export const router = createBrowserRouter([
   {
@@ -45,6 +47,10 @@ export const router = createBrowserRouter([
         ],
       },
       {
+        path: 'workspace/invite/:token',
+        element: <AcceptInvitationPage />,
+      },
+      {
         path: 'dashboard',
         element: (
           <ProtectedRoute>
@@ -60,9 +66,10 @@ export const router = createBrowserRouter([
             path: 'settings',
             element: <WorkspaceSettingsPage />,
           },
+
           {
             path: 'flows',
-            element: <div>Flows Page (Coming Soon)</div>,
+            element: <FlowsPage />,
           },
           {
             path: 'spaces',

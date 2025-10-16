@@ -1,6 +1,6 @@
-import { useState, useEffect, ReactNode, useCallback } from 'react';
+import { useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast-utils';
 import { axiosInstance } from '@/lib/axios-instance';
 import { AuthContext, AuthContextType } from './auth-context';
 import { User, LoginData, RegisterData, LoginResponse, UserMeResponse } from '@/types/auth';
@@ -45,6 +45,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     fetchUser();
   }, [fetchUser]);
 
+  const getRedirectPath = () => {
+    // ✅ Check sessionStorage first
+    const pendingInvitation = sessionStorage.getItem('pendingInvitation');
+    if (pendingInvitation) {
+      sessionStorage.removeItem('pendingInvitation');
+      return `/workspace/invite/${pendingInvitation}`;
+    }
+
+    // ✅ Check URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    const returnUrl = urlParams.get('returnUrl');
+    if (returnUrl) {
+      return decodeURIComponent(returnUrl);
+    }
+
+    // ✅ Default
+    return '/dashboard';
+  };
+
   const login = async (data: LoginData) => {
     try {
       const response = await axiosInstance.post<LoginResponse>('/auth/login', {
@@ -65,7 +84,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await fetchUser();
 
       toast.success('Logged in successfully');
-      navigate('/dashboard');
+
+      // ✅ Use the helper function
+      const redirectPath = getRedirectPath();
+      navigate(redirectPath);
     } catch (error: any) {
       const message = error.response?.data?.message || 'Login failed';
       toast.error(message);
@@ -76,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (data: RegisterData) => {
     try {
       const response = await axiosInstance.post<LoginResponse>('/auth/register', {
-        name: data.name, // Pass name to backend
+        name: data.name,
         email: data.email,
         password: data.password,
       });
@@ -94,7 +116,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await fetchUser();
 
       toast.success('Account created successfully');
-      navigate('/dashboard');
+
+      // ✅ Use the helper function
+      const redirectPath = getRedirectPath();
+      navigate(redirectPath);
     } catch (error: any) {
       const message = error.response?.data?.message || 'Registration failed';
       toast.error(message);
@@ -118,9 +143,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const isAuthenticated = useMemo(() => !!user, [user]);
+  const isLoading = loading;
+
   const value: AuthContextType = {
     user,
     loading,
+    isAuthenticated,
+    isLoading,
     login,
     logout,
     register,

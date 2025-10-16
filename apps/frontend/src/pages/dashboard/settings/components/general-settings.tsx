@@ -5,20 +5,31 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Trash2, Save, Loader2, Copy, Check, Calendar, Building2 } from 'lucide-react';
-import { toast } from 'sonner';
-import axiosInstance from '@/lib/axios-instance';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Trash2, Save, Loader2, Copy, Check, Calendar, Building2, AlertCircle } from 'lucide-react';
+import { toast } from '@/lib/toast-utils';
+import { axiosInstance } from '@/lib/axios-instance';
 import { DeleteWorkspaceDialog } from './delete-workspace-dialog';
+import { useWorkspaces } from '@/hooks/use-workspaces';
 
 interface GeneralSettingsProps {
   workspace: any;
 }
 
 export function GeneralSettings({ workspace }: GeneralSettingsProps) {
+  const { workspaces } = useWorkspaces();
   const [workspaceName, setWorkspaceName] = useState(workspace.name);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // ✅ Handle both workspace list format (role) and workspace details format (currentUserRole)
+  const userRole = workspace.currentUserRole || workspace.role;
+  const isOwner = userRole === 'OWNER';
+
+  const totalWorkspaces = Array.isArray(workspaces) ? workspaces.length : 0;
+  const isLastWorkspace = totalWorkspaces <= 1;
+  const canDelete = isOwner && workspace.type === 'TEAM' && !isLastWorkspace;
 
   const handleUpdateName = async () => {
     if (!workspaceName.trim()) {
@@ -34,7 +45,7 @@ export function GeneralSettings({ workspace }: GeneralSettingsProps) {
     setIsUpdating(true);
     try {
       await axiosInstance.patch(`/workspaces/${workspace.id}`, { name: workspaceName });
-      toast.success('Workspace name updated successfully');
+      toast.success('Workspace name updated');
       setTimeout(() => window.location.reload(), 1000);
     } catch (error: any) {
       toast.error('Failed to update workspace', {
@@ -48,7 +59,7 @@ export function GeneralSettings({ workspace }: GeneralSettingsProps) {
   const copyWorkspaceId = () => {
     navigator.clipboard.writeText(workspace.id);
     setCopied(true);
-    toast.success('Workspace ID copied to clipboard');
+    toast.success('Copied to clipboard');
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -81,10 +92,11 @@ export function GeneralSettings({ workspace }: GeneralSettingsProps) {
             onChange={(e) => setWorkspaceName(e.target.value)}
             placeholder="Enter workspace name"
             className="h-10"
+            disabled={!isOwner}
           />
           <Button
             onClick={handleUpdateName}
-            disabled={isUpdating || workspaceName === workspace.name}
+            disabled={isUpdating || workspaceName === workspace.name || !isOwner}
             size="default"
           >
             {isUpdating ? (
@@ -100,6 +112,14 @@ export function GeneralSettings({ workspace }: GeneralSettingsProps) {
             )}
           </Button>
         </div>
+        {!isOwner && (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="text-xs">
+              Only workspace owners can update the workspace name
+            </AlertDescription>
+          </Alert>
+        )}
       </div>
 
       <Separator />
@@ -155,23 +175,15 @@ export function GeneralSettings({ workspace }: GeneralSettingsProps) {
               disabled
             />
             <Button variant="outline" size="sm" onClick={copyWorkspaceId} className="h-9 shrink-0">
-              {copied ? (
-                <>
-                  <Check className="h-3.5 w-3.5" />
-                </>
-              ) : (
-                <>
-                  <Copy className="h-3.5 w-3.5" />
-                </>
-              )}
+              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
             </Button>
           </div>
-          <p className="text-muted-foreground text-xs">This is your unique workspace identifier</p>
+          <p className="text-muted-foreground text-xs">Your unique workspace identifier</p>
         </div>
       </div>
 
-      {/* Danger Zone */}
-      {workspace.type === 'TEAM' && (
+      {/* ✅ DANGER ZONE - ONLY SHOWS FOR OWNER OF TEAM WORKSPACES */}
+      {isOwner && workspace.type === 'TEAM' && (
         <>
           <Separator />
           <Card className="border-destructive/50 bg-destructive/5">
@@ -186,16 +198,47 @@ export function GeneralSettings({ workspace }: GeneralSettingsProps) {
                 <div className="space-y-1">
                   <p className="text-sm font-medium">Delete this workspace</p>
                   <p className="text-muted-foreground text-sm">
-                    Once deleted, all data will be permanently removed
+                    {isLastWorkspace
+                      ? 'Cannot delete your last workspace'
+                      : 'Once deleted, all data will be permanently removed'}
                   </p>
                 </div>
-                <Button variant="destructive" size="sm" onClick={() => setIsDeleteDialogOpen(true)}>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setIsDeleteDialogOpen(true)}
+                  disabled={!canDelete}
+                >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete
                 </Button>
               </div>
+
+              {/* Last Workspace Warning */}
+              {isLastWorkspace && (
+                <Alert className="mt-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    You must have at least one workspace. Create another workspace before deleting
+                    this one.
+                  </AlertDescription>
+                </Alert>
+              )}
             </CardContent>
           </Card>
+        </>
+      )}
+
+      {/* Personal Workspace Note */}
+      {workspace.type === 'PERSONAL' && (
+        <>
+          <Separator />
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="text-sm">
+              Personal workspaces cannot be deleted. They are automatically managed for each user.
+            </AlertDescription>
+          </Alert>
         </>
       )}
 

@@ -4,6 +4,8 @@ import { V1ServerModule } from './server/server.module';
 import { V1AuthModule } from './auth/auth.module';
 import { V1WorkspaceModule } from './workspace/workspace.module';
 import { V1UserModule } from './user/user.module';
+import { V1NotificationModule } from './notification/notification.module';
+import { V1FlowModule } from './flow/flow.module';
 
 @Module({
   imports: [
@@ -12,6 +14,8 @@ import { V1UserModule } from './user/user.module';
     V1AuthModule,
     V1WorkspaceModule,
     V1UserModule,
+    V1NotificationModule,
+    V1FlowModule,
   ],
   providers: [
     // {
@@ -25,6 +29,8 @@ import { V1UserModule } from './user/user.module';
     V1AuthModule,
     V1WorkspaceModule,
     V1UserModule,
+    V1NotificationModule,
+    V1FlowModule,
   ],
 })
 export class V1AppModule {}

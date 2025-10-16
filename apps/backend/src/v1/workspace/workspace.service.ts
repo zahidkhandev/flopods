@@ -14,12 +14,11 @@ import { AwsSesEmailService } from '../../common/aws/ses/ses-email.service';
 import { ConfigService } from '@nestjs/config';
 import { WorkspaceCreateDto } from './dto/workspace-create.dto';
 import { WorkspaceUpdateDto } from './dto/workspace-update.dto';
-import { WorkspaceAddMemberDto } from './dto/workspace-add-member.dto';
 import { WorkspaceUpdateMemberDto } from './dto/workspace-update-member.dto';
 import { WorkspaceSendInvitationDto } from './dto/workspace-send-invitation.dto';
 import { WorkspaceAddApiKeyDto } from './dto/workspace-add-api-key.dto';
 import { WorkspaceUpdateApiKeyDto } from './dto/workspace-update-api-key.dto';
-import { WorkspaceType, WorkspaceRole, InvitationStatus } from '@actopod/schema';
+import { WorkspaceType, WorkspaceRole, InvitationStatus, NotificationType } from '@actopod/schema';
 import * as crypto from 'crypto';
 import { workspaceInvitationTemplate } from '../../common/aws/ses/templates/workspace/invitation.template';
 import {
@@ -32,7 +31,9 @@ import {
   MessageResponse,
   ApiKeyUsageStats,
   UsageMetricResponse,
+  InvitationDetailsResponse,
 } from './types/workspace.types';
+import { V1NotificationService } from '../notification/notification.service';
 
 /**
  * Service handling all workspace-related business logic
@@ -48,6 +49,7 @@ export class V1WorkspaceService {
     private readonly prisma: PrismaService,
     private readonly emailService: AwsSesEmailService,
     private readonly configService: ConfigService,
+    private readonly notificationService: V1NotificationService,
   ) {
     const key = this.configService.get<string>('API_KEY_ENCRYPTION_SECRET');
 
@@ -84,6 +86,42 @@ export class V1WorkspaceService {
   }
 
   // ==================== WORKSPACE CRUD ====================
+
+  /**
+   * AUTO-SWITCH WORKSPACE TYPE LOGIC
+   * - 1 member = PERSONAL
+   * - 2+ members = TEAM
+   */
+  private async autoSwitchWorkspaceType(workspaceId: string): Promise<void> {
+    const memberCount = await this.prisma.workspaceUser.count({
+      where: { workspaceId },
+    });
+
+    const workspace = await this.prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { type: true },
+    });
+
+    if (!workspace) return;
+
+    // Switch to TEAM if 2+ members
+    if (memberCount >= 2 && workspace.type === WorkspaceType.PERSONAL) {
+      await this.prisma.workspace.update({
+        where: { id: workspaceId },
+        data: { type: WorkspaceType.TEAM },
+      });
+      this.logger.log(`🔄 Workspace ${workspaceId} auto-switched to TEAM (${memberCount} members)`);
+    }
+
+    // Switch to PERSONAL if only 1 member
+    if (memberCount === 1 && workspace.type === WorkspaceType.TEAM) {
+      await this.prisma.workspace.update({
+        where: { id: workspaceId },
+        data: { type: WorkspaceType.PERSONAL },
+      });
+      this.logger.log(`🔄 Workspace ${workspaceId} auto-switched to PERSONAL (1 member)`);
+    }
+  }
 
   async getAllWorkspaces(userId: string): Promise<WorkspaceListItem[]> {
     const workspaceUsers = await this.prisma.workspaceUser.findMany({
@@ -187,14 +225,11 @@ export class V1WorkspaceService {
   }
 
   async createWorkspace(userId: string, dto: WorkspaceCreateDto): Promise<any> {
-    if (dto.type === WorkspaceType.PERSONAL) {
-      throw new BadRequestException('Personal workspaces cannot be created manually');
-    }
-
+    // ✅ Allow PERSONAL workspaces - they will auto-switch to TEAM when 2nd member joins
     const workspace = await this.prisma.workspace.create({
       data: {
         name: dto.name,
-        type: dto.type,
+        type: dto.type ?? WorkspaceType.PERSONAL, // Default to PERSONAL
         members: {
           create: {
             userId,
@@ -377,59 +412,6 @@ export class V1WorkspaceService {
     return members as WorkspaceMemberResponse[];
   }
 
-  async addMember(
-    workspaceId: string,
-    userId: string,
-    dto: WorkspaceAddMemberDto,
-  ): Promise<WorkspaceMemberResponse> {
-    await this.verifyPermission(workspaceId, userId, 'canManageMembers');
-
-    const targetUser = await this.prisma.user.findUnique({
-      where: { email: dto.email },
-    });
-
-    if (!targetUser) {
-      throw new NotFoundException('User not found');
-    }
-
-    const existing = await this.prisma.workspaceUser.findUnique({
-      where: {
-        userId_workspaceId: { userId: targetUser.id, workspaceId },
-      },
-    });
-
-    if (existing) {
-      throw new ConflictException('User is already a member of this workspace');
-    }
-
-    const member = await this.prisma.workspaceUser.create({
-      data: {
-        userId: targetUser.id,
-        workspaceId,
-        role: dto.role ?? WorkspaceRole.MEMBER,
-        canCreateCanvas: dto.canCreateCanvas ?? true,
-        canDeleteCanvas: dto.canDeleteCanvas ?? false,
-        canInviteMembers: dto.canInviteMembers ?? false,
-        canManageMembers: dto.canManageMembers ?? false,
-        canManageApiKeys: dto.canManageApiKeys ?? false,
-        invitedBy: userId,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            image: true,
-          },
-        },
-      },
-    });
-
-    this.logger.log(`Member added: ${targetUser.email} to workspace ${workspaceId}`);
-    return member as WorkspaceMemberResponse;
-  }
-
   async updateMember(
     workspaceId: string,
     targetUserId: string,
@@ -500,6 +482,9 @@ export class V1WorkspaceService {
       },
     });
 
+    // ✅ AUTO-SWITCH WORKSPACE TYPE
+    await this.autoSwitchWorkspaceType(workspaceId);
+
     this.logger.log(`Member removed: ${targetUserId}`);
     return { message: 'Member removed successfully' };
   }
@@ -563,6 +548,26 @@ export class V1WorkspaceService {
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     });
+
+    // ✅ CREATE IN-APP NOTIFICATION (if user exists)
+    if (existingUser) {
+      await this.notificationService.createNotification({
+        userId: existingUser.id,
+        type: NotificationType.WORKSPACE_INVITATION,
+        title: `Workspace Invitation: ${workspace.name}`,
+        body: `You've been invited to join ${workspace.name} as ${dto.role ?? WorkspaceRole.MEMBER}`,
+        entityType: 'workspace_invitation',
+        entityId: invitation.id,
+        metadata: {
+          workspaceId,
+          workspaceName: workspace.name,
+          role: dto.role ?? WorkspaceRole.MEMBER,
+          inviterName: userId,
+        },
+        actionUrl: `/workspace/invite/${token}`, // ✅ Keep full path for invitations
+        expiresAt: invitation.expiresAt,
+      });
+    }
 
     const inviteLink = `${this.configService.get('FRONTEND_URL')}/workspace/invite/${token}`;
 
@@ -639,18 +644,27 @@ export class V1WorkspaceService {
       throw new ConflictException('You are already a member of this workspace');
     }
 
-    const permissions = (invitation.permissions as Record<string, boolean>) || {};
+    const permissions = (invitation.permissions as Record<string, boolean> | null) || {};
+
+    const defaultPermissions = {
+      canCreateCanvas: true,
+      canDeleteCanvas: false,
+      canInviteMembers: false,
+      canManageMembers: false,
+      canManageApiKeys: false,
+    };
 
     const member = await this.prisma.workspaceUser.create({
       data: {
         userId,
         workspaceId: invitation.workspaceId,
         role: invitation.role,
-        canCreateCanvas: permissions.canCreateCanvas ?? true,
-        canDeleteCanvas: permissions.canDeleteCanvas ?? false,
-        canInviteMembers: permissions.canInviteMembers ?? false,
-        canManageMembers: permissions.canManageMembers ?? false,
-        canManageApiKeys: permissions.canManageApiKeys ?? false,
+        canCreateCanvas: permissions.canCreateCanvas ?? defaultPermissions.canCreateCanvas,
+        canDeleteCanvas: permissions.canDeleteCanvas ?? defaultPermissions.canDeleteCanvas,
+        canInviteMembers: permissions.canInviteMembers ?? defaultPermissions.canInviteMembers,
+        canManageMembers: permissions.canManageMembers ?? defaultPermissions.canManageMembers,
+        canManageApiKeys: permissions.canManageApiKeys ?? defaultPermissions.canManageApiKeys,
+        canManageBilling: permissions.canManageBilling ?? false,
         invitedBy: invitation.invitedBy,
       },
     });
@@ -663,11 +677,73 @@ export class V1WorkspaceService {
       },
     });
 
+    // ✅ AUTO-SWITCH WORKSPACE TYPE
+    await this.autoSwitchWorkspaceType(invitation.workspaceId);
+
+    // Notify workspace admins/owner
+    const admins = await this.prisma.workspaceUser.findMany({
+      where: {
+        workspaceId: invitation.workspaceId,
+        role: { in: [WorkspaceRole.OWNER, WorkspaceRole.ADMIN] },
+      },
+    });
+
+    for (const admin of admins) {
+      await this.notificationService.createNotification({
+        userId: admin.userId,
+        type: NotificationType.WORKSPACE_MEMBER_JOINED,
+        title: 'New Member Joined',
+        body: `${user.name || user.email} has joined ${invitation.workspace.name}`,
+        entityType: 'workspace',
+        entityId: invitation.workspaceId,
+        metadata: {
+          workspaceId: invitation.workspaceId, // ✅ Include workspaceId
+          newMemberEmail: user.email,
+          newMemberName: user.name,
+          role: invitation.role,
+        },
+        actionUrl: `/settings?tab=members`, // ✅ Simplified URL
+      });
+    }
+
     this.logger.log(`Invitation accepted: ${token}`);
     return {
       workspace: invitation.workspace,
       member,
       message: 'Successfully joined workspace',
+    };
+  }
+
+  /**
+   * Get invitation details (PUBLIC - No user context needed)
+   * This is called before user accepts invitation
+   */
+  async getInvitationDetails(token: string): Promise<InvitationDetailsResponse> {
+    const invitation = await this.prisma.workspaceInvitation.findUnique({
+      where: { token },
+      include: { workspace: true },
+    });
+
+    if (!invitation) {
+      throw new NotFoundException('Invitation not found');
+    }
+
+    // Check if invitation is still valid
+    if (invitation.status !== InvitationStatus.PENDING) {
+      throw new BadRequestException(`Invitation is ${invitation.status.toLowerCase()}`);
+    }
+
+    return {
+      workspace: {
+        id: invitation.workspace.id,
+        name: invitation.workspace.name,
+        type: invitation.workspace.type,
+      },
+      email: invitation.email,
+      role: invitation.role,
+      permissions: invitation.permissions as Record<string, boolean> | null,
+      expiresAt: invitation.expiresAt,
+      status: invitation.status,
     };
   }
 

@@ -1,7 +1,7 @@
 // hooks/useWorkspaceApiKeys.ts
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast-utils';
 import axiosInstance from '@/lib/axios-instance';
 import {
   WorkspaceApiKey,

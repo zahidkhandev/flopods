@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 
 import { AccessTokenGuard } from './common/guards/auth';
 import { PrismaModule } from './prisma/prisma.module';
+import { WebSocketModule } from './common/websocket/websocket.module';
 import { V1AppModule } from './v1/app.module';
 
 @Module({
@@ -15,6 +16,7 @@ import { V1AppModule } from './v1/app.module';
     }),
     PrismaModule,
     ScheduleModule.forRoot(),
+    WebSocketModule,
     V1AppModule,
   ],
   providers: [

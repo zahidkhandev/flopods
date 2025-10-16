@@ -1,5 +1,3 @@
-// components/add-api-key-dialog.tsx
-
 import { useState } from 'react';
 import {
   Dialog,
@@ -27,6 +25,7 @@ interface AddApiKeyDialogProps {
   workspaceId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void; // ✅ Add this
 }
 
 const LLM_PROVIDERS = [
@@ -42,15 +41,22 @@ const LLM_PROVIDERS = [
   { value: 'CUSTOM', label: 'Custom' },
 ];
 
-export function AddApiKeyDialog({ workspaceId, open, onOpenChange }: AddApiKeyDialogProps) {
+const DEFAULT_FORM_DATA = {
+  provider: 'OPENAI',
+  displayName: '',
+  apiKey: '',
+};
+
+export function AddApiKeyDialog({
+  workspaceId,
+  open,
+  onOpenChange,
+  onSuccess, // ✅ Add this
+}: AddApiKeyDialogProps) {
   const { addApiKey } = useWorkspaceApiKeys(workspaceId);
   const [isLoading, setIsLoading] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
-  const [formData, setFormData] = useState<AddApiKeyDto>({
-    provider: 'OPENAI',
-    displayName: '',
-    apiKey: '',
-  });
+  const [formData, setFormData] = useState<AddApiKeyDto>(DEFAULT_FORM_DATA);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,12 +65,9 @@ export function AddApiKeyDialog({ workspaceId, open, onOpenChange }: AddApiKeyDi
     try {
       await addApiKey(formData);
       onOpenChange(false);
-      setFormData({
-        provider: 'OPENAI',
-        displayName: '',
-        apiKey: '',
-      });
+      setFormData(DEFAULT_FORM_DATA);
       setShowApiKey(false);
+      onSuccess?.(); // ✅ Call onSuccess to refresh data
     } catch {
       // Error handled in hook
     } finally {
