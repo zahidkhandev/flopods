@@ -18,6 +18,7 @@ import OfflinePage from './pages/errors/offline';
 import MaintenancePage from './pages/errors/maintenance';
 import AcceptInvitationPage from './pages/workspace/invite';
 import FlowsPage from './pages/dashboard/flows';
+import FlowIdPage from './pages/dashboard/flows/[id]';
 
 export const router = createBrowserRouter([
   {
@@ -70,6 +71,11 @@ export const router = createBrowserRouter([
           {
             path: 'flows',
             element: <FlowsPage />,
+          },
+
+          {
+            path: 'flows/:id',
+            element: <FlowIdPage />,
           },
           {
             path: 'spaces',

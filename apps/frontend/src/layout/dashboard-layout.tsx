@@ -1,3 +1,4 @@
+// layouts/dashboard-layout.tsx
 import { Outlet, useLocation, Link } from 'react-router-dom';
 import { SidebarProvider, SidebarTrigger, SidebarInset } from '@/components/ui/sidebar';
 import { ThemeToggle } from '@/components/shared/theme/theme-toggle';
@@ -11,9 +12,13 @@ import {
 } from '@/components/ui/breadcrumb';
 import { AppSidebar } from '@/components/common/app-sidebar';
 import { NotificationsDropdown } from '@/components/common/notifications/notifications-dropdown';
+import { useBreadcrumbs } from '@/hooks/use-breadcrumbs';
+import { Button } from '@/components/ui/button';
+import { Users } from 'lucide-react';
 
 export function DashboardLayout() {
   const location = useLocation();
+  const { customBreadcrumbs } = useBreadcrumbs();
 
   const generateBreadcrumbs = () => {
     const pathnames = location.pathname.split('/').filter((x) => x);
@@ -35,12 +40,13 @@ export function DashboardLayout() {
     });
   };
 
-  const breadcrumbs = generateBreadcrumbs();
+  const breadcrumbs = customBreadcrumbs || generateBreadcrumbs();
+  const isFlowEditor = location.pathname.match(/^\/dashboard\/flows\/[^/]+$/);
 
   return (
     <SidebarProvider>
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="flex flex-col overflow-hidden">
         <header className="bg-background sticky top-0 z-10 flex h-16 shrink-0 items-center gap-4 border-b px-4 sm:px-6">
           <SidebarTrigger className="-ml-1 translate-y-px cursor-pointer" />
           <Breadcrumb className="hidden sm:block">
@@ -62,11 +68,23 @@ export function DashboardLayout() {
             </BreadcrumbList>
           </Breadcrumb>
           <div className="ml-auto flex items-center gap-2">
+            {/* ✅ Only show Users button on flow editor */}
+            {isFlowEditor && (
+              <Button variant="ghost" size="icon">
+                <Users className="h-4 w-4" />
+              </Button>
+            )}
             <NotificationsDropdown />
             <ThemeToggle />
           </div>
         </header>
-        <main className="flex flex-1 flex-col gap-4 p-4 md:p-6">
+        <main
+          className={
+            isFlowEditor
+              ? 'relative flex-1 overflow-hidden'
+              : 'flex flex-1 flex-col gap-4 p-4 md:p-6'
+          }
+        >
           <Outlet />
         </main>
       </SidebarInset>

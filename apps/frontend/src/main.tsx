@@ -8,15 +8,18 @@ import { ThemeProvider } from './components/shared/theme/theme-provider';
 import { queryClient } from './lib/query-client';
 import { router } from './router';
 import './index.css';
+import { BreadcrumbProvider } from './context/breadcrumb-context';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ThemeProvider defaultTheme="dark">
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-        <Toaster position="top-right" richColors closeButton />
-        <ReactQueryDevtools />
-      </QueryClientProvider>
+      <BreadcrumbProvider>
+        <QueryClientProvider client={queryClient}>
+          <RouterProvider router={router} />
+          <Toaster position="top-right" richColors closeButton />
+          <ReactQueryDevtools />
+        </QueryClientProvider>
+      </BreadcrumbProvider>
     </ThemeProvider>
   </React.StrictMode>
 );
