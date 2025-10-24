@@ -1,4 +1,3 @@
-// flow.gateway.ts
 import {
   WebSocketGateway,
   WebSocketServer,
@@ -22,6 +21,10 @@ interface FlowSession {
   userColor?: string;
 }
 
+/**
+ * Unified WebSocket Gateway for Flow Canvas
+ * Handles: Connection management, pod updates, edge updates, collaboration
+ */
 @WebSocketGateway({
   cors: {
     origin: process.env.FRONTEND_URL || 'http://localhost:5173',
@@ -45,6 +48,8 @@ export class V1FlowGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   afterInit(): void {
     this.logger.log('🔌 Flow WebSocket Gateway initialized');
   }
+
+  // ==================== CONNECTION MANAGEMENT ====================
 
   async handleConnection(client: Socket): Promise<void> {
     try {
@@ -104,6 +109,8 @@ export class V1FlowGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     }
   }
 
+  // ==================== FLOW ROOM MANAGEMENT ====================
+
   @SubscribeMessage('flow:join')
   async handleJoinFlow(
     @MessageBody() data: { flowId: string; userName?: string; userColor?: string },
@@ -129,8 +136,10 @@ export class V1FlowGateway implements OnGatewayInit, OnGatewayConnection, OnGate
 
     this.flowSessions.get(flowId)!.set(client.id, session);
 
+    // Notify others that user joined
     client.to(`flow:${flowId}`).emit('user:joined', session);
 
+    // Send current users to the new joiner
     const currentUsers = Array.from(this.flowSessions.get(flowId)!.values());
     client.emit('flow:users', currentUsers);
 
@@ -162,70 +171,102 @@ export class V1FlowGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     }
   }
 
-  @SubscribeMessage('nodes:update')
-  handleNodesUpdate(
-    @MessageBody() data: { nodes: any[] },
+  // ==================== POD OPERATIONS ====================
+
+  @SubscribeMessage('pod:create')
+  handlePodCreate(@MessageBody() data: { pod: any }, @ConnectedSocket() client: Socket): void {
+    const flowId = client.data.flowId;
+    if (!flowId) return;
+
+    // Broadcast to all OTHER users in the flow
+    client.to(`flow:${flowId}`).emit('pod:created', {
+      pod: data.pod,
+      userId: client.data.userId,
+    });
+
+    this.logger.debug(`📦 Pod created in flow ${flowId}`);
+  }
+
+  @SubscribeMessage('pod:update')
+  handlePodUpdate(
+    @MessageBody() data: { podId: string; updates: any },
     @ConnectedSocket() client: Socket,
   ): void {
     const flowId = client.data.flowId;
     if (!flowId) return;
 
-    client.to(`flow:${flowId}`).emit('nodes:updated', {
-      nodes: data.nodes,
+    client.to(`flow:${flowId}`).emit('pod:updated', {
+      podId: data.podId,
+      updates: data.updates,
       userId: client.data.userId,
-      socketId: client.id,
     });
+
+    this.logger.debug(`📦 Pod ${data.podId} updated in flow ${flowId}`);
   }
 
-  @SubscribeMessage('edges:update')
-  handleEdgesUpdate(
-    @MessageBody() data: { edges: any[] },
+  @SubscribeMessage('pod:delete')
+  handlePodDelete(@MessageBody() data: { podId: string }, @ConnectedSocket() client: Socket): void {
+    const flowId = client.data.flowId;
+    if (!flowId) return;
+
+    client.to(`flow:${flowId}`).emit('pod:deleted', {
+      podId: data.podId,
+      userId: client.data.userId,
+    });
+
+    this.logger.debug(`📦 Pod ${data.podId} deleted in flow ${flowId}`);
+  }
+
+  @SubscribeMessage('pod:move')
+  handlePodMove(
+    @MessageBody() data: { podId: string; position: { x: number; y: number } },
     @ConnectedSocket() client: Socket,
   ): void {
     const flowId = client.data.flowId;
     if (!flowId) return;
 
-    client.to(`flow:${flowId}`).emit('edges:updated', {
-      edges: data.edges,
-      userId: client.data.userId,
-      socketId: client.id,
-    });
-  }
-
-  @SubscribeMessage('node:add')
-  handleNodeAdd(@MessageBody() data: { node: any }, @ConnectedSocket() client: Socket): void {
-    const flowId = client.data.flowId;
-    if (!flowId) return;
-
-    client.to(`flow:${flowId}`).emit('node:added', {
-      node: data.node,
+    client.to(`flow:${flowId}`).emit('pod:moved', {
+      podId: data.podId,
+      position: data.position,
       userId: client.data.userId,
     });
   }
 
-  @SubscribeMessage('node:delete')
-  handleNodeDelete(
-    @MessageBody() data: { nodeId: string },
-    @ConnectedSocket() client: Socket,
-  ): void {
+  @SubscribeMessage('pod:lock')
+  handlePodLock(@MessageBody() data: { podId: string }, @ConnectedSocket() client: Socket): void {
     const flowId = client.data.flowId;
     if (!flowId) return;
 
-    client.to(`flow:${flowId}`).emit('node:deleted', {
-      nodeId: data.nodeId,
+    client.to(`flow:${flowId}`).emit('pod:locked', {
+      podId: data.podId,
       userId: client.data.userId,
     });
   }
 
-  @SubscribeMessage('edge:add')
-  handleEdgeAdd(@MessageBody() data: { edge: any }, @ConnectedSocket() client: Socket): void {
+  @SubscribeMessage('pod:unlock')
+  handlePodUnlock(@MessageBody() data: { podId: string }, @ConnectedSocket() client: Socket): void {
     const flowId = client.data.flowId;
     if (!flowId) return;
 
-    client.to(`flow:${flowId}`).emit('edge:added', {
+    client.to(`flow:${flowId}`).emit('pod:unlocked', {
+      podId: data.podId,
+      userId: client.data.userId,
+    });
+  }
+
+  // ==================== EDGE OPERATIONS ====================
+
+  @SubscribeMessage('edge:create')
+  handleEdgeCreate(@MessageBody() data: { edge: any }, @ConnectedSocket() client: Socket): void {
+    const flowId = client.data.flowId;
+    if (!flowId) return;
+
+    client.to(`flow:${flowId}`).emit('edge:created', {
       edge: data.edge,
       userId: client.data.userId,
     });
+
+    this.logger.debug(`🔗 Edge created in flow ${flowId}`);
   }
 
   @SubscribeMessage('edge:delete')
@@ -240,13 +281,70 @@ export class V1FlowGateway implements OnGatewayInit, OnGatewayConnection, OnGate
       edgeId: data.edgeId,
       userId: client.data.userId,
     });
+
+    this.logger.debug(`🔗 Edge ${data.edgeId} deleted in flow ${flowId}`);
   }
 
+  // ==================== CURSOR & SELECTION ====================
+
+  @SubscribeMessage('cursor:move')
+  handleCursorMove(
+    @MessageBody() data: { position: { x: number; y: number } },
+    @ConnectedSocket() client: Socket,
+  ): void {
+    const flowId = client.data.flowId;
+    if (!flowId) return;
+
+    client.to(`flow:${flowId}`).emit('cursor:updated', {
+      userId: client.data.userId,
+      position: data.position,
+      socketId: client.id,
+    });
+  }
+
+  @SubscribeMessage('selection:change')
+  handleSelectionChange(
+    @MessageBody() data: { selectedPodIds: string[] },
+    @ConnectedSocket() client: Socket,
+  ): void {
+    const flowId = client.data.flowId;
+    if (!flowId) return;
+
+    client.to(`flow:${flowId}`).emit('selection:changed', {
+      userId: client.data.userId,
+      selectedPodIds: data.selectedPodIds,
+      socketId: client.id,
+    });
+  }
+
+  // ==================== UTILITY METHODS ====================
+
+  /**
+   * Broadcast message to all users in a flow
+   */
+  broadcastToFlow(flowId: string, event: string, data: any): void {
+    this.server.to(`flow:${flowId}`).emit(event, data);
+  }
+
+  /**
+   * Get number of active users in a flow
+   */
   getFlowUserCount(flowId: string): number {
     return this.flowSessions.get(flowId)?.size || 0;
   }
 
+  /**
+   * Get number of active flows
+   */
   getActiveFlowsCount(): number {
     return this.flowSessions.size;
+  }
+
+  /**
+   * Get all users in a flow
+   */
+  getFlowUsers(flowId: string): FlowSession[] {
+    const sessions = this.flowSessions.get(flowId);
+    return sessions ? Array.from(sessions.values()) : [];
   }
 }

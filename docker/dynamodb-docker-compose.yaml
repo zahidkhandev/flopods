@@ -1,0 +1,22 @@
+version: '3.8'
+name: actopod
+
+services:
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    container_name: actopod-dynamodb-local
+    ports:
+      - '8003:8000' # ← CHANGE THIS: External:Internal
+    command: '-jar DynamoDBLocal.jar -sharedDb -dbPath /data'
+    volumes:
+      - dynamodb-data:/data
+    networks:
+      - actopod-network
+
+volumes:
+  dynamodb-data:
+    driver: local
+
+networks:
+  actopod-network:
+    driver: bridge

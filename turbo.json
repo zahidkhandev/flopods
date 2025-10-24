@@ -36,6 +36,11 @@
         "AWS_SNS_SECRET_ACCESS_KEY",
         "AWS_DYNAMODB_ACCESS_KEY_ID",
         "AWS_DYNAMODB_SECRET_ACCESS_KEY",
+        "AWS_DYNAMODB_ENDPOINT",
+        "AWS_DYNAMODB_REGION",
+        "AWS_DYNAMODB_POD_TABLE",
+        "AWS_DYNAMODB_EXECUTION_TABLE",
+        "AWS_DYNAMODB_CACHE_TABLE",
         "API_KEY_ENCRYPTION_SECRET",
         "VITE_*"
       ]
@@ -73,7 +78,22 @@
         "AWS_SNS_SECRET_ACCESS_KEY",
         "AWS_DYNAMODB_ACCESS_KEY_ID",
         "AWS_DYNAMODB_SECRET_ACCESS_KEY",
+        "AWS_DYNAMODB_ENDPOINT",
+        "AWS_DYNAMODB_REGION",
+        "AWS_DYNAMODB_POD_TABLE",
+        "AWS_DYNAMODB_SESSION_TABLE",
+        "AWS_DYNAMODB_EXECUTION_TABLE",
+        "AWS_DYNAMODB_CACHE_TABLE",
         "API_KEY_ENCRYPTION_SECRET",
+        "QUEUE_BACKEND",
+        "REDIS_HOST",
+        "REDIS_PORT",
+        "REDIS_PASSWORD",
+        "REDIS_TLS_ENABLED",
+        "AWS_SQS_ACCESS_KEY_ID",
+        "AWS_SQS_SECRET_ACCESS_KEY",
+        "AWS_SQS_QUEUE_URL",
+        "AWS_SQS_REGION",
         "VITE_*"
       ]
     },
@@ -117,7 +137,17 @@
     "test": {
       "dependsOn": ["^build"],
       "outputs": ["coverage/**"],
-      "env": ["DATABASE_URL", "NODE_ENV", "JWT_ACCESS_TOKEN_SECRET", "JWT_REFRESH_TOKEN_SECRET"]
+      "env": [
+        "DATABASE_URL",
+        "NODE_ENV",
+        "JWT_ACCESS_TOKEN_SECRET",
+        "JWT_REFRESH_TOKEN_SECRET",
+        "AWS_DYNAMODB_ACCESS_KEY_ID",
+        "AWS_DYNAMODB_SECRET_ACCESS_KEY",
+        "AWS_DYNAMODB_ENDPOINT",
+        "AWS_DYNAMODB_REGION",
+        "AWS_DYNAMODB_POD_TABLE"
+      ]
     },
     "clean": {
       "cache": false
