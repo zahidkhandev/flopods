@@ -1,11 +1,12 @@
 {
   "extends": "@actopod/tsconfig/react.json",
   "compilerOptions": {
+    "noEmit": true,
     "paths": {
       "@/*": ["./src/*"],
       "@actopod/schema": ["../../packages/schema/src"]
     }
   },
   "include": ["src", "vite-env.d.ts"],
-  "references": [{ "path": "./tsconfig.node.json" }, { "path": "./tsconfig.app.json" }]
+  "exclude": ["node_modules", "dist"]
 }

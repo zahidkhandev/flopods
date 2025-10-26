@@ -108,12 +108,12 @@ export class DynamoDbService implements OnModuleInit {
       // Only auto-create tables in development
       if (!this.isProduction) {
         this.logger.log('🔧 Development mode: Ensuring tables exist...');
-        // await Promise.all([
-        //   this.ensureTableExists(this.podTableName, this.createPodTableSchema()),
-        //   this.ensureTableExists(this.executionTableName, this.createExecutionTableSchema()),
-        //   this.ensureTableExists(this.contextTableName, this.createContextTableSchema()),
-        // ]);
-        this.logger.log('🔧 Development mode: Active');
+        await Promise.all([
+          this.ensureTableExists(this.podTableName, this.createPodTableSchema()),
+          this.ensureTableExists(this.executionTableName, this.createExecutionTableSchema()),
+          this.ensureTableExists(this.contextTableName, this.createContextTableSchema()),
+        ]);
+        // this.logger.log('🔧 Development mode: Active');
       } else {
         this.logger.log('🏭 Production mode: Skipping auto table creation');
       }

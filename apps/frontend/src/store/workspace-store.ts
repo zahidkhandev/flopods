@@ -8,7 +8,6 @@ interface WorkspaceState {
   clearWorkspace: () => void;
 }
 
-// Encode/decode workspace ID for localStorage
 const encodeWorkspaceId = (id: string): string => {
   return btoa(id);
 };
@@ -21,7 +20,6 @@ const decodeWorkspaceId = (encoded: string): string => {
   }
 };
 
-// Custom storage with encoding/decoding
 const customStorage: StateStorage = {
   getItem: (name: string): string | null => {
     const str = localStorage.getItem(name);
@@ -57,7 +55,10 @@ export const useWorkspaceStore = create<WorkspaceState>()(
   persist(
     (set) => ({
       currentWorkspaceId: null,
-      setCurrentWorkspaceId: (id: string) => set({ currentWorkspaceId: id }),
+      setCurrentWorkspaceId: (id: string) => {
+        console.log('📌 Workspace set to:', id);
+        set({ currentWorkspaceId: id });
+      },
       clearWorkspace: () => set({ currentWorkspaceId: null }),
     }),
     {

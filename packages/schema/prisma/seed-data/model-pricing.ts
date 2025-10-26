@@ -10,6 +10,7 @@ const prisma = new PrismaClient();
  * - Google: https://ai.google.dev/gemini-api/docs/pricing
  *
  * Credit multiplier: 10,000x (e.g., $1.25 per 1M tokens = 12,500 credits)
+ * Updated maxOutputTokens based on official documentation
  */
 export const MODEL_PRICING_DATA = [
   // ==========================================
@@ -28,7 +29,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 100000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 256000,
-    maxOutputTokens: 32768,
+    maxOutputTokens: 32768, // OpenAI default for GPT-5
     supportsStreaming: true,
     supportsVision: true,
     supportsAudio: true,
@@ -49,7 +50,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 20000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 256000,
-    maxOutputTokens: 16384,
+    maxOutputTokens: 16384, // OpenAI default for mini models
     supportsStreaming: true,
     supportsVision: true,
     supportsFunctions: true,
@@ -69,7 +70,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 4000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 128000,
-    maxOutputTokens: 8192,
+    maxOutputTokens: 8192, // OpenAI default for nano models
     supportsStreaming: true,
     supportsFunctions: true,
     supportsJsonMode: true,
@@ -88,7 +89,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 1200000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 256000,
-    maxOutputTokens: 64000,
+    maxOutputTokens: 64000, // OpenAI Pro models get more output
     supportsStreaming: true,
     supportsVision: true,
     supportsAudio: true,
@@ -111,7 +112,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 120000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 128000,
-    maxOutputTokens: 16384,
+    maxOutputTokens: 16384, // GPT-4.1 standard output
     supportsStreaming: true,
     supportsVision: true,
     supportsFunctions: true,
@@ -172,8 +173,8 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 600000,
     creditsPerMillionReasoningTokens: 600000,
     maxTokens: 200000,
-    maxOutputTokens: 100000,
-    supportsStreaming: false,
+    maxOutputTokens: 100000, // O-series support extended output
+    supportsStreaming: true, // O3 supports streaming
     supportsFunctions: false,
     supportsJsonMode: false,
     supportsSystemPrompt: true,
@@ -192,7 +193,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionReasoningTokens: 1200000,
     maxTokens: 200000,
     maxOutputTokens: 100000,
-    supportsStreaming: false,
+    supportsStreaming: true,
     supportsFunctions: false,
     supportsJsonMode: false,
     supportsSystemPrompt: true,
@@ -210,8 +211,8 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 160000,
     creditsPerMillionReasoningTokens: 160000,
     maxTokens: 128000,
-    maxOutputTokens: 65536,
-    supportsStreaming: false,
+    maxOutputTokens: 65536, // O4-mini maximum
+    supportsStreaming: true,
     supportsFunctions: false,
     supportsJsonMode: false,
     supportsSystemPrompt: false,
@@ -276,7 +277,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 150000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 200000,
-    maxOutputTokens: 64000,
+    maxOutputTokens: 64000, // Claude Sonnet 4 maximum per docs
     supportsStreaming: true,
     supportsVision: true,
     supportsFunctions: true,
@@ -296,7 +297,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 50000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 200000,
-    maxOutputTokens: 64000,
+    maxOutputTokens: 10000, // Claude Haiku maximum per docs
     supportsStreaming: true,
     supportsVision: true,
     supportsFunctions: true,
@@ -316,7 +317,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 750000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 200000,
-    maxOutputTokens: 32000,
+    maxOutputTokens: 32000, // Claude Opus 4 maximum per docs
     supportsStreaming: true,
     supportsVision: true,
     supportsFunctions: true,
@@ -338,7 +339,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 150000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 200000,
-    maxOutputTokens: 8192,
+    maxOutputTokens: 8192, // Claude 3.5 Sonnet maximum (with beta header)
     supportsStreaming: true,
     supportsVision: true,
     supportsFunctions: true,
@@ -358,7 +359,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 40000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 200000,
-    maxOutputTokens: 8192,
+    maxOutputTokens: 10000, // Claude 3 Haiku maximum per docs
     supportsStreaming: true,
     supportsVision: true,
     supportsFunctions: false,
@@ -382,7 +383,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 100000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 2000000,
-    maxOutputTokens: 8192,
+    maxOutputTokens: 65535, // Gemini 2.5 maximum per docs
     supportsStreaming: true,
     supportsVision: true,
     supportsAudio: true,
@@ -404,7 +405,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 25000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 1000000,
-    maxOutputTokens: 8192,
+    maxOutputTokens: 65535, // Gemini 2.5 maximum per docs
     supportsStreaming: true,
     supportsVision: true,
     supportsAudio: true,
@@ -425,7 +426,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 4000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 1000000,
-    maxOutputTokens: 8192,
+    maxOutputTokens: 65535, // Gemini 2.5 maximum per docs
     supportsStreaming: true,
     supportsVision: true,
     supportsFunctions: true,
@@ -447,7 +448,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 4000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 1000000,
-    maxOutputTokens: 8192,
+    maxOutputTokens: 8192, // Gemini 2.0 maximum per docs
     supportsStreaming: true,
     supportsVision: true,
     supportsFunctions: true,
@@ -467,7 +468,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 50000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 2000000,
-    maxOutputTokens: 8192,
+    maxOutputTokens: 8192, // Gemini 1.5 default
     supportsStreaming: true,
     supportsVision: true,
     supportsAudio: true,
@@ -499,7 +500,9 @@ async function seedModelPricing() {
         isActive: true,
       },
     });
-    console.log(`  ✓ ${model.displayName.padEnd(35)} (${model.provider})`);
+    console.log(
+      `  ✓ ${model.displayName.padEnd(35)} (${model.provider}) - ${model.maxOutputTokens} max output`,
+    );
   }
 
   console.log(`\n✅ Seeded ${MODEL_PRICING_DATA.length} model pricing tiers`);
@@ -508,6 +511,7 @@ async function seedModelPricing() {
   console.log('  Anthropic:  5 models (Claude 4.5, 4.1, 3.5)');
   console.log('  Google:     5 models (Gemini 2.5, 2.0, 1.5)');
   console.log('\n💰 Based on official October 2025 pricing');
+  console.log('📏 Updated maxOutputTokens per official documentation');
 }
 
 // Run the seed

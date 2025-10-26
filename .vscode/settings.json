@@ -1,3 +1,15 @@
 {
-  "cSpell.words": ["actopod", "BYOK", "cuid", "Flopods", "ILLM", "Timestamptz"]
+  "cSpell.words": [
+    "actopod",
+    "BYOK",
+    "connectionline",
+    "contenteditable",
+    "cuid",
+    "doctag",
+    "Flopods",
+    "ILLM",
+    "nodrag",
+    "reactflow",
+    "Timestamptz"
+  ]
 }

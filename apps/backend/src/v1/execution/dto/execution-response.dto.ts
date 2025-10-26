@@ -1,3 +1,5 @@
+// File: apps/backend/src/v1/execution/dto/execution-response.dto.ts
+
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
 import { PodExecutionStatus, LLMProvider } from '@actopod/schema';
@@ -174,6 +176,10 @@ export class ExecutionDetailDto {
 
   @Expose()
   runtimeInMs!: number | null;
+
+  @ApiProperty({ description: 'Request metadata (user input, params)', required: false })
+  @Expose()
+  requestMetadata!: any; // ✅ Added for user input
 
   @ApiProperty({ description: 'Raw response from LLM provider' })
   @Expose()

@@ -31,14 +31,16 @@ export class V1EdgeService {
     dto: CreateEdgeDto,
   ): Promise<EdgeResponseDto> {
     try {
+      // Verify flow exists in workspace
       const flow = await this.prisma.flow.findFirst({
         where: { id: dto.flowId, workspaceId },
       });
 
       if (!flow) {
-        throw new NotFoundException('Flow not found');
+        throw new NotFoundException(`Flow ${dto.flowId} not found`);
       }
 
+      // Verify both pods exist in the flow
       const [sourcePod, targetPod] = await Promise.all([
         this.prisma.pod.findFirst({
           where: { id: dto.sourcePodId, flowId: dto.flowId },
@@ -48,10 +50,35 @@ export class V1EdgeService {
         }),
       ]);
 
-      if (!sourcePod || !targetPod) {
-        throw new BadRequestException('Source or target pod not found');
+      if (!sourcePod) {
+        throw new BadRequestException(`Source pod ${dto.sourcePodId} not found in flow`);
       }
 
+      if (!targetPod) {
+        throw new BadRequestException(`Target pod ${dto.targetPodId} not found in flow`);
+      }
+
+      // Prevent self-loops
+      if (dto.sourcePodId === dto.targetPodId) {
+        throw new BadRequestException('Cannot create edge from pod to itself');
+      }
+
+      // Check for duplicate edges
+      const existingEdge = await this.prisma.edge.findFirst({
+        where: {
+          flowId: dto.flowId,
+          sourcePodId: dto.sourcePodId,
+          targetPodId: dto.targetPodId,
+          sourceHandle: dto.sourceHandle || null,
+          targetHandle: dto.targetHandle || null,
+        },
+      });
+
+      if (existingEdge) {
+        throw new BadRequestException('Edge already exists between these pods and handles');
+      }
+
+      // Create edge in PostgreSQL
       const edge = await this.prisma.edge.create({
         data: {
           flowId: dto.flowId,
@@ -63,24 +90,35 @@ export class V1EdgeService {
         },
       });
 
+      // Update DynamoDB connectedPods
       const tableName = this.dynamoDb.getTableNames().pods;
-      const sourceItem = await this.dynamoDb.getItem(tableName, {
-        pk: sourcePod.dynamoPartitionKey,
-        sk: sourcePod.dynamoSortKey,
-      });
-
-      if (sourceItem) {
-        const updatedConnectedPods = [
-          ...new Set([...(sourceItem.connectedPods || []), dto.targetPodId]),
-        ];
-        await this.dynamoDb.putItem(tableName, {
-          ...sourceItem,
-          connectedPods: updatedConnectedPods,
-          updatedAt: new Date().toISOString(),
+      try {
+        const sourceItem = await this.dynamoDb.getItem(tableName, {
+          pk: sourcePod.dynamoPartitionKey,
+          sk: sourcePod.dynamoSortKey,
         });
+
+        if (sourceItem) {
+          const updatedConnectedPods = [
+            ...new Set([...(sourceItem.connectedPods || []), dto.targetPodId]),
+          ];
+          await this.dynamoDb.putItem(tableName, {
+            ...sourceItem,
+            connectedPods: updatedConnectedPods,
+            updatedAt: new Date().toISOString(),
+          });
+        }
+      } catch (dynamoError) {
+        this.logger.warn(
+          `Failed to update connectedPods in DynamoDB for pod ${dto.sourcePodId}:`,
+          dynamoError,
+        );
+        // Don't fail edge creation if DynamoDB update fails
       }
 
-      this.logger.log(`✅ Edge created: ${edge.id} (${dto.sourcePodId} → ${dto.targetPodId})`);
+      this.logger.log(
+        `✅ Edge created: ${edge.id} (${dto.sourcePodId} → ${dto.targetPodId}) by user ${userId}`,
+      );
 
       const result = plainToInstance(EdgeResponseDto, edge, {
         excludeExtraneousValues: true,
@@ -90,6 +128,7 @@ export class V1EdgeService {
       this.flowGateway.broadcastToFlow(dto.flowId, 'edge:created', {
         edge: result,
         userId,
+        timestamp: new Date().toISOString(),
       });
 
       return result;
@@ -105,6 +144,7 @@ export class V1EdgeService {
    */
   async deleteEdge(edgeId: string, workspaceId: string, userId: string): Promise<void> {
     try {
+      // Fetch edge with related pods
       const edge = await this.prisma.edge.findFirst({
         where: {
           id: edgeId,
@@ -117,28 +157,38 @@ export class V1EdgeService {
       });
 
       if (!edge) {
-        throw new NotFoundException('Edge not found');
+        throw new NotFoundException(`Edge ${edgeId} not found`);
       }
 
       const flowId = edge.flowId;
 
+      // Update DynamoDB connectedPods
       const tableName = this.dynamoDb.getTableNames().pods;
-      const sourceItem = await this.dynamoDb.getItem(tableName, {
-        pk: edge.sourcePod.dynamoPartitionKey,
-        sk: edge.sourcePod.dynamoSortKey,
-      });
-
-      if (sourceItem) {
-        const updatedConnectedPods = (sourceItem.connectedPods || []).filter(
-          (podId: string) => podId !== edge.targetPodId,
-        );
-        await this.dynamoDb.putItem(tableName, {
-          ...sourceItem,
-          connectedPods: updatedConnectedPods,
-          updatedAt: new Date().toISOString(),
+      try {
+        const sourceItem = await this.dynamoDb.getItem(tableName, {
+          pk: edge.sourcePod.dynamoPartitionKey,
+          sk: edge.sourcePod.dynamoSortKey,
         });
+
+        if (sourceItem) {
+          const updatedConnectedPods = (sourceItem.connectedPods || []).filter(
+            (podId: string) => podId !== edge.targetPodId,
+          );
+          await this.dynamoDb.putItem(tableName, {
+            ...sourceItem,
+            connectedPods: updatedConnectedPods,
+            updatedAt: new Date().toISOString(),
+          });
+        }
+      } catch (dynamoError) {
+        this.logger.warn(
+          `Failed to update connectedPods in DynamoDB for pod ${edge.sourcePodId}:`,
+          dynamoError,
+        );
+        // Don't fail edge deletion if DynamoDB update fails
       }
 
+      // Delete edge from PostgreSQL
       await this.prisma.edge.delete({
         where: { id: edgeId },
       });
@@ -149,6 +199,7 @@ export class V1EdgeService {
       this.flowGateway.broadcastToFlow(flowId, 'edge:deleted', {
         edgeId,
         userId,
+        timestamp: new Date().toISOString(),
       });
     } catch (error) {
       if (error instanceof NotFoundException) throw error;

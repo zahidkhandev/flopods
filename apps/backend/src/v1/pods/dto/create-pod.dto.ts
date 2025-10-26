@@ -42,9 +42,13 @@ export class LLMConfigDto {
   @IsString()
   systemPrompt?: string;
 
-  @ApiProperty({ example: 'Analyze the following data: {{input}}' })
+  @ApiPropertyOptional({
+    example: 'Analyze the following data: {{input}}',
+    description: 'User prompt template. Can be empty initially.',
+  })
+  @IsOptional()
   @IsString()
-  userPrompt!: string;
+  userPrompt?: string;
 
   @ApiPropertyOptional({
     minimum: 0,

@@ -1,36 +1,36 @@
-// pages/dashboard/flows/[id]/index.tsx
-import { useCallback, useRef, useEffect, useState, useMemo } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import ReactFlow, {
-  Background,
   Controls,
   MiniMap,
   Connection,
-  addEdge,
-  useNodesState,
-  useEdgesState,
-  NodeChange,
-  EdgeChange,
-  Edge,
-  Node,
   Panel,
   ReactFlowProvider,
+  NodeTypes,
+  EdgeTypes,
+  Node,
+  Edge,
+  NodeChange,
+  EdgeChange,
+  useReactFlow,
+  useNodesInitialized,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Loader2, Plus, Square, Circle, Diamond } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { Loader2, Upload, Sparkles } from 'lucide-react';
 import { useFlowSocket } from './hooks/use-flow-socket';
 import { useSetBreadcrumbs } from '@/hooks/use-set-breadcrumbs';
 import { axiosInstance } from '@/lib/axios-instance';
 import { useWorkspaces } from '@/hooks/use-workspaces';
+import { CanvasProvider, useCanvas } from './context/canvas-context';
+import { ModelsProvider } from './context/models-context';
+import SourcePodNode from './components/pods/source-pod-node';
+import LLMPodNode from './components/pods/llm-pod-node';
+import ConfigPanel from './components/panels/config-panel';
+import AnimatedEdge from './components/edges/animated-edge';
+import CanvasBackground from './components/canvas/canvas-background';
+import SaveToolbar from './components/toolbar/save-toolbar';
+import { PodExecutionStatus } from './types';
+import { toast } from 'sonner';
 
 interface FlowDetails {
   id: string;
@@ -49,30 +49,98 @@ interface FlowDetails {
   collaboratorCount: number;
 }
 
-function debounce<T extends (...args: any[]) => void>(
-  func: T,
-  delay: number
-): (...args: Parameters<T>) => void {
-  let timeoutId: NodeJS.Timeout;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => func(...args), delay);
-  };
-}
+const nodeTypes: NodeTypes = {
+  SOURCE: SourcePodNode,
+  LLM: LLMPodNode,
+};
+
+const edgeTypes: EdgeTypes = {
+  animated: AnimatedEdge,
+};
 
 function FlowEditor() {
   const { id: flowId } = useParams<{ id: string }>();
   const { currentWorkspaceId } = useWorkspaces();
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const { screenToFlowPosition, fitView } = useReactFlow();
+  const nodesInitialized = useNodesInitialized();
+
+  const {
+    nodes,
+    edges,
+    onNodesChange,
+    onEdgesChange,
+    addNode,
+    addEdge,
+    deleteNode,
+    deleteEdge,
+    isInitializing,
+    setNodeStatus,
+    setNodes,
+    setEdges,
+
+    save,
+    hasUnsavedChanges,
+    isSaving,
+  } = useCanvas();
+
+  // ✅ Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Don't trigger if user is typing in an input/textarea
+      const target = event.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const isCtrlOrCmd = isMac ? event.metaKey : event.ctrlKey;
+
+      // Ctrl/Cmd + S: Save
+      if (isCtrlOrCmd && event.key === 's') {
+        event.preventDefault();
+        if (hasUnsavedChanges && !isSaving) {
+          save();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [save, hasUnsavedChanges, isSaving]);
   const [flowDetails, setFlowDetails] = useState<FlowDetails | null>(null);
   const [isLoadingFlow, setIsLoadingFlow] = useState(true);
+  const [selectedPodId, setSelectedPodId] = useState<string | null>(null);
+  const [contextMenuPosition, setContextMenuPosition] = useState<{ x: number; y: number } | null>(
+    null
+  );
+  const [hasInitialFitView, setHasInitialFitView] = useState(false);
 
-  const emitNodesUpdateRef = useRef<((nodes: Node[]) => void) | null>(null);
-  const emitEdgesUpdateRef = useRef<((edges: Edge[]) => void) | null>(null);
-  const nodeIdCounter = useRef(0);
+  // ✅ Handle double-click to open config panel
+  const handleNodeDoubleClick = useCallback((_event: React.MouseEvent, node: Node) => {
+    setSelectedPodId(node.id);
+  }, []);
 
-  // ✅ Fetch flow details
+  // ✅ Track selection without opening panel (only close if deselected)
+  useEffect(() => {
+    const selectedNode = nodes.find((n) => n.selected);
+    // Only close panel if no node is selected
+    if (selectedPodId && !selectedNode) {
+      setSelectedPodId(null);
+    }
+  }, [nodes, selectedPodId]);
+
+  useEffect(() => {
+    if (nodesInitialized && nodes.length > 0 && !hasInitialFitView) {
+      fitView({
+        padding: 0.5,
+        duration: 0,
+        minZoom: 0.1,
+        maxZoom: 0.5,
+      });
+      setHasInitialFitView(true);
+    }
+  }, [nodesInitialized, nodes.length, hasInitialFitView, fitView]);
+
   useEffect(() => {
     const fetchFlow = async () => {
       if (!currentWorkspaceId || !flowId) return;
@@ -121,121 +189,84 @@ function FlowEditor() {
 
   useSetBreadcrumbs(breadcrumbs);
 
-  const handleNodesUpdate = useCallback(
-    (updatedNodes: Node[]) => {
-      setNodes(updatedNodes);
+  const handleExecutionStarted = useCallback(
+    (podId: string) => {
+      setNodeStatus(podId, PodExecutionStatus.RUNNING);
     },
-    [setNodes]
+    [setNodeStatus]
   );
 
-  const handleEdgesUpdate = useCallback(
-    (updatedEdges: Edge[]) => {
-      setEdges(updatedEdges);
+  const handleExecutionCompleted = useCallback(
+    (podId: string) => {
+      setNodeStatus(podId, PodExecutionStatus.COMPLETED);
+      toast.success('Execution completed');
     },
-    [setEdges]
+    [setNodeStatus]
   );
 
-  const handleNodeAdded = useCallback(
-    (node: Node) => {
-      setNodes((nds) => {
-        if (nds.some((n) => n.id === node.id)) return nds;
-        return [...nds, node];
-      });
+  const handleExecutionError = useCallback(
+    (podId: string) => {
+      setNodeStatus(podId, PodExecutionStatus.ERROR);
+      toast.error('Execution failed');
     },
-    [setNodes]
+    [setNodeStatus]
   );
 
-  const handleNodeDeleted = useCallback(
-    (nodeId: string) => {
-      setNodes((nds) => nds.filter((n) => n.id !== nodeId));
-    },
-    [setNodes]
-  );
-
-  const handleEdgeAdded = useCallback(
-    (edge: Edge) => {
-      setEdges((eds) => {
-        if (eds.some((e) => e.id === edge.id)) return eds;
-        return [...eds, edge];
-      });
-    },
-    [setEdges]
-  );
-
-  const handleEdgeDeleted = useCallback(
-    (edgeId: string) => {
-      setEdges((eds) => eds.filter((e) => e.id !== edgeId));
-    },
-    [setEdges]
-  );
-
-  const { emitNodesUpdate, emitEdgesUpdate, emitNodeAdd, emitEdgeAdd } = useFlowSocket(
-    flowId!,
-    handleNodesUpdate,
-    handleEdgesUpdate,
-    handleNodeAdded,
-    handleNodeDeleted,
-    handleEdgeAdded,
-    handleEdgeDeleted
-  );
-
-  useEffect(() => {
-    emitNodesUpdateRef.current = debounce(emitNodesUpdate, 300);
-    emitEdgesUpdateRef.current = debounce(emitEdgesUpdate, 300);
-  }, [emitNodesUpdate, emitEdgesUpdate]);
-
-  const handleNodesChangeLocal = useCallback(
+  const handleExternalNodeChanges = useCallback(
     (changes: NodeChange[]) => {
       onNodesChange(changes);
-
-      if ('requestIdleCallback' in window) {
-        requestIdleCallback(() => {
-          if (emitNodesUpdateRef.current) {
-            setNodes((currentNodes) => {
-              emitNodesUpdateRef.current!(currentNodes);
-              return currentNodes;
-            });
-          }
-        });
-      } else {
-        setTimeout(() => {
-          if (emitNodesUpdateRef.current) {
-            setNodes((currentNodes) => {
-              emitNodesUpdateRef.current!(currentNodes);
-              return currentNodes;
-            });
-          }
-        }, 0);
-      }
     },
-    [onNodesChange, setNodes]
+    [onNodesChange]
   );
 
-  const handleEdgesChangeLocal = useCallback(
+  const handleExternalEdgeChanges = useCallback(
     (changes: EdgeChange[]) => {
       onEdgesChange(changes);
-
-      if ('requestIdleCallback' in window) {
-        requestIdleCallback(() => {
-          if (emitEdgesUpdateRef.current) {
-            setEdges((currentEdges) => {
-              emitEdgesUpdateRef.current!(currentEdges);
-              return currentEdges;
-            });
-          }
-        });
-      } else {
-        setTimeout(() => {
-          if (emitEdgesUpdateRef.current) {
-            setEdges((currentEdges) => {
-              emitEdgesUpdateRef.current!(currentEdges);
-              return currentEdges;
-            });
-          }
-        }, 0);
-      }
     },
-    [onEdgesChange, setEdges]
+    [onEdgesChange]
+  );
+
+  const handleExternalNodeAdded = useCallback(
+    (node: Node) => {
+      setNodes((nds) => [...nds, node]);
+    },
+    [setNodes]
+  );
+
+  const handleExternalNodeDeleted = useCallback(
+    (nodeId: string) => {
+      deleteNode(nodeId);
+    },
+    [deleteNode]
+  );
+
+  const handleExternalEdgeAdded = useCallback(
+    (edge: Edge) => {
+      setEdges((eds) => [...eds, edge]);
+    },
+    [setEdges]
+  );
+
+  const handleExternalEdgeDeleted = useCallback(
+    (edgeId: string) => {
+      deleteEdge(edgeId);
+    },
+    [deleteEdge]
+  );
+
+  useFlowSocket(
+    flowId!,
+    handleExternalNodeChanges,
+    handleExternalEdgeChanges,
+    setNodes,
+    setEdges,
+    handleExternalNodeAdded,
+    handleExternalNodeDeleted,
+    handleExternalEdgeAdded,
+    handleExternalEdgeDeleted,
+    handleExecutionStarted,
+    handleExecutionCompleted,
+    handleExecutionError
   );
 
   const onConnect = useCallback(
@@ -244,42 +275,78 @@ function FlowEditor() {
         console.warn('[FlowEditor] Invalid connection');
         return;
       }
-
-      const newEdge: Edge = {
-        id: `edge-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      addEdge({
         source: connection.source,
         target: connection.target,
         sourceHandle: connection.sourceHandle,
         targetHandle: connection.targetHandle,
-      };
-
-      setEdges((eds) => addEdge(newEdge, eds));
-      emitEdgeAdd(newEdge);
+        type: 'animated',
+      });
     },
-    [setEdges, emitEdgeAdd]
+    [addEdge]
   );
 
-  // ✅ Add node function
-  const addNode = useCallback(
-    (type: 'default' | 'input' | 'output') => {
-      const id = `node-${++nodeIdCounter.current}`;
-      const newNode: Node = {
-        id,
-        type,
-        position: {
-          x: Math.random() * 400 + 100,
-          y: Math.random() * 400 + 100,
+  const handleAddSourcePod = useCallback(async () => {
+    if (!contextMenuPosition) return;
+
+    const position = screenToFlowPosition({
+      x: contextMenuPosition.x,
+      y: contextMenuPosition.y,
+    });
+
+    const newNodeData: Partial<Node> = {
+      type: 'SOURCE',
+      position,
+      data: {
+        label: 'Text Input',
+        config: { sourceType: 'text', content: '' },
+        executionStatus: PodExecutionStatus.IDLE,
+        backendType: 'TEXT_INPUT',
+      },
+    };
+
+    await addNode(newNodeData);
+    setContextMenuPosition(null);
+  }, [contextMenuPosition, screenToFlowPosition, addNode]);
+
+  const handleAddLLMPod = useCallback(async () => {
+    if (!contextMenuPosition) return;
+
+    const position = screenToFlowPosition({
+      x: contextMenuPosition.x,
+      y: contextMenuPosition.y,
+    });
+
+    const newNodeData: Partial<Node> = {
+      type: 'LLM',
+      position,
+      data: {
+        label: 'LLM Prompt',
+        config: {
+          provider: 'OPENAI',
+          model: 'gpt-4o',
+          temperature: 0.7,
+          maxTokens: 2000,
+          systemPrompt: '',
         },
-        data: { label: `${type.charAt(0).toUpperCase() + type.slice(1)} Node` },
-      };
+        executionStatus: PodExecutionStatus.IDLE,
+        backendType: 'LLM_PROMPT',
+      },
+    };
 
-      setNodes((nds) => [...nds, newNode]);
-      emitNodeAdd(newNode);
-    },
-    [setNodes, emitNodeAdd]
-  );
+    await addNode(newNodeData);
+    setContextMenuPosition(null);
+  }, [contextMenuPosition, screenToFlowPosition, addNode]);
 
-  if (!flowId || isLoadingFlow || !currentWorkspaceId) {
+  const onPaneContextMenu = useCallback((event: React.MouseEvent) => {
+    event.preventDefault();
+    setContextMenuPosition({
+      x: event.clientX,
+      y: event.clientY,
+    });
+  }, []);
+
+  if (!flowId || isLoadingFlow || isInitializing || !currentWorkspaceId) {
     return (
       <div className="flex h-full items-center justify-center">
         <div className="flex items-center gap-2">
@@ -304,68 +371,96 @@ function FlowEditor() {
   }
 
   return (
-    <div className="absolute inset-0">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={handleNodesChangeLocal}
-        onEdgesChange={handleEdgesChangeLocal}
-        onConnect={onConnect}
-        fitView
-        attributionPosition="bottom-left"
-        proOptions={{ hideAttribution: true }}
-      >
-        <Background />
-        <Controls />
-        <MiniMap
-          nodeColor={(node) => {
-            switch (node.type) {
-              case 'input':
-                return '#22c55e';
-              case 'output':
-                return '#ef4444';
-              default:
-                return '#3b82f6';
-            }
+    <div className="flex h-full w-full overflow-hidden">
+      <div className="relative flex-1 overflow-hidden">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onPaneContextMenu={onPaneContextMenu}
+          onNodeDoubleClick={handleNodeDoubleClick}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          defaultEdgeOptions={{
+            type: 'animated',
+            animated: true,
           }}
-        />
+          minZoom={0.1}
+          maxZoom={2}
+          fitViewOptions={{
+            padding: 0.5,
+            includeHiddenNodes: false,
+            minZoom: 0.1,
+            maxZoom: 0.5,
+          }}
+          proOptions={{ hideAttribution: true }}
+          zoomOnScroll={true}
+          zoomOnPinch={true}
+          panOnScroll={false}
+          panOnDrag={true}
+          preventScrolling={true}
+          zoomActivationKeyCode={null}
+          nodesDraggable={true}
+          nodesConnectable={true}
+          elementsSelectable={true}
+        >
+          <CanvasBackground />
+          <Controls />
+          <MiniMap
+            nodeColor={(node) => {
+              switch (node.type) {
+                case 'SOURCE':
+                  return '#3b82f6';
+                case 'LLM':
+                  return '#a855f7';
+                default:
+                  return '#6b7280';
+              }
+            }}
+          />
 
-        {/* ✅ Add Node Toolbar */}
-        <Panel position="top-left" className="space-y-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="sm" className="gap-2">
-                <Plus className="h-4 w-4" />
-                Add Node
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuLabel>Node Types</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => addNode('default')}>
-                <Square className="mr-2 h-4 w-4" />
-                Default Node
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => addNode('input')}>
-                <Circle className="mr-2 h-4 w-4" />
-                Input Node
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => addNode('output')}>
-                <Diamond className="mr-2 h-4 w-4" />
-                Output Node
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </Panel>
+          <Panel position="top-left">
+            <SaveToolbar />
+          </Panel>
 
-        {/* ✅ Stats Panel */}
-        <Panel position="top-right" className="bg-background rounded-lg border p-2 shadow-sm">
-          <div className="text-muted-foreground text-xs">
-            <div>Nodes: {nodes.length}</div>
-            <div>Edges: {edges.length}</div>
+          <Panel position="top-right" className="bg-background rounded-lg border p-2 shadow-sm">
+            <div className="text-muted-foreground text-xs">
+              <div>Pods: {nodes.length}</div>
+              <div>Connections: {edges.length}</div>
+            </div>
+          </Panel>
+        </ReactFlow>
+
+        {contextMenuPosition && (
+          <div
+            className="bg-popover text-popover-foreground animate-in fade-in-80 fixed z-50 min-w-[200px] overflow-hidden rounded-md border p-1 shadow-md"
+            style={{
+              left: contextMenuPosition.x,
+              top: contextMenuPosition.y,
+            }}
+            onMouseLeave={() => setContextMenuPosition(null)}
+          >
+            <div
+              className="hover:bg-accent hover:text-accent-foreground relative flex cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm transition-colors outline-none select-none"
+              onClick={handleAddSourcePod}
+            >
+              <Upload className="mr-2 h-4 w-4" />
+              <span>Add Source Pod</span>
+            </div>
+            <div
+              className="hover:bg-accent hover:text-accent-foreground relative flex cursor-pointer items-center rounded-sm px-2 py-1.5 text-sm transition-colors outline-none select-none"
+              onClick={handleAddLLMPod}
+            >
+              <Sparkles className="mr-2 h-4 w-4" />
+              <span>Add LLM Pod</span>
+            </div>
           </div>
-        </Panel>
-      </ReactFlow>
+        )}
+      </div>
+
+      <ConfigPanel selectedPodId={selectedPodId} />
     </div>
   );
 }
@@ -373,7 +468,11 @@ function FlowEditor() {
 export default function FlowIdPage() {
   return (
     <ReactFlowProvider>
-      <FlowEditor />
+      <ModelsProvider>
+        <CanvasProvider>
+          <FlowEditor />
+        </CanvasProvider>
+      </ModelsProvider>
     </ReactFlowProvider>
   );
 }

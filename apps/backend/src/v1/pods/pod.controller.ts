@@ -51,9 +51,8 @@ export class V1PodController {
   async getCanvas(
     @Param('workspaceId') workspaceId: string,
     @Param('flowId') flowId: string,
-    @GetCurrentUserId() userId: string,
   ): Promise<FlowCanvasResponseDto> {
-    return this.podService.getFlowCanvas(flowId, workspaceId, userId);
+    return this.podService.getFlowCanvas(flowId, workspaceId);
   }
 
   // ==================== PODS ====================

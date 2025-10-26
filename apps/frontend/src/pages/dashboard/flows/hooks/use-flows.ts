@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { axiosInstance } from '@/lib/axios-instance';
 import { toast } from '@/lib/toast-utils';
 import { useWorkspaces } from '@/hooks/use-workspaces';
-import { Flow, FlowVisibility } from '../types/flow';
+import { Flow, FlowVisibility } from '../types';
 
 interface UseFlowsOptions {
   page?: number;

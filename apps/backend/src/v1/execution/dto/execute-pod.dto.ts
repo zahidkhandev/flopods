@@ -11,7 +11,6 @@ import {
   IsIn,
   Min,
   Max,
-  IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { LLMProvider } from '@actopod/schema';
@@ -44,10 +43,7 @@ export class ExecutePodDto {
   @ApiProperty({
     description: 'Messages to send to the LLM',
     type: [LLMMessageDto],
-    example: [
-      { role: 'system', content: 'You are a helpful assistant' },
-      { role: 'user', content: 'Hello!' },
-    ],
+    example: [{ role: 'user', content: 'Hello!' }],
   })
   @IsArray()
   @ValidateNested({ each: true })
@@ -73,6 +69,14 @@ export class ExecutePodDto {
   model?: string;
 
   @ApiPropertyOptional({
+    description: 'Override system prompt (overrides pod configuration)',
+    example: 'You are an expert in quantum physics',
+  })
+  @IsOptional()
+  @IsString()
+  systemPrompt?: string;
+
+  @ApiPropertyOptional({
     description: 'Override sampling temperature (0-2)',
     minimum: 0,
     maximum: 2,
@@ -87,32 +91,69 @@ export class ExecutePodDto {
   @ApiPropertyOptional({
     description: 'Override maximum tokens to generate',
     minimum: 1,
-    maximum: 128000,
+    maximum: 128000000,
     example: 2048,
   })
   @IsOptional()
   @IsNumber()
   @Min(1)
-  @Max(128000)
+  @Max(128000000)
   maxTokens?: number;
+
+  @ApiPropertyOptional({
+    description: 'Override top-p nucleus sampling (0-1)',
+    minimum: 0,
+    maximum: 1,
+    example: 0.9,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(1)
+  topP?: number;
+
+  @ApiPropertyOptional({
+    description: 'Override presence penalty (-2 to 2)',
+    minimum: -2,
+    maximum: 2,
+    example: 0,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(-2)
+  @Max(2)
+  presencePenalty?: number;
+
+  @ApiPropertyOptional({
+    description: 'Override frequency penalty (-2 to 2)',
+    minimum: -2,
+    maximum: 2,
+    example: 0,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(-2)
+  @Max(2)
+  frequencyPenalty?: number;
 
   @ApiPropertyOptional({
     description: 'Override thinking budget for reasoning models',
     minimum: 1000,
-    maximum: 100000,
+    maximum: 128000000,
     example: 10000,
   })
   @IsOptional()
   @IsNumber()
   @Min(1000)
-  @Max(100000)
+  @Max(128000000)
   thinkingBudget?: number;
 
   @ApiPropertyOptional({
-    description: 'Execute in background (async mode)',
-    default: false,
+    description: 'Override response format',
+    enum: ['text', 'json_object', 'json'],
+    example: 'text',
   })
   @IsOptional()
-  @IsBoolean()
-  async?: boolean;
+  @IsIn(['text', 'json_object', 'json'])
+  responseFormat?: 'text' | 'json_object' | 'json';
 }

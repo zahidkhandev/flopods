@@ -1,15 +1,15 @@
-// execution.controller.ts
+// File: apps/backend/src/v1/execution/execution.controller.ts
 
 import {
   Controller,
   Post,
   Get,
-  Delete,
   Body,
   Param,
   Query,
   HttpCode,
   HttpStatus,
+  Res,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -19,37 +19,40 @@ import {
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
-import { ExecutionService } from './execution.service';
-import { ExecutionQueueService } from './execution-queue.service';
+import { Response } from 'express';
+import { V1ExecutionService } from './execution.service';
 import { ExecutePodDto } from './dto/execute-pod.dto';
-import {
-  ExecutionResultDto,
-  ExecutionHistoryItemDto,
-  ExecutionDetailDto,
-} from './dto/execution-response.dto';
+import { ExecutionHistoryItemDto, ExecutionDetailDto } from './dto/execution-response.dto';
 import { GetCurrentUserId } from '../../common/decorators/user';
 
 @ApiTags('Executions')
-@Controller('v1/workspaces/:workspaceId/executions')
+@Controller('workspaces/:workspaceId')
 @ApiBearerAuth()
 export class V1ExecutionController {
-  constructor(
-    private readonly executionService: ExecutionService,
-    private readonly queueService: ExecutionQueueService,
-  ) {}
+  constructor(private readonly executionService: V1ExecutionService) {}
 
-  @Post()
+  @Post('executions')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Execute a pod',
-    description:
-      'Execute a pod with specified LLM configuration. Supports both sync and async execution modes.',
+    summary: 'Execute a pod with instant streaming + conversation history',
+    description: `
+      Execute a pod with real-time streaming response.
+
+      **Key Features:**
+      - ✅ Instant token streaming (no queuing)
+      - ✅ Automatic conversation history (last 20 turns)
+      - ✅ Full upstream context from connected pods
+      - ✅ Variable interpolation ({{podId}})
+
+      **Conversation History:**
+      Each pod maintains its own conversation thread. The last 20 executions
+      are automatically included as context for continuity.
+    `,
   })
   @ApiParam({ name: 'workspaceId', description: 'Workspace ID', example: 'cm2abc123' })
   @ApiResponse({
     status: 200,
-    description: 'Execution completed (sync) or queued (async)',
-    type: ExecutionResultDto,
+    description: 'Streaming execution (SSE format)',
   })
   @ApiResponse({ status: 400, description: 'Invalid request or missing API key' })
   @ApiResponse({ status: 404, description: 'Pod not found' })
@@ -57,91 +60,83 @@ export class V1ExecutionController {
     @Param('workspaceId') workspaceId: string,
     @GetCurrentUserId('id') userId: string,
     @Body() dto: ExecutePodDto,
-  ): Promise<ExecutionResultDto | { executionId: string; status: string }> {
-    if (dto.async) {
-      // Queue execution for background processing
-      const pod = await this.executionService['prisma'].pod.findFirst({
-        where: { id: dto.podId },
-        select: { flowId: true },
+    @Res({ passthrough: false }) res: Response,
+  ): Promise<void> {
+    if (!dto.podId || !dto.messages || dto.messages.length === 0) {
+      res.status(400).json({
+        error: 'Invalid request',
+        message: 'podId and messages are required',
       });
+      return;
+    }
 
-      if (!pod) {
-        throw new Error('Pod not found');
-      }
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
 
-      const executionId = `exec_${Date.now()}`;
-      await this.queueService.queueExecution({
-        executionId,
+    try {
+      const stream = this.executionService.executePod({
         podId: dto.podId,
         workspaceId,
         userId,
-        flowId: pod.flowId,
         messages: dto.messages,
-        provider: dto.provider, // Already LLMProvider type
+        provider: dto.provider,
         model: dto.model,
+        systemPrompt: dto.systemPrompt,
         temperature: dto.temperature,
         maxTokens: dto.maxTokens,
+        topP: dto.topP,
+        presencePenalty: dto.presencePenalty,
+        frequencyPenalty: dto.frequencyPenalty,
         thinkingBudget: dto.thinkingBudget,
+        responseFormat: dto.responseFormat,
       });
 
-      return {
-        executionId,
-        status: 'queued',
-      };
-    }
+      for await (const chunk of stream) {
+        res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+      }
 
-    // Execute synchronously
-    return this.executionService.executePod({
-      ...dto,
-      workspaceId,
-      userId,
-    });
+      res.write('data: [DONE]\n\n');
+      res.end();
+    } catch (error) {
+      res.write(
+        `data: ${JSON.stringify({
+          type: 'error',
+          error: error instanceof Error ? error.message : 'Unknown error',
+          timestamp: new Date().toISOString(),
+        })}\n\n`,
+      );
+      res.end();
+    }
   }
 
-  @Get('pod/:podId')
-  @ApiOperation({ summary: 'Get pod execution history' })
+  @Get('flows/:flowId/executions/pods/:podId')
+  @ApiOperation({
+    summary: 'Get execution history for a specific pod',
+    description: 'Returns the latest execution history for a pod (max 100 executions)',
+  })
   @ApiParam({ name: 'workspaceId', description: 'Workspace ID' })
+  @ApiParam({ name: 'flowId', description: 'Flow ID' })
   @ApiParam({ name: 'podId', description: 'Pod ID', example: 'pod_1234567890_abc123' })
-  @ApiQuery({ name: 'limit', required: false, example: 10 })
+  @ApiQuery({ name: 'limit', required: false, example: 10, description: 'Max 100' })
   @ApiResponse({ status: 200, type: [ExecutionHistoryItemDto] })
-  async getPodExecutions(
+  async getPodExecutionsByPodId(
     @Param('podId') podId: string,
     @Query('limit') limit?: string,
   ): Promise<ExecutionHistoryItemDto[]> {
-    return this.executionService.getPodExecutions(podId, limit ? parseInt(limit, 10) : 10);
+    const parsedLimit = limit ? Math.min(parseInt(limit, 10), 100) : 10;
+    return this.executionService.getPodExecutions(podId, parsedLimit);
   }
 
-  @Get(':executionId')
-  @ApiOperation({ summary: 'Get execution details' })
+  @Get('executions/:executionId')
+  @ApiOperation({ summary: 'Get detailed execution information' })
   @ApiParam({ name: 'workspaceId', description: 'Workspace ID' })
   @ApiParam({ name: 'executionId', description: 'Execution ID', example: 'exec_cm2abc123' })
   @ApiResponse({ status: 200, type: ExecutionDetailDto })
   @ApiResponse({ status: 404, description: 'Execution not found' })
   async getExecution(@Param('executionId') executionId: string): Promise<ExecutionDetailDto> {
     return this.executionService.getExecution(executionId);
-  }
-
-  @Delete(':executionId')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Cancel queued execution' })
-  @ApiParam({ name: 'executionId', description: 'Execution ID' })
-  @ApiResponse({ status: 204, description: 'Execution cancelled' })
-  async cancelExecution(@Param('executionId') executionId: string): Promise<void> {
-    await this.queueService.cancelExecution(executionId);
-  }
-
-  @Get('queue/metrics')
-  @ApiOperation({ summary: 'Get queue metrics' })
-  @ApiResponse({ status: 200, description: 'Queue metrics' })
-  async getQueueMetrics() {
-    return this.queueService.getQueueMetrics();
-  }
-
-  @Get(':executionId/status')
-  @ApiOperation({ summary: 'Get execution queue status' })
-  @ApiParam({ name: 'executionId', description: 'Execution ID' })
-  @ApiResponse({ status: 200, description: 'Execution queue status' })
-  async getExecutionStatus(@Param('executionId') executionId: string) {
-    return this.queueService.getExecutionQueueStatus(executionId);
   }
 }

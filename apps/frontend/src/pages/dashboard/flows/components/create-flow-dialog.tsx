@@ -1,3 +1,4 @@
+// File: apps/frontend/src/pages/dashboard/flows/components/create-flow-dialog.tsx
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -20,7 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useFlows } from '../hooks/use-flows';
-import { FlowVisibility } from '../types/flow';
+import { FlowVisibility } from '../types';
 
 interface CreateFlowDialogProps {
   open: boolean;
@@ -39,21 +40,37 @@ export function CreateFlowDialog({ open, onOpenChange }: CreateFlowDialogProps) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!formData.name.trim()) {
+      return; // ✅ Guard clause
+    }
+
     setIsLoading(true);
 
-    const flow = await createFlow(formData);
-    setIsLoading(false);
+    try {
+      const flow = await createFlow(formData);
 
-    if (flow) {
-      onOpenChange(false);
-      setFormData({ name: '', description: '', visibility: FlowVisibility.PRIVATE });
-      navigate(`/dashboard/flows/${flow.id}`);
+      if (flow) {
+        onOpenChange(false);
+        setFormData({ name: '', description: '', visibility: FlowVisibility.PRIVATE });
+        navigate(`/dashboard/flows/${flow.id}`);
+      }
+    } catch (error) {
+      console.error('Failed to create flow:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent
+        className="sm:max-w-[500px]"
+        onPointerDownOutside={(e) => {
+          // ✅ Prevent closing when clicking outside
+          if (isLoading) e.preventDefault();
+        }}
+      >
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Create New Flow</DialogTitle>
@@ -68,7 +85,9 @@ export function CreateFlowDialog({ open, onOpenChange }: CreateFlowDialogProps) 
                 placeholder="My AI Workflow"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                disabled={isLoading}
                 required
+                autoFocus
               />
             </div>
 
@@ -79,6 +98,7 @@ export function CreateFlowDialog({ open, onOpenChange }: CreateFlowDialogProps) 
                 placeholder="Describe what this workflow does..."
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                disabled={isLoading}
                 rows={3}
               />
             </div>
@@ -90,8 +110,9 @@ export function CreateFlowDialog({ open, onOpenChange }: CreateFlowDialogProps) 
                 onValueChange={(value) =>
                   setFormData({ ...formData, visibility: value as FlowVisibility })
                 }
+                disabled={isLoading}
               >
-                <SelectTrigger>
+                <SelectTrigger id="visibility">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -104,10 +125,15 @@ export function CreateFlowDialog({ open, onOpenChange }: CreateFlowDialogProps) 
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isLoading}
+            >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading || !formData.name}>
+            <Button type="submit" disabled={isLoading || !formData.name.trim()}>
               {isLoading ? 'Creating...' : 'Create Flow'}
             </Button>
           </DialogFooter>

@@ -78,6 +78,7 @@ export abstract class BaseLLMProvider implements ILLMProvider {
     const status = error.response?.status;
     const errorData = error.response?.data;
 
+    // Handle specific HTTP status codes
     if (status === 401 || status === 403) {
       throw new Error(`Invalid or expired API key for ${provider}`);
     }
@@ -97,39 +98,67 @@ export abstract class BaseLLMProvider implements ILLMProvider {
     if (status === 500 || status === 503) {
       throw new Error(`${provider} service unavailable. Please try again later.`);
     }
+    if (status === 502 || status === 504) {
+      throw new Error(`${provider} gateway timeout. Please try again.`);
+    }
 
+    // Handle timeout errors
+    if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+      throw new Error(`${provider} request timeout. Please try again.`);
+    }
+
+    // Handle network errors
+    if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+      throw new Error(`${provider} network error. Check your internet connection.`);
+    }
+
+    // Generic error
     const message = error.message || 'Unknown error';
     throw new Error(`${provider} execution failed: ${message}`);
   }
 
   /**
-   * Retry with exponential backoff
+   * Retry with exponential backoff and jitter
    */
   protected async retryWithBackoff<T>(
     fn: () => Promise<T>,
     maxRetries: number = 3,
     baseDelay: number = 1000,
   ): Promise<T> {
-    for (let i = 0; i < maxRetries; i++) {
+    let lastError: any;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
         return await fn();
       } catch (error: any) {
-        // Don't retry on auth or bad request errors
-        if (
-          error.response?.status === 401 ||
-          error.response?.status === 403 ||
-          error.response?.status === 400
-        ) {
+        lastError = error;
+
+        // Don't retry on client errors (4xx except 429)
+        const status = error.response?.status;
+        if (status && status >= 400 && status < 500 && status !== 429) {
+          this.logger.warn(`Non-retryable error (${status}), failing immediately`);
           throw error;
         }
 
-        if (i === maxRetries - 1) throw error;
+        // Don't retry if this is the last attempt
+        if (attempt === maxRetries - 1) {
+          this.logger.error(`Max retries (${maxRetries}) exceeded`);
+          throw error;
+        }
 
-        const delay = baseDelay * Math.pow(2, i);
-        this.logger.warn(`Retry ${i + 1}/${maxRetries} after ${delay}ms`);
+        // Calculate delay with exponential backoff + jitter
+        const exponentialDelay = baseDelay * Math.pow(2, attempt);
+        const jitter = Math.random() * 1000; // Random 0-1000ms jitter
+        const delay = Math.min(exponentialDelay + jitter, 30000); // Cap at 30 seconds
+
+        this.logger.warn(
+          `Retry ${attempt + 1}/${maxRetries} after ${Math.round(delay)}ms (status: ${status || 'unknown'})`,
+        );
+
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
-    throw new Error('Max retries exceeded');
+
+    throw lastError;
   }
 }
