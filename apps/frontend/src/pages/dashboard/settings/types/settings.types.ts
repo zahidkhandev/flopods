@@ -133,6 +133,6 @@ export interface AddMemberDto {
  */
 export interface SendInvitationDto {
   email: string;
-  role?: 'ADMIN' | 'MEMBER' | 'VIEWER';
-  permissions?: Record<string, boolean>;
+  role?: 'MEMBER' | 'ADMIN' | 'VIEWER';
+  permissions?: Record<string, boolean> | null;
 }

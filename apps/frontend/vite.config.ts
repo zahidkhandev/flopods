@@ -11,14 +11,28 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  server: {
-    port: process.env.FRONTEND_PORT ? parseInt(process.env.FRONTEND_PORT) : 5173,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:5173',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': [
+            'framer-motion',
+            'lucide-react',
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+          ],
+          reactflow: ['reactflow'],
+          markdown: ['react-markdown', 'remark-gfm', 'highlight.js'],
+        },
       },
     },
+    chunkSizeWarningLimit: 1000, // Suppress warning temporarily
+  },
+  server: {
+    port: process.env.FRONTEND_PORT ? parseInt(process.env.FRONTEND_PORT) : 5173,
+  },
+  optimizeDeps: {
+    exclude: ['@actopod/schema'],
   },
 });

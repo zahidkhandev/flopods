@@ -1,9 +1,7 @@
-// hooks/useWorkspaceMembers.ts
-
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { toast } from 'sonner';
-import axiosInstance from '@/lib/axios-instance';
-import { WorkspaceMember, AddMemberDto } from '../types/settings.types';
+import { toast } from '@/lib/toast-utils';
+import { axiosInstance } from '@/lib/axios-instance';
+import { WorkspaceMember } from '../types/settings.types';
 
 interface UseWorkspaceMembersOptions {
   autoRefresh?: boolean;
@@ -14,7 +12,6 @@ interface UseWorkspaceMembersOptions {
 export function useWorkspaceMembers(workspaceId: string, options: UseWorkspaceMembersOptions = {}) {
   const { autoRefresh = false, refreshInterval = 30000, enableOptimisticUpdates = true } = options;
 
-  // ✅ INITIALIZE AS EMPTY ARRAY
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -30,19 +27,20 @@ export function useWorkspaceMembers(workspaceId: string, options: UseWorkspaceMe
         } else {
           setIsRefreshing(true);
         }
-        setError(null);
 
+        setError(null);
         const response = await axiosInstance.get(`/workspaces/${workspaceId}/members`);
 
-        // ✅ ENSURE ARRAY
-        setMembers(Array.isArray(response.data) ? response.data : []);
+        // Handle both wrapped and direct responses
+        const membersData = response.data?.data || response.data;
+        setMembers(Array.isArray(membersData) ? membersData : []);
       } catch (error: any) {
         const errorMessage = error.response?.data?.message || 'Failed to load members';
         setError(errorMessage);
         toast.error('Failed to load members', {
           description: errorMessage,
         });
-        setMembers([]); // ✅ SET EMPTY ARRAY ON ERROR
+        setMembers([]);
       } finally {
         setIsLoading(false);
         setIsRefreshing(false);
@@ -51,34 +49,10 @@ export function useWorkspaceMembers(workspaceId: string, options: UseWorkspaceMe
     [workspaceId]
   );
 
-  const addMember = useCallback(
-    async (data: AddMemberDto) => {
-      try {
-        const response = await axiosInstance.post(`/workspaces/${workspaceId}/members`, data);
-
-        toast.success('Member added successfully', {
-          description: `${data.email} has been added to the workspace`,
-        });
-
-        if (enableOptimisticUpdates) {
-          setMembers((prev) => [...prev, response.data]);
-        } else {
-          await fetchMembers(false);
-        }
-
-        return response.data;
-      } catch (error: any) {
-        toast.error('Failed to add member', {
-          description: error.response?.data?.message || 'Please try again',
-        });
-        throw error;
-      }
-    },
-    [workspaceId, enableOptimisticUpdates, fetchMembers]
-  );
+  // ❌ REMOVED: addMember function - Use invitations instead
 
   const updateMember = useCallback(
-    async (userId: string, data: Partial<AddMemberDto>) => {
+    async (userId: string, data: Partial<any>) => {
       try {
         if (enableOptimisticUpdates) {
           setMembers((prev) =>
@@ -154,9 +128,7 @@ export function useWorkspaceMembers(workspaceId: string, options: UseWorkspaceMe
   }, [members]);
 
   const ownerCount = useMemo(() => members.filter((m) => m.role === 'OWNER').length, [members]);
-
   const adminCount = useMemo(() => members.filter((m) => m.role === 'ADMIN').length, [members]);
-
   const memberCount = useMemo(() => members.filter((m) => m.role === 'MEMBER').length, [members]);
 
   useEffect(() => {
@@ -174,7 +146,7 @@ export function useWorkspaceMembers(workspaceId: string, options: UseWorkspaceMe
   }, [fetchMembers]);
 
   return {
-    members, // ✅ ALWAYS AN ARRAY
+    members,
     membersByRole,
     isLoading,
     isRefreshing,
@@ -183,7 +155,7 @@ export function useWorkspaceMembers(workspaceId: string, options: UseWorkspaceMe
     ownerCount,
     adminCount,
     memberCount,
-    addMember,
+    // ❌ REMOVED: addMember
     updateMember,
     removeMember,
     refetch: fetchMembers,

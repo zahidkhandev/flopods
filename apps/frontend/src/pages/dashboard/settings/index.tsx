@@ -1,6 +1,5 @@
-// pages/workspace-settings-page.tsx
-
-import { useState } from 'react';
+import { useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -28,7 +27,19 @@ const tabs = [
 
 export default function WorkspaceSettingsPage() {
   const { currentWorkspace, isLoading } = useWorkspaces();
-  const [activeTab, setActiveTab] = useState('general');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // ✅ Derive active tab from URL - no state needed!
+  const activeTab = useMemo(() => {
+    const urlTab = searchParams.get('tab') || 'general';
+    // Validate tab exists
+    return tabs.some((tab) => tab.value === urlTab) ? urlTab : 'general';
+  }, [searchParams]);
+
+  // ✅ Update URL when tab changes
+  const handleTabChange = (newTab: string) => {
+    setSearchParams({ tab: newTab });
+  };
 
   if (isLoading) {
     return (
@@ -63,10 +74,10 @@ export default function WorkspaceSettingsPage() {
 
       <Card>
         <CardContent className="px-6 py-1 md:px-6 md:py-4">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <Tabs value={activeTab} onValueChange={handleTabChange}>
             {/* Mobile: Dropdown Selector */}
             <div className="mb-6 md:hidden">
-              <Select value={activeTab} onValueChange={setActiveTab}>
+              <Select value={activeTab} onValueChange={handleTabChange}>
                 <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>

@@ -1,6 +1,12 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
+/* Light theme for highlight.js */
+@import 'highlight.js/styles/github.css' layer(hljs-light);
+
+/* Dark theme for highlight.js */
+@import 'highlight.js/styles/github-dark.css' layer(hljs-dark);
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -39,6 +45,19 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+
+  /* ✅ LATO FONT FAMILY */
+  --font-sans:
+    'Lato', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+    'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+:root:not(.dark) [data-theme='hljs-dark'] {
+  display: none;
+}
+
+.dark [data-theme='hljs-light'] {
+  display: none;
 }
 
 :root {
@@ -74,14 +93,6 @@
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.606 0.25 292.717);
-  --sidebar-primary-foreground: oklch(0.969 0.016 293.756);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.606 0.25 292.717);
 }
 
 .dark {
@@ -116,14 +127,6 @@
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.541 0.281 293.009);
-  --sidebar-primary-foreground: oklch(0.969 0.016 293.756);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.541 0.281 293.009);
 }
 
 @layer base {
@@ -132,29 +135,332 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family:
+      'Lato', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+      'Segoe UI Symbol', 'Noto Color Emoji';
   }
 }
 
 /* Hide scrollbar utility class */
 @layer utilities {
-  /* Hide scrollbar for Chrome, Safari and Opera */
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
 
-  /* Hide scrollbar for IE, Edge and Firefox */
   .no-scrollbar {
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 
-  /* Hide scrollbar for sidebar specifically */
   [data-sidebar]::-webkit-scrollbar {
     display: none;
   }
 
   [data-sidebar] {
-    -ms-overflow-style: none; /* IE and Edge */
-    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
+
+  /* ✅ ADD: Overflow handling utilities */
+  .overflow-wrap-anywhere {
+    overflow-wrap: anywhere;
+  }
+
+  .word-break-break-word {
+    word-break: break-word;
+  }
+}
+
+/* ========================================
+   ✅ REACT FLOW - NODE & HANDLE STYLES
+   ======================================== */
+
+.react-flow__node {
+  user-select: none;
+  cursor: grab;
+}
+
+.react-flow__node:active {
+  cursor: grabbing;
+}
+
+/* ✅ CRITICAL: Make handles ALWAYS visible */
+.react-flow__handle {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: all !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  z-index: 100 !important;
+}
+
+.react-flow__handle-connecting {
+  background: white !important;
+  box-shadow: 0 0 25px hsl(var(--primary)) !important;
+  border: 3px solid hsl(var(--primary)) !important;
+  transform: scale(1.5) !important;
+}
+
+/* ✅ Make handles pop on node hover */
+.react-flow__node:hover .react-flow__handle {
+  opacity: 1 !important;
+  transform: scale(1.2) !important;
+  box-shadow: 0 0 15px hsl(var(--primary)) !important;
+}
+
+/* ========================================
+   ✅ EDGE STYLES
+   ======================================== */
+
+.react-flow__edge-path {
+  stroke: oklch(0.606 0.25 292.717 / 0.6);
+  stroke-width: 2px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: oklch(0.606 0.25 292.717);
+  stroke-width: 3px;
+  filter: drop-shadow(0 0 6px oklch(0.606 0.25 292.717 / 0.4));
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -12;
+  }
+}
+
+.react-flow__connectionline {
+  stroke: oklch(0.606 0.25 292.717) !important;
+  stroke-width: 2px !important;
+  stroke-dasharray: 6 6;
+  animation: dash 1s linear infinite;
+}
+
+/* ========================================
+   ✅ CONTROLS & MINIMAP
+   ======================================== */
+
+.react-flow__controls {
+  background: hsl(var(--card) / 0.8) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid hsl(var(--border) / 0.5) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 40px -10px oklch(0 0 0 / 0.1) !important;
+}
+
+.react-flow__controls-button {
+  background: transparent !important;
+  border: none !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.react-flow__controls-button:hover {
+  background: hsl(var(--accent)) !important;
+}
+
+.react-flow__minimap {
+  background: hsl(var(--card) / 0.6) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid hsl(var(--border) / 0.5) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 40px -10px oklch(0 0 0 / 0.1) !important;
+}
+
+.react-flow__minimap-mask {
+  fill: oklch(0.606 0.25 292.717 / 0.1) !important;
+  stroke: oklch(0.606 0.25 292.717 / 0.5) !important;
+}
+
+.react-flow__selection {
+  background: oklch(0.606 0.25 292.717 / 0.05) !important;
+  border: 1px solid oklch(0.606 0.25 292.717 / 0.3) !important;
+}
+
+.react-flow__node,
+.react-flow__edge {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ========================================
+   ✅ CODE HIGHLIGHTING - THEME AWARE
+   ======================================== */
+
+pre code.hljs {
+  display: block;
+  overflow-x: auto;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  font-family: 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace;
+  max-width: 100%; /* ✅ ADD: Prevent overflow */
+  word-wrap: break-word; /* ✅ ADD: Wrap long words */
+}
+
+/* ✅ Light mode code blocks */
+:root:not(.dark) pre code.hljs {
+  background: #f6f8fa !important;
+  color: #24292f !important;
+}
+
+/* ✅ Dark mode code blocks */
+.dark pre code.hljs {
+  background: #0d1117 !important;
+  color: #c9d1d9 !important;
+}
+
+/* Light mode syntax colors */
+:root:not(.dark) pre code.hljs {
+  --hljs-keyword: #d73a49;
+  --hljs-string: #032f62;
+  --hljs-comment: #6a737d;
+  --hljs-function: #6f42c1;
+  --hljs-variable: #e36209;
+  --hljs-number: #005cc5;
+  --hljs-literal: #0086b3;
+}
+
+/* Dark mode syntax colors */
+.dark pre code.hljs {
+  --hljs-keyword: #ff7b72;
+  --hljs-string: #a5d6ff;
+  --hljs-comment: #8b949e;
+  --hljs-function: #d2a8ff;
+  --hljs-variable: #ffa657;
+  --hljs-number: #79c0ff;
+  --hljs-literal: #79c0ff;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in {
+  color: var(--hljs-keyword) !important;
+}
+.hljs-string,
+.hljs-doctag {
+  color: var(--hljs-string) !important;
+}
+.hljs-comment,
+.hljs-quote {
+  color: var(--hljs-comment) !important;
+  font-style: italic;
+}
+.hljs-title,
+.hljs-section,
+.hljs-function {
+  color: var(--hljs-function) !important;
+  font-weight: 600;
+}
+.hljs-variable,
+.hljs-template-variable,
+.hljs-attr {
+  color: var(--hljs-variable) !important;
+}
+.hljs-number,
+.hljs-literal {
+  color: var(--hljs-number) !important;
+}
+.hljs-regexp,
+.hljs-link {
+  color: var(--hljs-string) !important;
+}
+.hljs-meta {
+  color: var(--hljs-comment) !important;
+}
+.hljs-tag {
+  color: var(--hljs-keyword) !important;
+}
+.hljs-name {
+  color: var(--hljs-function) !important;
+  font-weight: 600;
+}
+.hljs-attribute {
+  color: var(--hljs-variable) !important;
+}
+.hljs-symbol,
+.hljs-bullet {
+  color: var(--hljs-literal) !important;
+}
+.hljs-addition {
+  color: #22863a !important;
+  background-color: #f0fff4 !important;
+}
+.hljs-deletion {
+  color: #b31d28 !important;
+  background-color: #ffeef0 !important;
+}
+
+.dark .hljs-addition {
+  color: #aff5b4 !important;
+  background-color: #033a16 !important;
+}
+.dark .hljs-deletion {
+  color: #ffdcd7 !important;
+  background-color: #67060c !important;
+}
+
+/* ========================================
+   ✅ TEXT SELECTION & CURSOR CONTROL
+   ======================================== */
+
+.select-text,
+.select-text * {
+  user-select: text !important;
+  cursor: text !important;
+}
+
+input,
+textarea,
+[contenteditable] {
+  user-select: text;
+  cursor: text;
+}
+
+.react-flow__node .drag-handle {
+  cursor: move !important;
+}
+
+.react-flow__node .nodrag {
+  cursor: default !important;
+  user-select: text !important;
+}
+
+.react-flow__node .nodrag * {
+  cursor: inherit !important;
+}
+
+/* ✅ Allow buttons inside nodes to be clickable */
+.react-flow__node .nodrag button {
+  cursor: pointer !important;
+}
+
+.react-flow__node .nodrag input,
+.react-flow__node .nodrag textarea,
+.react-flow__node .nodrag [role='button'],
+.react-flow__node .nodrag [role='combobox'] {
+  cursor: pointer !important;
+}
+
+/* ========================================
+   ✅ PROSE OVERFLOW FIX (CRITICAL)
+   ======================================== */
+
+.prose {
+  max-width: 100% !important;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.prose * {
+  max-width: 100% !important;
+}
+
+.prose code {
+  overflow-wrap: anywhere !important;
+  word-break: break-all !important;
+}
+
+.prose pre {
+  max-width: 100% !important;
+  overflow-x: auto !important;
 }

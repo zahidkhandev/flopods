@@ -16,6 +16,7 @@ model User {
   accounts                 Account[]
   workspaces               WorkspaceUser[]
   refreshTokens            RefreshToken[]
+  notifications            Notification[]
   flowCollaborations       FlowCollaborator[]
   sentWorkspaceInvites     WorkspaceInvitation[] @relation("InvitedBy")
   receivedWorkspaceInvites WorkspaceInvitation[] @relation("InvitedUser")
@@ -238,6 +239,36 @@ model ShareLink {
   @@schema("core")
 }
 
+
+model Notification {
+  id     String           @id @default(cuid())
+  userId String
+  type   NotificationType
+  title  String           @db.VarChar(255)
+  body   String           @db.Text
+
+  // Reference to related entity
+  entityType String?        @db.VarChar(50)
+  entityId   String?
+
+  // Metadata (invitation IDs, workspace IDs, etc.)
+  metadata Json?
+
+  isRead     Boolean  @default(false)
+  readAt     DateTime? @db.Timestamptz(6)
+  actionUrl  String?   @db.VarChar(500)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  expiresAt DateTime? @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt])
+  @@index([userId, type, isRead])
+  @@schema("core")
+}
+
+
 // ==========================================
 // ENUMS
 // ==========================================
@@ -249,6 +280,23 @@ enum AuthProvider {
 
   @@schema("core")
 }
+
+
+
+enum NotificationType {
+  WORKSPACE_INVITATION
+  WORKSPACE_MEMBER_JOINED
+  WORKSPACE_MEMBER_LEFT
+  WORKSPACE_ROLE_CHANGED
+  FLOW_INVITATION
+  FLOW_SHARED
+  MENTION
+  COMMENT
+  SYSTEM
+
+  @@schema("core")
+}
+
 
 enum WorkspaceType {
   PERSONAL

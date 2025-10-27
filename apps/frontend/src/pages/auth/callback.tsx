@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast-utils';
 import { setAuthTokens, setDeviceName } from '@/utils/token-utils';
 import { useAuth } from '@/hooks/use-auth';
 import { Loader2 } from 'lucide-react';
+import axiosInstance from '@/lib/axios-instance';
 
 export default function AuthCallbackPage() {
   const [searchParams] = useSearchParams();
@@ -45,7 +46,6 @@ export default function AuthCallbackPage() {
         }
 
         // Fetch user data
-        const { axiosInstance } = await import('@/lib/axios-instance');
         const response = await axiosInstance.get('/users/me');
 
         setUser(response.data.data);

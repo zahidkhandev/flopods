@@ -1,7 +1,7 @@
 // lib/axios-instance.ts
 
 import axios, { AxiosError, AxiosHeaders, InternalAxiosRequestConfig, AxiosResponse } from 'axios';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast-utils';
 import { getAuthTokens, setAuthTokens, clearAuthTokens } from '@/utils/token-utils';
 import { AuthTokens } from '@/types/auth';
 

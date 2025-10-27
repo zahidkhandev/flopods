@@ -24,7 +24,6 @@ import { V1WorkspaceService } from './workspace.service';
 import { GetCurrentUserId } from '../../common/decorators/user';
 import { WorkspaceCreateDto } from './dto/workspace-create.dto';
 import { WorkspaceUpdateDto } from './dto/workspace-update.dto';
-import { WorkspaceAddMemberDto } from './dto/workspace-add-member.dto';
 import { WorkspaceUpdateMemberDto } from './dto/workspace-update-member.dto';
 import { WorkspaceSendInvitationDto } from './dto/workspace-send-invitation.dto';
 import { WorkspaceAddApiKeyDto } from './dto/workspace-add-api-key.dto';
@@ -35,11 +34,11 @@ import {
   WorkspaceMemberResponse,
   ApiKeyResponse,
   InvitationResponse,
-  AcceptInvitationResponse,
   MessageResponse,
   UsageMetricResponse,
   ApiKeyUsageStats,
 } from './types/workspace.types';
+import { Public } from '../../common/decorators/common';
 
 /**
  * V1 Workspace Controller
@@ -478,58 +477,6 @@ export class V1WorkspaceController {
   }
 
   /**
-   * Add existing user to workspace
-   *
-   * @description Adds an existing registered user to the workspace by email.
-   * Requires `canManageMembers` permission. Allows setting role and granular
-   * permissions for the new member.
-   *
-   * @param {string} id - Workspace unique identifier
-   * @param {WorkspaceAddMemberDto} dto - Member data (email, role, permissions)
-   * @returns {Promise<WorkspaceMemberResponse>} Created member record
-   *
-   * @throws {400} Bad Request - Invalid input
-   * @throws {401} Unauthorized - Invalid or missing JWT token
-   * @throws {403} Forbidden - Insufficient permissions (requires canManageMembers)
-   * @throws {404} Not Found - User with provided email not found
-   * @throws {409} Conflict - User is already a workspace member
-   *
-   * @example
-   * ```
-   * POST /api/v1/workspaces/clx123abc/members
-   * Content-Type: application/json
-   * Authorization: Bearer <your_jwt_token>
-   *
-   * {
-   *   "email": "user@example.com",
-   *   "role": "MEMBER",
-   *   "canCreateCanvas": true,
-   *   "canDeleteCanvas": false,
-   *   "canInviteMembers": false
-   * }
-   * ```
-   */
-  @Post(':id/members')
-  @ApiOperation({
-    summary: 'Add existing user to workspace',
-    description: 'Adds registered user by email (requires canManageMembers)',
-  })
-  @ApiParam({ name: 'id', description: 'Workspace ID', example: 'clx123abc' })
-  @ApiResponse({ status: 201, description: 'Member added successfully' })
-  @ApiResponse({ status: 400, description: 'Bad Request - Invalid input' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Insufficient permissions' })
-  @ApiResponse({ status: 404, description: 'Not Found - User not found' })
-  @ApiResponse({ status: 409, description: 'Conflict - User already a member' })
-  async addMember(
-    @Param('id') id: string,
-    @Body() dto: WorkspaceAddMemberDto,
-    @GetCurrentUserId() userId: string,
-  ): Promise<WorkspaceMemberResponse> {
-    return this.workspaceService.addMember(id, userId, dto);
-  }
-
-  /**
    * Update workspace member
    *
    * @description Updates an existing member's role and granular permissions.
@@ -721,6 +668,34 @@ export class V1WorkspaceController {
   }
 
   /**
+   * GET INVITATION DETAILS (PUBLIC - No Auth Required)
+   * This endpoint should be accessible without authentication
+   */
+  @Get('invitations/:token/details')
+  @Public()
+  @ApiOperation({
+    summary: 'Get invitation details (public)',
+    description:
+      'Get workspace invitation details for preview before acceptance. No authentication required.',
+  })
+  @ApiParam({
+    name: 'token',
+    description: 'Invitation token',
+    example: 'ff08ff32428b36add715719515d133d806ae0b759792952dd6815931827cc92d',
+  })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Invitation details retrieved successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Invitation not found',
+  })
+  async getInvitationDetails(@Param('token') token: string) {
+    return this.workspaceService.getInvitationDetails(token);
+  }
+
+  /**
    * Accept workspace invitation
    *
    * @description Accepts an invitation via token and joins the workspace.
@@ -742,29 +717,35 @@ export class V1WorkspaceController {
    * Authorization: Bearer <your_jwt_token>
    * ```
    */
+  /**
+   * ACCEPT INVITATION
+   * Requires authentication - user must be logged in
+   */
   @Post('invitations/:token/accept')
   @ApiOperation({
     summary: 'Accept workspace invitation',
-    description: 'Accepts invitation and joins workspace (validates email and expiration)',
+    description: 'Accept a workspace invitation and join the workspace. Requires authentication.',
   })
   @ApiParam({
     name: 'token',
-    description: 'Invitation token from email',
-    example: 'abc123def456...',
+    description: 'Invitation token',
+    example: 'ff08ff32428b36add715719515d133d806ae0b759792952dd6815931827cc92d',
   })
-  @ApiResponse({ status: 200, description: 'Invitation accepted, workspace joined successfully' })
-  @ApiResponse({ status: 400, description: 'Bad Request - Invalid or expired invitation' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - Email mismatch' })
-  @ApiResponse({ status: 404, description: 'Not Found - Invitation not found' })
-  @ApiResponse({ status: 409, description: 'Conflict - Already a member' })
-  async acceptInvitation(
-    @Param('token') token: string,
-    @GetCurrentUserId() userId: string,
-  ): Promise<AcceptInvitationResponse> {
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Invitation accepted successfully',
+  })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Invitation is invalid, expired, or already used',
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Email mismatch - invitation sent to different email',
+  })
+  async acceptInvitation(@Param('token') token: string, @GetCurrentUserId() userId: string) {
     return this.workspaceService.acceptInvitation(token, userId);
   }
-
   /**
    * Revoke pending invitation
    *

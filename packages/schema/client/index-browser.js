@@ -627,6 +627,22 @@ exports.Prisma.ShareLinkScalarFieldEnum = {
   expiresAt: 'expiresAt'
 };
 
+exports.Prisma.NotificationScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  type: 'type',
+  title: 'title',
+  body: 'body',
+  entityType: 'entityType',
+  entityId: 'entityId',
+  metadata: 'metadata',
+  isRead: 'isRead',
+  readAt: 'readAt',
+  actionUrl: 'actionUrl',
+  createdAt: 'createdAt',
+  expiresAt: 'expiresAt'
+};
+
 exports.Prisma.DocumentFolderScalarFieldEnum = {
   id: 'id',
   workspaceId: 'workspaceId',
@@ -1006,6 +1022,16 @@ exports.Prisma.ShareLinkOrderByRelevanceFieldEnum = {
   password: 'password'
 };
 
+exports.Prisma.NotificationOrderByRelevanceFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  title: 'title',
+  body: 'body',
+  entityType: 'entityType',
+  entityId: 'entityId',
+  actionUrl: 'actionUrl'
+};
+
 exports.Prisma.DocumentFolderOrderByRelevanceFieldEnum = {
   id: 'id',
   workspaceId: 'workspaceId',
@@ -1291,6 +1317,18 @@ exports.ShareAccessLevel = exports.$Enums.ShareAccessLevel = {
   EDIT: 'EDIT'
 };
 
+exports.NotificationType = exports.$Enums.NotificationType = {
+  WORKSPACE_INVITATION: 'WORKSPACE_INVITATION',
+  WORKSPACE_MEMBER_JOINED: 'WORKSPACE_MEMBER_JOINED',
+  WORKSPACE_MEMBER_LEFT: 'WORKSPACE_MEMBER_LEFT',
+  WORKSPACE_ROLE_CHANGED: 'WORKSPACE_ROLE_CHANGED',
+  FLOW_INVITATION: 'FLOW_INVITATION',
+  FLOW_SHARED: 'FLOW_SHARED',
+  MENTION: 'MENTION',
+  COMMENT: 'COMMENT',
+  SYSTEM: 'SYSTEM'
+};
+
 exports.DocumentSourceType = exports.$Enums.DocumentSourceType = {
   INTERNAL: 'INTERNAL',
   GOOGLE_DRIVE: 'GOOGLE_DRIVE',
@@ -1351,6 +1389,7 @@ exports.Prisma.ModelName = {
   ProviderAPIKey: 'ProviderAPIKey',
   UsageMetric: 'UsageMetric',
   ShareLink: 'ShareLink',
+  Notification: 'Notification',
   DocumentFolder: 'DocumentFolder',
   Document: 'Document',
   Embedding: 'Embedding',

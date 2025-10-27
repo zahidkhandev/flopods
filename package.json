@@ -42,7 +42,7 @@
     "db:push": "yarn workspace @actopod/schema db:push",
     "db:pull": "yarn workspace @actopod/schema prisma db pull",
     "db:studio": "yarn workspace @actopod/schema db:studio",
-    "db:seed": "yarn workspace @actopod/schema db:seed",
+    "db:seed:pricing": "yarn workspace @actopod/schema db:seed:pricing",
     "db:reset": "yarn workspace @actopod/schema prisma migrate reset",
     "db:validate": "yarn workspace @actopod/schema prisma validate",
     "db:format": "yarn workspace @actopod/schema prisma format",
@@ -52,6 +52,15 @@
     "docker:db:logs": "docker compose -f docker/db-docker-compose.yaml logs -f",
     "docker:db:clean": "docker compose -f docker/db-docker-compose.yaml down -v",
     "docker:db:ps": "docker compose -f docker/db-docker-compose.yaml ps",
+    "docker:dynamodb:up": "docker compose -f docker/dynamodb-docker-compose.yaml up -d",
+    "docker:dynamodb:down": "docker compose -f docker/dynamodb-docker-compose.yaml down",
+    "docker:dynamodb:restart": "yarn docker:dynamodb:down && yarn docker:dynamodb:up",
+    "docker:dynamodb:logs": "docker compose -f docker/dynamodb-docker-compose.yaml logs -f",
+    "docker:dynamodb:clean": "docker compose -f docker/dynamodb-docker-compose.yaml down -v",
+    "docker:redis:up": "docker compose -f docker/redis-docker-compose.yaml up -d",
+    "docker:redis:down": "docker compose -f docker/redis-docker-compose.yaml down",
+    "docker:redis:logs": "docker compose -f docker/redis-docker-compose.yaml logs -f",
+    "docker:dev": "yarn docker:db:up && yarn docker:dynamodb:up",
     "install:all": "yarn install",
     "reinstall": "yarn clean:all && yarn install",
     "prepare": "husky install || true",
@@ -66,7 +75,7 @@
     "turbo": "^2.5.8",
     "typescript": "^5.7.2"
   },
-  "packageManager": "yarn@4.0.0",
+  "packageManager": "yarn@4.10.3",
   "engines": {
     "node": ">=20.0.0",
     "yarn": ">=4.0.0"

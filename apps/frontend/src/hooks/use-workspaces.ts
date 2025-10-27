@@ -38,14 +38,25 @@ export const useWorkspaces = () => {
       const response = await axiosInstance.get('/workspaces');
       return response.data.data || response.data;
     },
+    // ✅ Ensure workspace is selected immediately
+    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 
-  // Auto-select first workspace if none selected
+  // ✅ CRITICAL FIX: Auto-select first workspace IMMEDIATELY when data loads
   useEffect(() => {
-    if (workspaces && workspaces.length > 0 && !currentWorkspaceId) {
-      setCurrentWorkspaceId(workspaces[0].id);
+    if (!isLoading && workspaces && workspaces.length > 0) {
+      // If no workspace is selected OR selected workspace doesn't exist
+      const workspaceExists = workspaces.some((ws) => ws.id === currentWorkspaceId);
+
+      if (!currentWorkspaceId || !workspaceExists) {
+        // ✅ Prioritize PERSONAL workspace, fallback to first
+        const defaultWorkspace = workspaces.find((ws) => ws.type === 'PERSONAL') || workspaces[0];
+
+        setCurrentWorkspaceId(defaultWorkspace.id);
+        console.log('✅ Auto-selected workspace:', defaultWorkspace.name);
+      }
     }
-  }, [workspaces, currentWorkspaceId, setCurrentWorkspaceId]);
+  }, [workspaces, currentWorkspaceId, setCurrentWorkspaceId, isLoading]);
 
   const currentWorkspace = workspaces?.find((ws) => ws.id === currentWorkspaceId);
 
@@ -53,14 +64,17 @@ export const useWorkspaces = () => {
     setCurrentWorkspaceId(workspaceId);
     // Invalidate relevant queries when switching workspace
     queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId] });
+    queryClient.invalidateQueries({ queryKey: ['flows'] });
   };
 
   return {
     workspaces: workspaces || [],
     currentWorkspace,
-    currentWorkspaceId,
+    currentWorkspaceId: currentWorkspaceId || workspaces?.[0]?.id || null, // ✅ Fallback
     switchWorkspace,
     isLoading,
     error,
+    // ✅ Helper to check if workspace is ready
+    isReady: !isLoading && !!currentWorkspaceId,
   };
 };

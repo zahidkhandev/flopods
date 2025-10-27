@@ -26,26 +26,32 @@ interface SendInvitationDialogProps {
   workspaceId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSuccess?: () => void; // ✅ Add this
 }
+
+const DEFAULT_FORM_DATA = {
+  email: '',
+  role: 'MEMBER' as const,
+  permissions: {
+    canCreateCanvas: true,
+    canDeleteCanvas: false,
+    canInviteMembers: false,
+    canManageMembers: false,
+    canManageApiKeys: false,
+  },
+};
 
 export function SendInvitationDialog({
   workspaceId,
   open,
   onOpenChange,
+  onSuccess, // ✅ Add this
 }: SendInvitationDialogProps) {
   const { sendInvitation } = useWorkspaceInvitations(workspaceId);
   const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState<SendInvitationDto & { permissions: any }>({
-    email: '',
-    role: 'MEMBER',
-    permissions: {
-      canCreateCanvas: true,
-      canDeleteCanvas: false,
-      canInviteMembers: false,
-      canManageMembers: false,
-      canManageApiKeys: false,
-    },
-  });
+  const [formData, setFormData] = useState<SendInvitationDto & { permissions: any }>(
+    DEFAULT_FORM_DATA
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,17 +60,8 @@ export function SendInvitationDialog({
     try {
       await sendInvitation(formData);
       onOpenChange(false);
-      setFormData({
-        email: '',
-        role: 'MEMBER',
-        permissions: {
-          canCreateCanvas: true,
-          canDeleteCanvas: false,
-          canInviteMembers: false,
-          canManageMembers: false,
-          canManageApiKeys: false,
-        },
-      });
+      setFormData(DEFAULT_FORM_DATA);
+      onSuccess?.(); // ✅ Call onSuccess to refresh
     } catch {
       // Error handled in hook
     } finally {
@@ -74,14 +71,14 @@ export function SendInvitationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-h-[90vh] max-w-md overflow-hidden">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Send Invitation</DialogTitle>
             <DialogDescription>Invite someone to join this workspace via email</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="max-h-[calc(90vh-200px)] space-y-4 overflow-y-auto px-1 py-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email Address *</Label>
               <Input
@@ -109,14 +106,14 @@ export function SendInvitationDialog({
                   <SelectItem value="VIEWER">Viewer</SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-muted-foreground text-xs">Invitation expires in 7 days</p>
+              <p className="text-muted-foreground text-xs">Expires in 7 days</p>
             </div>
 
-            <div className="space-y-3 rounded-lg border p-4">
+            <div className="space-y-3 rounded-lg border p-3">
               <p className="text-sm font-medium">Permissions</p>
-              <div className="space-y-3">
+              <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="canCreateCanvas" className="font-normal">
+                  <Label htmlFor="canCreateCanvas" className="text-sm font-normal">
                     Create Flows
                   </Label>
                   <Switch
@@ -131,7 +128,7 @@ export function SendInvitationDialog({
                   />
                 </div>
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="canDeleteCanvas" className="font-normal">
+                  <Label htmlFor="canDeleteCanvas" className="text-sm font-normal">
                     Delete Flows
                   </Label>
                   <Switch
@@ -146,7 +143,7 @@ export function SendInvitationDialog({
                   />
                 </div>
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="canInviteMembers" className="font-normal">
+                  <Label htmlFor="canInviteMembers" className="text-sm font-normal">
                     Invite Members
                   </Label>
                   <Switch
@@ -161,7 +158,7 @@ export function SendInvitationDialog({
                   />
                 </div>
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="canManageMembers" className="font-normal">
+                  <Label htmlFor="canManageMembers" className="text-sm font-normal">
                     Manage Members
                   </Label>
                   <Switch
@@ -176,7 +173,7 @@ export function SendInvitationDialog({
                   />
                 </div>
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="canManageApiKeys" className="font-normal">
+                  <Label htmlFor="canManageApiKeys" className="text-sm font-normal">
                     Manage API Keys
                   </Label>
                   <Switch
@@ -194,7 +191,7 @@ export function SendInvitationDialog({
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="mt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>

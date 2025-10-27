@@ -1,5 +1,3 @@
-// components/api-keys-settings.tsx
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +6,7 @@ import { Key, Trash2, Plus, Zap, Clock, DollarSign, Activity } from 'lucide-reac
 import { useWorkspaceApiKeys } from '../hooks/use-workspace-api-keys';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AddApiKeyDialog } from './add-api-key-dialog';
-import { toast } from 'sonner';
+import { toast } from '@/lib/toast-utils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,7 +19,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export function ApiKeysSettings({ workspaceId }: { workspaceId: string }) {
-  const { apiKeys, stats, isLoading, deleteApiKey } = useWorkspaceApiKeys(workspaceId);
+  const { apiKeys, stats, isLoading, deleteApiKey, refetch } = useWorkspaceApiKeys(workspaceId);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
@@ -30,11 +28,16 @@ export function ApiKeysSettings({ workspaceId }: { workspaceId: string }) {
 
     try {
       await deleteApiKey(deleteId);
-      toast.success('API key deleted successfully');
+      toast.success('API key deleted');
     } catch {
       // Error handled in hook
     }
     setDeleteId(null);
+  };
+
+  const handleAddSuccess = () => {
+    setIsAddDialogOpen(false);
+    refetch(); // ✅ Refresh data after adding
   };
 
   if (isLoading) {
@@ -212,7 +215,12 @@ export function ApiKeysSettings({ workspaceId }: { workspaceId: string }) {
       <AddApiKeyDialog
         workspaceId={workspaceId}
         open={isAddDialogOpen}
-        onOpenChange={setIsAddDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setIsAddDialogOpen(false);
+          }
+        }}
+        onSuccess={handleAddSuccess} // ✅ Pass success handler
       />
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>

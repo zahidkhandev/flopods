@@ -2,6 +2,18 @@
 
 import { WorkspaceType, WorkspaceRole, InvitationStatus, LLMProvider } from '@actopod/schema';
 
+export interface InvitationDetailsResponse {
+  workspace: {
+    id: string;
+    name: string;
+    type: string;
+  };
+  email: string;
+  role: string;
+  permissions: Record<string, boolean> | null;
+  expiresAt: Date;
+  status: string;
+}
 /**
  * Response type for workspace list
  */

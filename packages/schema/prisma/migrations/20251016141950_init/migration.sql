@@ -62,6 +62,9 @@ CREATE TYPE "canvas"."FlowActivityAction" AS ENUM ('FLOW_CREATED', 'FLOW_UPDATED
 CREATE TYPE "core"."AuthProvider" AS ENUM ('GOOGLE', 'GITHUB', 'EMAIL');
 
 -- CreateEnum
+CREATE TYPE "core"."NotificationType" AS ENUM ('WORKSPACE_INVITATION', 'WORKSPACE_MEMBER_JOINED', 'WORKSPACE_MEMBER_LEFT', 'WORKSPACE_ROLE_CHANGED', 'FLOW_INVITATION', 'FLOW_SHARED', 'MENTION', 'COMMENT', 'SYSTEM');
+
+-- CreateEnum
 CREATE TYPE "core"."WorkspaceType" AS ENUM ('PERSONAL', 'TEAM');
 
 -- CreateEnum
@@ -692,6 +695,25 @@ CREATE TABLE "core"."ShareLink" (
 );
 
 -- CreateTable
+CREATE TABLE "core"."Notification" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "type" "core"."NotificationType" NOT NULL,
+    "title" VARCHAR(255) NOT NULL,
+    "body" TEXT NOT NULL,
+    "entityType" VARCHAR(50),
+    "entityId" TEXT,
+    "metadata" JSONB,
+    "isRead" BOOLEAN NOT NULL DEFAULT false,
+    "readAt" TIMESTAMPTZ(6),
+    "actionUrl" VARCHAR(500),
+    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expiresAt" TIMESTAMPTZ(6),
+
+    CONSTRAINT "Notification_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "documents"."DocumentFolder" (
     "id" TEXT NOT NULL,
     "workspaceId" TEXT NOT NULL,
@@ -1173,6 +1195,12 @@ CREATE INDEX "ShareLink_createdBy_createdAt_idx" ON "core"."ShareLink"("createdB
 CREATE UNIQUE INDEX "ShareLink_assetType_assetId_key" ON "core"."ShareLink"("assetType", "assetId");
 
 -- CreateIndex
+CREATE INDEX "Notification_userId_isRead_createdAt_idx" ON "core"."Notification"("userId", "isRead", "createdAt");
+
+-- CreateIndex
+CREATE INDEX "Notification_userId_type_isRead_idx" ON "core"."Notification"("userId", "type", "isRead");
+
+-- CreateIndex
 CREATE INDEX "DocumentFolder_workspaceId_parentId_sortOrder_idx" ON "documents"."DocumentFolder"("workspaceId", "parentId", "sortOrder");
 
 -- CreateIndex
@@ -1366,6 +1394,9 @@ ALTER TABLE "core"."UsageMetric" ADD CONSTRAINT "UsageMetric_keyId_fkey" FOREIGN
 
 -- AddForeignKey
 ALTER TABLE "core"."ShareLink" ADD CONSTRAINT "ShareLink_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "core"."Workspace"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "core"."Notification" ADD CONSTRAINT "Notification_userId_fkey" FOREIGN KEY ("userId") REFERENCES "core"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "documents"."DocumentFolder" ADD CONSTRAINT "DocumentFolder_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "documents"."DocumentFolder"("id") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -58,7 +58,7 @@ async function bootstrap() {
   // Global API prefix
   app.setGlobalPrefix('api');
 
-  // CORS configuration
+  // CORS configuration (applies to both HTTP and WebSocket)
   app.enableCors({
     origin: [
       process.env.FRONTEND_URL || 'http://localhost:5173',
@@ -80,10 +80,11 @@ async function bootstrap() {
   try {
     await prisma.$connect();
     logger.log('✅ Database connected successfully');
-  } catch (error: any) {
-    logger.error('❌ Database connection failed', error.message);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('❌ Database connection failed', errorMessage);
     throw new HttpException(
-      { message: 'Unable to connect to database', error: error.message },
+      { message: 'Unable to connect to database', error: errorMessage },
       HttpStatus.INTERNAL_SERVER_ERROR,
     );
   }
@@ -116,7 +117,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(new ClassSerializerInterceptor(reflector));
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  // Swagger documentation - BEFORE app.listen()
+  // Swagger documentation
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Actopod API v1')
     .setDescription('AI Workflow Canvas - Multi-LLM Node-Based Platform')
@@ -146,10 +147,12 @@ async function bootstrap() {
   logger.log(`🚀 Actopod Backend running on: http://localhost:${port}`);
   logger.log(`📚 API v1 Documentation: http://localhost:${port}/api/v1/docs`);
   logger.log(`🔍 Health Check: http://localhost:${port}/api/v1/health`);
+  logger.log(`🔌 WebSocket: ws://localhost:${port}/notifications`);
 }
 
-bootstrap().catch((error) => {
+bootstrap().catch((error: unknown) => {
   const logger = new Logger('Bootstrap');
-  logger.error('❌ Failed to start application', error);
+  const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+  logger.error('❌ Failed to start application', errorMessage);
   process.exit(1);
 });

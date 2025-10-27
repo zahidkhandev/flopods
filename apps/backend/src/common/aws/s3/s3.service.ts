@@ -108,7 +108,8 @@ export class S3Service {
         Key: key,
       });
 
-      const url = await getSignedUrl(this.s3Client, command, { expiresIn });
+      // Type assertion to fix AWS SDK version mismatch
+      const url = await getSignedUrl(this.s3Client as any, command as any, { expiresIn });
       this.logger.log(`🔗 Generated signed URL for: ${key} (expires in ${expiresIn}s)`);
       return url;
     } catch (error: any) {
@@ -120,6 +121,7 @@ export class S3Service {
   /**
    * Get signed URL for file upload (client-side upload)
    */
+
   async getUploadSignedUrl(
     key: string,
     contentType: string,
@@ -136,7 +138,8 @@ export class S3Service {
         ContentType: contentType,
       });
 
-      const url = await getSignedUrl(this.s3Client, command, { expiresIn });
+      // Type assertion to fix AWS SDK version mismatch
+      const url = await getSignedUrl(this.s3Client as any, command as any, { expiresIn });
       this.logger.log(`🔗 Generated upload signed URL for: ${key}`);
       return url;
     } catch (error: any) {
