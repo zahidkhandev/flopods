@@ -2,6 +2,7 @@
   "cSpell.words": [
     "actopod",
     "BYOK",
+    "chunker",
     "connectionline",
     "contenteditable",
     "cuid",
@@ -10,6 +11,8 @@
     "ILLM",
     "nodrag",
     "reactflow",
+    "tesseract",
+    "tiktoken",
     "Timestamptz"
   ]
 }

@@ -9,6 +9,7 @@ import { V1FlowModule } from './flow/flow.module';
 import { V1ExecutionModule } from './execution/execution.module';
 import { V1PodModule } from './pods/pod.module';
 import { V1ModelsModule } from './models/models.module';
+import { V1DocumentModule } from './documents/documents.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { V1ModelsModule } from './models/models.module';
     V1ExecutionModule,
     V1PodModule,
     V1ModelsModule,
+    V1DocumentModule,
   ],
   providers: [
     // {
@@ -40,6 +42,7 @@ import { V1ModelsModule } from './models/models.module';
     V1ExecutionModule,
     V1PodModule,
     V1ModelsModule,
+    V1DocumentModule,
   ],
 })
 export class V1AppModule {}
