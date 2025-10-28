@@ -1,6 +1,6 @@
 # Flopods Code Owners
 
-# These owners will be requested for review when someone opens a pull request.
+# These owners will be automatically requested for review when someone opens a pull request.
 
 # Global owner
 
@@ -22,3 +22,8 @@
 
 /.github/** @zahidkhandev
 /docker/** @zahidkhandev
+/turbo.json @zahidkhandev
+
+# Documentation
+
+\*.md @zahidkhandev
