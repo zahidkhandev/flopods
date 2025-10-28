@@ -233,6 +233,20 @@ Open your browser and navigate to **http://localhost:5173** 🎉
 | `yarn docker:localstack:up`   | Start LocalStack only                         |
 | `yarn docker:localstack:logs` | View LocalStack logs                          |
 
+# Install podman-compose
+
+pip3 install podman-compose
+
+| Command                       | Description                                   |
+| ----------------------------- | --------------------------------------------- |
+| `yarn podman:dev`             | Start all services (DB, Redis, LocalStack)    |
+| `yarn podman:dev:down`        | Stop all services                             |
+| `yarn podman:dev:clean`       | Stop and remove all volumes (⚠️ deletes data) |
+| `yarn podman:db:up`           | Start PostgreSQL only                         |
+| `yarn podman:redis:up`        | Start Redis only                              |
+| `yarn podman:localstack:up`   | Start LocalStack only                         |
+| `yarn podman:localstack:logs` | View LocalStack logs                          |
+
 ### Maintenance
 
 | Command          | Description                             |
