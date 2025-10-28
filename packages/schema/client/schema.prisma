@@ -1365,10 +1365,13 @@ model Embedding {
   chunkIndex Int
   chunkText  String @db.Text
 
-  // S3 Vectors - AWS S3 storage (NOT pgvector)
+  // Dual storage: PostgreSQL pgvector (768d for Gemini) + S3 backup
+  vector Unsupported("vector(768)")?
+
+  // S3 Vectors - AWS S3 storage for backup/archive
   s3VectorBucket  String @db.VarChar(255)
   s3VectorKey     String @db.VarChar(512)
-  vectorDimension Int    @default(1536)
+  vectorDimension Int    @default(768)
 
   metadata Json?
 
@@ -1381,6 +1384,7 @@ model Embedding {
   @@index([documentId, createdAt(sort: Desc)])
   @@index([model, createdAt(sort: Desc)])
   @@index([s3VectorBucket])
+  @@index([vectorDimension])
   @@schema("documents")
 }
 

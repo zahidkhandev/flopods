@@ -1,5 +1,5 @@
 param(
-    [string]$SpecificPath = "apps/frontend/src/pages/dashboard/flows"
+    [string]$SpecificPath = "apps/backend"
 )
 
 # RootPath is always where the script is run from

@@ -760,9 +760,10 @@ CREATE TABLE "documents"."Embedding" (
     "model" VARCHAR(100) NOT NULL,
     "chunkIndex" INTEGER NOT NULL,
     "chunkText" TEXT NOT NULL,
+    "vector" vector(768),
     "s3VectorBucket" VARCHAR(255) NOT NULL,
     "s3VectorKey" VARCHAR(512) NOT NULL,
-    "vectorDimension" INTEGER NOT NULL DEFAULT 1536,
+    "vectorDimension" INTEGER NOT NULL DEFAULT 768,
     "metadata" JSONB,
     "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -1244,6 +1245,9 @@ CREATE INDEX "Embedding_model_createdAt_idx" ON "documents"."Embedding"("model",
 
 -- CreateIndex
 CREATE INDEX "Embedding_s3VectorBucket_idx" ON "documents"."Embedding"("s3VectorBucket");
+
+-- CreateIndex
+CREATE INDEX "Embedding_vectorDimension_idx" ON "documents"."Embedding"("vectorDimension");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Embedding_documentId_chunkIndex_key" ON "documents"."Embedding"("documentId", "chunkIndex");
