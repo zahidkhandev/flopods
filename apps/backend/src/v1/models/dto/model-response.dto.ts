@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { LLMProvider } from '@actopod/schema';
+import { LLMProvider } from '@flopods/schema';
 import { Expose } from 'class-transformer';
 
 export class ModelPricingDto {

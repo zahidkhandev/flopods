@@ -1,4 +1,4 @@
-import { PrismaClient, LLMProvider, ModelCategory } from '@actopod/schema';
+import { PrismaClient, LLMProvider, ModelCategory } from '@flopods/schema';
 
 const prisma = new PrismaClient();
 

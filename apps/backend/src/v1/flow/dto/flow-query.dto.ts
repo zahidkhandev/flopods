@@ -1,7 +1,7 @@
 import { IsOptional, IsEnum, IsString, IsInt, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { FlowVisibility } from '@actopod/schema';
+import { FlowVisibility } from '@flopods/schema';
 
 export class FlowQueryDto {
   @ApiPropertyOptional({ example: 1, minimum: 1, default: 1 })

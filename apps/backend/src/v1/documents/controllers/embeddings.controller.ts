@@ -121,7 +121,7 @@ export class V1EmbeddingsController {
             chunkText: 'Machine learning is a subset of artificial intelligence...',
             model: 'text-embedding-004',
             vectorDimension: 768,
-            s3VectorBucket: 'actopod-vectors-prod',
+            s3VectorBucket: 'flopods-vectors-prod',
             s3VectorKey: 'embeddings/cm3d1o2c3u4m5e6n7t/chunk-0.json',
             metadata: {
               tokenCount: 487,

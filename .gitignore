@@ -69,6 +69,8 @@ prisma/migrations/**/*.sql
 packages/schema/client
 **/prisma/client
 
+docs/context
+
 # Temporary files
 *.tmp
 *.temp

@@ -2,7 +2,7 @@
 
 import { IsString, IsEnum, MaxLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { LLMProvider } from '@actopod/schema';
+import { LLMProvider } from '@flopods/schema';
 
 export class WorkspaceAddApiKeyDto {
   @ApiProperty({

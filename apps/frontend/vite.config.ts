@@ -33,6 +33,6 @@ export default defineConfig({
     port: process.env.FRONTEND_PORT ? parseInt(process.env.FRONTEND_PORT) : 5173,
   },
   optimizeDeps: {
-    exclude: ['@actopod/schema'],
+    exclude: ['@flopods/schema'],
   },
 });

@@ -1,7 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { ILLMProvider, LLMRequest, LLMResponse } from '../types/llm-provider.types';
-import { LLMProvider, ModelPricingTier } from '@actopod/schema';
+import { LLMProvider, ModelPricingTier } from '@flopods/schema';
 
 export abstract class BaseLLMProvider implements ILLMProvider {
   protected readonly logger: Logger;

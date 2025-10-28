@@ -1,6 +1,6 @@
 import { IsString, IsOptional, IsEnum, MaxLength, MinLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { FlowVisibility } from '@actopod/schema';
+import { FlowVisibility } from '@flopods/schema';
 
 export class CreateFlowDto {
   @ApiProperty({ example: 'My AI Workflow' })

@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { LLMProvider } from '@actopod/schema';
+import { LLMProvider } from '@flopods/schema';
 import { plainToInstance } from 'class-transformer';
 import { ModelPricingDto, ModelsByProviderDto } from './dto/model-response.dto';
 import { ProviderInfoDto } from './dto/provider-response.dto';

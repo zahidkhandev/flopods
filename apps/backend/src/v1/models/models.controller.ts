@@ -3,7 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { V1ModelsService } from './models.service';
 import { ModelPricingDto, ModelsByProviderDto } from './dto/model-response.dto';
 import { ProviderInfoDto } from './dto/provider-response.dto';
-import { LLMProvider } from '@actopod/schema';
+import { LLMProvider } from '@flopods/schema';
 import { Public } from '../../common/decorators/common';
 
 @ApiTags('Models & Providers')

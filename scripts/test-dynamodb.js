@@ -45,7 +45,7 @@ async function testDynamoDB(retries = 5) {
         console.error('   DynamoDB Local is running but may still be initializing');
         console.error('   Wait a few seconds and try again, or check port mapping');
         console.error('\nDocker logs:');
-        console.error('   docker logs actopod-dynamodb-local');
+        console.error('   docker logs flopods-dynamodb-local');
         process.exit(1);
       }
 

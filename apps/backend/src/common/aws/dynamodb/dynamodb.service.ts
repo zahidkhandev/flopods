@@ -90,7 +90,9 @@ export class DynamoDbService implements OnModuleInit {
 
       if (endpoint) {
         clientConfig.endpoint = endpoint;
-        this.logger.log(`🔧 DynamoDB Local endpoint: ${endpoint}`);
+        this.logger.log(`🔧 DynamoDB LocalStack endpoint: ${endpoint}`);
+      } else {
+        this.logger.log('☁️  Using AWS DynamoDB (Production)');
       }
 
       this.dynamoClient = new DynamoDBClient(clientConfig);
@@ -105,18 +107,29 @@ export class DynamoDbService implements OnModuleInit {
 
   async onModuleInit() {
     if (this.isEnabled && this.dynamoClient) {
-      // Only auto-create tables in development
-      if (!this.isProduction) {
-        this.logger.log('🔧 Development mode: Ensuring tables exist...');
-        await Promise.all([
-          this.ensureTableExists(this.podTableName, this.createPodTableSchema()),
-          this.ensureTableExists(this.executionTableName, this.createExecutionTableSchema()),
-          this.ensureTableExists(this.contextTableName, this.createContextTableSchema()),
-        ]);
-        // this.logger.log('🔧 Development mode: Active');
+      const endpoint = this.configService.get<string>('AWS_DYNAMODB_ENDPOINT');
+
+      // Only auto-create tables when using LocalStack
+      if (endpoint) {
+        this.logger.log('🔧 LocalStack mode: Ensuring tables exist...');
+        // Tables will be created by init script, just verify
+        await this.verifyTables();
       } else {
-        this.logger.log('🏭 Production mode: Skipping auto table creation');
+        this.logger.log('🏭 Production mode: Tables should exist in AWS');
       }
+    }
+  }
+
+  private async verifyTables() {
+    try {
+      await Promise.all([
+        this.dynamoClient!.send(new DescribeTableCommand({ TableName: this.podTableName })),
+        this.dynamoClient!.send(new DescribeTableCommand({ TableName: this.executionTableName })),
+        this.dynamoClient!.send(new DescribeTableCommand({ TableName: this.contextTableName })),
+      ]);
+      this.logger.log('✅ All DynamoDB tables verified');
+    } catch (error: any) {
+      this.logger.warn(`⚠️  Some tables may not exist: ${error.message}`);
     }
   }
 

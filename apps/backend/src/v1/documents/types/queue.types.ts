@@ -7,7 +7,7 @@
  * @module v1/documents/types/queue
  */
 
-import { DocumentSourceType } from '@actopod/schema';
+import { DocumentSourceType } from '@flopods/schema';
 import { DocumentProcessingAction, DocumentMessagePriority } from './document.types';
 
 /**

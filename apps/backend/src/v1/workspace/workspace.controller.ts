@@ -53,7 +53,7 @@ import { Public } from '../../common/decorators/common';
  *
  * @security Requires JWT Bearer token authentication for all endpoints
  * @version 1.0.0
- * @author Actopod Team
+ * @author Flopods Team
  * @see {@link V1WorkspaceService} for business logic implementation
  *
  * @remarks

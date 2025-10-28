@@ -20,7 +20,7 @@
 
     "paths": {
       "@/*": ["./src/*"],
-      "@actopod/schema": ["../../packages/schema/src"]
+      "@flopods/schema": ["../../packages/schema/src"]
     }
   },
   "include": ["src", "vite-env.d.ts"]

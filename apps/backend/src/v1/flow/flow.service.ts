@@ -7,7 +7,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { Prisma, FlowVisibility, FlowAccessLevel, FlowActivityAction } from '@actopod/schema';
+import { Prisma, FlowVisibility, FlowAccessLevel, FlowActivityAction } from '@flopods/schema';
 import { plainToInstance } from 'class-transformer';
 import { CreateFlowDto } from './dto/create-flow.dto';
 import { UpdateFlowDto } from './dto/update-flow.dto';

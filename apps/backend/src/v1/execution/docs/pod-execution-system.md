@@ -15,7 +15,7 @@
 
 ## System Overview
 
-The Pod Execution System is the **heart of Actopod's AI workflow engine**. It orchestrates the execution of LLM (Large Language Model) pods in a flow, managing:
+The Pod Execution System is the **heart of Flopods's AI workflow engine**. It orchestrates the execution of LLM (Large Language Model) pods in a flow, managing:
 
 - **Context Resolution** - Building context from upstream pod outputs
 - **Variable Interpolation** - Replacing `{{pod_id}}` references with actual outputs
@@ -32,12 +32,14 @@ The Pod Execution System is the **heart of Actopod's AI workflow engine**. It or
 **Problem:** Pods in a flow are connected (Pod A → Pod B → Pod C). When executing Pod B, it needs Pod A's output as context.
 
 **Solution:** The context resolution service:
+
 - Finds all upstream connected pods (those that feed into current pod)
 - Retrieves their latest execution outputs
 - Builds a variable map (`pod_a_id` → `"Pod A's actual output"`)
 - Enables variable interpolation in prompts
 
 **Example:**
+
 ```
 Pod A: "What is quantum computing?"
 Output: "Quantum computing uses qubits to process information..."
@@ -47,6 +49,7 @@ After interpolation: "Summarize this: Quantum computing uses qubits to process i
 ```
 
 **Why Critical:**
+
 - Without it, pods can't reference each other's outputs
 - No way to build complex multi-step AI workflows
 - Users would have to manually copy-paste outputs between pods
@@ -56,17 +59,20 @@ After interpolation: "Summarize this: Quantum computing uses qubits to process i
 ### 2. **Execution Queue Service** (`execution-queue.service.ts`)
 
 **Problem:** LLM API calls can take 5-30 seconds. Blocking the HTTP request thread causes:
+
 - Timeout errors for long-running executions
 - Poor user experience (stuck waiting)
 - Server resource exhaustion under load
 
 **Solution:** Queue-based async execution:
+
 - User clicks "Execute" → Returns immediately with `executionId`
 - Execution job queued in background (BullMQ/SQS)
 - Worker processes job asynchronously
 - Real-time status updates via WebSocket
 
 **Why Critical:**
+
 - **Scalability** - Handle 1000s of concurrent executions
 - **Reliability** - Retry failed executions automatically
 - **User Experience** - Non-blocking, responsive UI
@@ -77,6 +83,7 @@ After interpolation: "Summarize this: Quantum computing uses qubits to process i
 ### 3. **Execution Service** (`execution.service.ts`)
 
 **Problem:** Need a central orchestrator that:
+
 - Validates pod access (workspace permissions)
 - Fetches pod configuration from DynamoDB
 - Resolves context from upstream pods
@@ -85,6 +92,7 @@ After interpolation: "Summarize this: Quantum computing uses qubits to process i
 - Updates pod status in real-time
 
 **Solution:** The execution service is the **main coordinator** that:
+
 1. Validates the request
 2. Resolves context using `ContextResolutionService`
 3. Interpolates variables in prompts
@@ -94,6 +102,7 @@ After interpolation: "Summarize this: Quantum computing uses qubits to process i
 7. Updates pod status
 
 **Why Critical:**
+
 - Single source of truth for execution logic
 - Ensures consistent behavior across sync/async modes
 - Handles all error cases gracefully
@@ -125,13 +134,13 @@ async getExecutionOrder(flowId: string): Promise<string[]>
 ```typescript
 interface ContextChain {
   pod: { id: string; type: PodType };
-  context: ResolvedContext[];     // Upstream pod outputs
+  context: ResolvedContext[]; // Upstream pod outputs
   variables: Record<string, string>; // pod_id → output mapping
 }
 
 interface ResolvedContext {
   podId: string;
-  output: string;                 // Actual LLM response
+  output: string; // Actual LLM response
   executionId?: string;
   timestamp: Date;
 }
@@ -140,12 +149,14 @@ interface ResolvedContext {
 **Algorithm:**
 
 1. **Find Upstream Pods:**
+
    ```sql
    SELECT sourcePodId FROM edges
    WHERE flowId = ? AND targetPodId = ?
    ```
 
 2. **Get Latest Execution for Each:**
+
    ```sql
    SELECT responseMetadata FROM podExecution
    WHERE podId = ? AND status = 'COMPLETED'
@@ -158,8 +169,9 @@ interface ResolvedContext {
    - Gemini: `response.candidates[0].content.parts[0].text`
 
 4. **Build Variable Map:**
+
    ```typescript
-   variables['pod_abc123'] = "Quantum computing uses qubits..."
+   variables['pod_abc123'] = 'Quantum computing uses qubits...';
    ```
 
 5. **Interpolate in Prompts:**
@@ -178,43 +190,46 @@ interface ResolvedContext {
 **Key Features:**
 
 1. **Queue Creation:**
+
    ```typescript
    this.executionQueue = this.queueFactory.createQueue('pod-executions', 10);
    // 10 = max concurrent workers
    ```
 
 2. **Job Enqueueing:**
+
    ```typescript
    async queueExecution(data: ExecutionJobData): Promise<string> {
      const jobId = await this.executionQueue.add('execute-pod', data, {
        jobId: data.executionId, // Use execution ID as job ID for idempotency
      });
-     
+
      // Emit WebSocket event
      this.flowGateway.broadcastToFlow(data.flowId, 'execution:queued', {...});
-     
+
      return jobId;
    }
    ```
 
 3. **Job Processing:**
+
    ```typescript
    private async processExecution(job: any) {
      const { executionId, podId, workspaceId, userId, flowId, ...params } = job.data;
-     
+
      // Update status to RUNNING
      await this.updateExecutionStatus(executionId, PodExecutionStatus.RUNNING);
      this.flowGateway.broadcastToFlow(flowId, 'execution:running', {...});
-     
+
      try {
        // Execute the pod
        const result = await this.executionService.executePodInternal({
          executionId, podId, workspaceId, userId, ...params
        });
-       
+
        // Emit success
        this.flowGateway.broadcastToFlow(flowId, 'execution:completed', {result});
-       
+
        return result;
      } catch (error) {
        // Emit error
@@ -361,7 +376,7 @@ WebSocket Event → Frontend
 }
 
     ⏱️ MEANWHILE (background worker)
-    
+
 Queue Worker picks up job
     ↓
 ExecutionQueueService.processExecution()
@@ -381,6 +396,7 @@ WebSocket Event → "execution:completed"
 ```
 
 **Frontend receives 3 WebSocket events:**
+
 1. `execution:queued` - Job added to queue
 2. `execution:running` - Worker started
 3. `execution:completed` - Result ready
@@ -392,6 +408,7 @@ WebSocket Event → "execution:completed"
 ### Example Flow with 3 Connected Pods
 
 **Setup:**
+
 ```
 ┌──────────────┐
 │   Pod A      │  Research Pod
@@ -414,25 +431,27 @@ WebSocket Event → "execution:completed"
 **Execution Sequence:**
 
 **1. Execute Pod A:**
+
 ```typescript
 // No upstream pods → No context
 contextChain = {
   pod: { id: 'pod_a', type: 'LLM_PROMPT' },
   context: [],
-  variables: {}
-}
+  variables: {},
+};
 
 // Final prompt to LLM
 messages = [
   { role: 'system', content: 'You are a helpful AI assistant' },
-  { role: 'user', content: 'What is quantum computing?' }
-]
+  { role: 'user', content: 'What is quantum computing?' },
+];
 
 // Response saved
-response = "Quantum computing uses qubits to process information. Unlike classical bits..."
+response = 'Quantum computing uses qubits to process information. Unlike classical bits...';
 ```
 
 **2. Execute Pod B:**
+
 ```typescript
 // Find upstream pods
 upstreamEdges = [{ sourcePodId: 'pod_a', targetPodId: 'pod_b' }]
@@ -472,6 +491,7 @@ response = "Quantum computing leverages qubits. It processes information differe
 ```
 
 **3. Execute Pod C:**
+
 ```typescript
 // Find upstream pods
 upstreamEdges = [{ sourcePodId: 'pod_b', targetPodId: 'pod_c' }]
@@ -517,6 +537,7 @@ response = "1. Research qubits\n2. Study quantum information processing\n3. Lear
 ### Why We Need a Queue
 
 **Without Queue (Synchronous Only):**
+
 ```
 User clicks Execute
   ↓
@@ -528,6 +549,7 @@ Response returns
 ```
 
 **Problems:**
+
 - ❌ Browser timeout after 30s
 - ❌ Server thread blocked (can't handle other requests)
 - ❌ No retry on failure
@@ -535,6 +557,7 @@ Response returns
 - ❌ Poor UX (user stuck waiting)
 
 **With Queue (Asynchronous):**
+
 ```
 User clicks Execute
   ↓
@@ -548,6 +571,7 @@ WebSocket updates frontend in real-time
 ```
 
 **Benefits:**
+
 - ✅ Instant response (< 100ms)
 - ✅ Automatic retries (3 attempts with exponential backoff)
 - ✅ Concurrency control (max 10 workers)
@@ -559,6 +583,7 @@ WebSocket updates frontend in real-time
 ### Queue Architecture
 
 **Development (BullMQ + Redis):**
+
 ```
 ┌─────────────────┐
 │   Controller    │
@@ -591,6 +616,7 @@ WebSocket updates frontend in real-time
 ```
 
 **Production (AWS SQS):**
+
 ```
 ┌─────────────────┐
 │   Controller    │
@@ -652,17 +678,19 @@ export class QueueFactory {
 **From BullMQ to SQS:**
 
 **Step 1:** Update `.env` file
+
 ```bash
 # Change this ONE line:
 QUEUE_BACKEND=redis  # ← From this
 QUEUE_BACKEND=sqs    # ← To this
 
 # Add SQS config (if not already present):
-AWS_SQS_QUEUE_URL=https://sqs.ap-south-1.amazonaws.com/715841334028/actopod-executions
+AWS_SQS_QUEUE_URL=https://sqs.ap-south-1.amazonaws.com/715841334028/flopods-executions
 AWS_SQS_REGION=ap-south-1
 ```
 
 **Step 2:** Restart backend
+
 ```bash
 yarn dev:backend
 ```
@@ -674,6 +702,7 @@ yarn dev:backend
 ### How It Works
 
 **Queue Adapter Interface:**
+
 ```typescript
 export interface QueueAdapter {
   add(jobName: string, data: any, options?: any): Promise<string>;
@@ -688,6 +717,7 @@ export interface QueueAdapter {
 **Both adapters implement the same interface:**
 
 **RedisQueueAdapter (BullMQ):**
+
 ```typescript
 class RedisQueueAdapter implements QueueAdapter {
   private queue: Queue;
@@ -706,6 +736,7 @@ class RedisQueueAdapter implements QueueAdapter {
 ```
 
 **SqsQueueAdapter (AWS SQS):**
+
 ```typescript
 class SqsQueueAdapter implements QueueAdapter {
   private sqsClient: SQSClient;
@@ -715,7 +746,7 @@ class SqsQueueAdapter implements QueueAdapter {
       new SendMessageCommand({
         QueueUrl: this.queueUrl,
         MessageBody: JSON.stringify({ jobName, data }),
-      })
+      }),
     );
     return response.MessageId;
   }
@@ -729,6 +760,7 @@ class SqsQueueAdapter implements QueueAdapter {
 ```
 
 **ExecutionQueueService doesn't care which implementation:**
+
 ```typescript
 // This code works with BOTH BullMQ and SQS:
 this.executionQueue = this.queueFactory.createQueue('pod-executions', 10);
@@ -759,7 +791,7 @@ REDIS_TLS_ENABLED=false
 # AWS SQS (Production)
 AWS_SQS_ACCESS_KEY_ID=AKIA...
 AWS_SQS_SECRET_ACCESS_KEY=...
-AWS_SQS_QUEUE_URL=https://sqs.ap-south-1.amazonaws.com/715841334028/actopod-executions
+AWS_SQS_QUEUE_URL=https://sqs.ap-south-1.amazonaws.com/715841334028/flopods-executions
 AWS_SQS_REGION=ap-south-1
 ```
 
@@ -772,6 +804,7 @@ AWS_SQS_REGION=ap-south-1
 ### Execute Pod Synchronously
 
 **Request:**
+
 ```http
 POST /api/v1/workspaces/cm2abc123/executions
 Authorization: Bearer <token>
@@ -794,6 +827,7 @@ Content-Type: application/json
 ```
 
 **Response (after 5-10 seconds):**
+
 ```json
 {
   "executionId": "exec_cm2def456",
@@ -819,6 +853,7 @@ Content-Type: application/json
 ### Execute Pod Asynchronously (Queue)
 
 **Request:**
+
 ```http
 POST /api/v1/workspaces/cm2abc123/executions
 Authorization: Bearer <token>
@@ -837,6 +872,7 @@ Content-Type: application/json
 ```
 
 **Immediate Response (< 100ms):**
+
 ```json
 {
   "executionId": "exec_cm2def456",
@@ -847,6 +883,7 @@ Content-Type: application/json
 **WebSocket Events (received over time):**
 
 **Event 1 (immediately):**
+
 ```json
 {
   "type": "execution:queued",
@@ -857,6 +894,7 @@ Content-Type: application/json
 ```
 
 **Event 2 (when worker picks up job):**
+
 ```json
 {
   "type": "execution:running",
@@ -867,6 +905,7 @@ Content-Type: application/json
 ```
 
 **Event 3 (when completed):**
+
 ```json
 {
   "type": "execution:completed",
@@ -887,12 +926,14 @@ Content-Type: application/json
 ### Get Execution History
 
 **Request:**
+
 ```http
 GET /api/v1/workspaces/cm2abc123/executions/pod/pod_xyz789?limit=10
 Authorization: Bearer <token>
 ```
 
 **Response:**
+
 ```json
 [
   {
@@ -921,12 +962,14 @@ Authorization: Bearer <token>
 ### Cancel Queued Execution
 
 **Request:**
+
 ```http
 DELETE /api/v1/workspaces/cm2abc123/executions/exec_cm2def456
 Authorization: Bearer <token>
 ```
 
 **Response:**
+
 ```http
 HTTP/1.1 204 No Content
 ```

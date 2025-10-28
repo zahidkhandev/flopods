@@ -1,3 +1,3 @@
-import nestjsConfig from '@actopod/eslint-config/nestjs.js';
+import nestjsConfig from '@flopods/eslint-config/nestjs.js';
 
 export default [...nestjsConfig];

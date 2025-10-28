@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import axios, { AxiosError } from 'axios';
 import { BaseLLMProvider } from './base-llm.provider';
-import { LLMProvider } from '@actopod/schema';
+import { LLMProvider } from '@flopods/schema';
 import { LLMRequest, LLMResponse, LLMStreamChunk } from '../types/llm-provider.types';
 import { PrismaService } from '../../../prisma/prisma.service';
 

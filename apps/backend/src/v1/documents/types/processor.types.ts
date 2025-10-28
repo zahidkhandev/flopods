@@ -7,7 +7,7 @@
  * @module v1/documents/types/processor
  */
 
-import { DocumentSourceType } from '@actopod/schema';
+import { DocumentSourceType } from '@flopods/schema';
 
 /**
  * Document processor configuration options

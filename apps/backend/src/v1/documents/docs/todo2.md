@@ -86,8 +86,8 @@ REDIS_TLS_ENABLED=false
 
 # Document Processing
 DOCUMENT_MAX_FILE_SIZE=104857600  # 100MB
-DOCUMENT_S3_BUCKET=actopod-documents-dev
-DOCUMENT_VECTOR_S3_BUCKET=actopod-vectors-dev
+DOCUMENT_S3_BUCKET=flopods-documents-dev
+DOCUMENT_VECTOR_S3_BUCKET=flopods-vectors-dev
 
 # Gemini API (Platform Key)
 GEMINI_API_KEY=your-gemini-api-key
@@ -101,15 +101,15 @@ QUEUE_BACKEND=sqs
 
 # AWS SQS (Production)
 AWS_SQS_REGION=ap-south-1
-AWS_SQS_QUEUE_URL=https://sqs.ap-south-1.amazonaws.com/123456789/actopod-document-processing.fifo
-AWS_SQS_DLQ_URL=https://sqs.ap-south-1.amazonaws.com/123456789/actopod-document-processing-dlq.fifo
+AWS_SQS_QUEUE_URL=https://sqs.ap-south-1.amazonaws.com/123456789/flopods-document-processing.fifo
+AWS_SQS_DLQ_URL=https://sqs.ap-south-1.amazonaws.com/123456789/flopods-document-processing-dlq.fifo
 AWS_SQS_ACCESS_KEY_ID=your-sqs-access-key
 AWS_SQS_SECRET_ACCESS_KEY=your-sqs-secret-key
 
 # Document Processing
 DOCUMENT_MAX_FILE_SIZE=524288000  # 500MB for production
-DOCUMENT_S3_BUCKET=actopod-documents-prod
-DOCUMENT_VECTOR_S3_BUCKET=actopod-vectors-prod
+DOCUMENT_S3_BUCKET=flopods-documents-prod
+DOCUMENT_VECTOR_S3_BUCKET=flopods-vectors-prod
 
 # Gemini API (Platform Key)
 GEMINI_API_KEY=your-production-gemini-key
@@ -179,7 +179,7 @@ GEMINI_API_KEY=your-production-gemini-key
 **Create FIFO Queue**:
 
 ```
-Queue Name: actopod-document-processing.fifo
+Queue Name: flopods-document-processing.fifo
 Type: FIFO
 Region: ap-south-1
 Message Retention: 4 days (345600 seconds)
@@ -191,7 +191,7 @@ Content-Based Deduplication: Enabled
 **Create Dead Letter Queue**:
 
 ```
-Queue Name: actopod-document-processing-dlq.fifo
+Queue Name: flopods-document-processing-dlq.fifo
 Type: FIFO
 Region: ap-south-1
 Message Retention: 14 days
@@ -213,8 +213,8 @@ Max Receives: 3
         "sqs:GetQueueAttributes"
       ],
       "Resource": [
-        "arn:aws:sqs:ap-south-1:ACCOUNT_ID:actopod-document-processing.fifo",
-        "arn:aws:sqs:ap-south-1:ACCOUNT_ID:actopod-document-processing-dlq.fifo"
+        "arn:aws:sqs:ap-south-1:ACCOUNT_ID:flopods-document-processing.fifo",
+        "arn:aws:sqs:ap-south-1:ACCOUNT_ID:flopods-document-processing-dlq.fifo"
       ]
     }
   ]

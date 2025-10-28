@@ -9,7 +9,7 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
-import type { DocumentProcessingType } from '@actopod/schema';
+import type { DocumentProcessingType } from '@flopods/schema';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { DocumentCostSummary, DocumentDailyCost } from '../types';
 

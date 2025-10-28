@@ -61,7 +61,7 @@ export class AwsSesEmailService {
       throw new InternalServerErrorException('SES "from" email is not configured.');
     }
 
-    const source = from || `Actopod <${this.defaultFromEmail}>`;
+    const source = from || `Flopods <${this.defaultFromEmail}>`;
     const toAddresses = Array.isArray(to) ? to : [to];
 
     // Development mode - log only

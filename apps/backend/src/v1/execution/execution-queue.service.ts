@@ -5,7 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { V1ExecutionService } from './execution.service';
 import { V1FlowGateway } from '../flow/flow.gateway';
 import { PrismaService } from '../../prisma/prisma.service';
-import { LLMProvider, PodExecutionStatus } from '@actopod/schema';
+import { LLMProvider, PodExecutionStatus } from '@flopods/schema';
 import { QueueFactory } from '../../common/queue/queue.factory';
 import { QueueAdapter } from '../../common/queue/queue-adapter.interface';
 

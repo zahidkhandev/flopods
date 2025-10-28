@@ -9,7 +9,7 @@
 
 import { fileTypeFromBuffer } from 'file-type';
 import { lookup } from 'mime-types';
-import { DocumentSourceType } from '@actopod/schema';
+import { DocumentSourceType } from '@flopods/schema';
 
 /**
  * Supported document MIME types

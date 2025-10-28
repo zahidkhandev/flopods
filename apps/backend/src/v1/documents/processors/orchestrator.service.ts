@@ -3,7 +3,7 @@
  */
 
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
-import { DocumentSourceType, DocumentStatus } from '@actopod/schema';
+import { DocumentSourceType, DocumentStatus } from '@flopods/schema';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { PDFDocumentProcessor } from './pdf-processor.service';
 import { ImageDocumentProcessor } from './image-processor.service';

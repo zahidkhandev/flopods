@@ -1,6 +1,6 @@
 import { IsEnum, IsBoolean, IsOptional } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { FlowAccessLevel } from '@actopod/schema';
+import { FlowAccessLevel } from '@flopods/schema';
 
 export class UpdateCollaboratorDto {
   @ApiPropertyOptional({ enum: FlowAccessLevel })

@@ -1,5 +1,5 @@
 {
-  "extends": "@actopod/tsconfig/base.json",
+  "extends": "@flopods/tsconfig/base.json",
   "compilerOptions": {
     "composite": true,
     "module": "ESNext",

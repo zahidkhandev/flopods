@@ -13,7 +13,7 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { PodType, LLMProvider } from '@actopod/schema';
+import { PodType, LLMProvider } from '@flopods/schema';
 
 export class PositionDto {
   @ApiProperty()

@@ -1,6 +1,6 @@
 import { Expose } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
-import { PodType, PodExecutionStatus } from '@actopod/schema';
+import { PodType, PodExecutionStatus } from '@flopods/schema';
 
 export class PodResponseDto {
   @Expose()

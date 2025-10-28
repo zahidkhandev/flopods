@@ -1,6 +1,6 @@
 import { IsString, IsNotEmpty, MaxLength, IsEnum, IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { WorkspaceType } from '@actopod/schema';
+import { WorkspaceType } from '@flopods/schema';
 
 /**
  * DTO for creating a new workspace

@@ -2,7 +2,7 @@
 
 import { ApiProperty } from '@nestjs/swagger';
 import { Expose } from 'class-transformer';
-import { PodExecutionStatus, LLMProvider } from '@actopod/schema';
+import { PodExecutionStatus, LLMProvider } from '@flopods/schema';
 
 export class ExecutionUsageDto {
   @ApiProperty({ description: 'Prompt (input) tokens used', example: 150 })

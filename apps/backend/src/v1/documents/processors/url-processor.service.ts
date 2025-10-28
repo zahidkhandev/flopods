@@ -11,7 +11,7 @@ import { Injectable, Logger, NotFoundException, BadRequestException } from '@nes
 import * as cheerio from 'cheerio';
 import { BaseDocumentProcessor } from './base-processor.abstract';
 import type { DocumentExtractedContent } from '../types';
-import { DocumentSourceType } from '@actopod/schema';
+import { DocumentSourceType } from '@flopods/schema';
 import { PrismaService } from '../../../prisma/prisma.service';
 
 /**

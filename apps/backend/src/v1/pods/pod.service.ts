@@ -7,7 +7,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { PodType, PodExecutionStatus } from '@actopod/schema';
+import { PodType, PodExecutionStatus } from '@flopods/schema';
 import { plainToInstance } from 'class-transformer';
 import { CreatePodDto } from './dto/create-pod.dto';
 import { UpdatePodDto } from './dto/update-pod.dto';
