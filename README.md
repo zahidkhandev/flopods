@@ -2,13 +2,19 @@
 
 <div align="center">
 
-![Flopods Logo](https://via
+# 🌊 Flopods
 
 **The Next-Generation Multi-LLM, Node-Based Workflow Platform**
 
-[![License: MIT](https://img.shields.e.js Version](https://img.shields.iolcome](https://img.shields.io/badge/PRs-welcome-brightgreen.ck-start) - [Documentation](#-documentation) - [Architecture](#-architecture) - [Contributing](#-contributing)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen)](https://nodejs.org/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/zahidkhandev/flopods/pulls)
+
+[Features](#-features) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Architecture](#-architecture) • [Contributing](#-contributing)
 
 </div>
+
+---
 
 ---
 
