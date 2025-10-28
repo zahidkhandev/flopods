@@ -9,13 +9,18 @@
     "doctag",
     "flopods",
     "Flopods",
+    "hostable",
     "ILLM",
     "localstack",
     "nodrag",
+    "Passwordless",
+    "pgvector",
     "reactflow",
     "tesseract",
     "tiktoken",
     "Timestamptz",
+    "Turborepo",
+    "yourpassword",
     "zahidkhandev"
   ]
 }
