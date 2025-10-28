@@ -201,7 +201,7 @@ export class GeminiProvider extends BaseLLMProvider {
                   totalTokens: data.usageMetadata.totalTokenCount || 0,
                 };
               }
-            } catch (parseError) {
+            } catch {
               this.logger.warn(`Failed to parse final buffer: ${trimmedBuffer.substring(0, 100)}`);
             }
           }

@@ -57,7 +57,7 @@ export class V1ExecutionService {
     responseFormat?: 'text' | 'json_object' | 'json';
     contextMappings?: PodContextMapping[];
   }): AsyncGenerator<LLMStreamChunk, void, unknown> {
-    const { podId, workspaceId, messages, contextMappings } = params;
+    const { podId, workspaceId, messages } = params;
     const executionId = `exec_${nanoid(16)}`;
     const startTime = Date.now();
     let podFlowId: string | null = null;

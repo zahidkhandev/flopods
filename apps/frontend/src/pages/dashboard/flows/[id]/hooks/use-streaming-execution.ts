@@ -61,8 +61,6 @@ export function useStreamingExecution(options: UseStreamingExecutionOptions = {}
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
         const url = `${apiUrl}/workspaces/${currentWorkspaceId}/executions`;
 
-        console.log('[Streaming] Executing to:', url);
-
         const response = await fetch(url, {
           method: 'POST',
           headers: {
@@ -141,7 +139,7 @@ export function useStreamingExecution(options: UseStreamingExecutionOptions = {}
                     options.onStart?.(executionId);
                     break;
 
-                  case 'token':
+                  case 'token': {
                     // ✅ Handle BOTH `token` and `content` fields
                     const tokenText = parsed.token || parsed.content || '';
                     if (tokenText) {
@@ -149,6 +147,7 @@ export function useStreamingExecution(options: UseStreamingExecutionOptions = {}
                       options.onToken?.(tokenText);
                     }
                     break;
+                  }
 
                   case 'done':
                     // ✅ Capture token usage from Gemini's done event
@@ -160,7 +159,6 @@ export function useStreamingExecution(options: UseStreamingExecutionOptions = {}
                         inputTokens: parsed.usage.promptTokens || 0,
                         outputTokens: parsed.usage.completionTokens || 0,
                       };
-                      console.log('[Streaming] Usage captured:', metadata);
                     }
                     break;
 

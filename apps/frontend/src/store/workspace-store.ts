@@ -56,7 +56,6 @@ export const useWorkspaceStore = create<WorkspaceState>()(
     (set) => ({
       currentWorkspaceId: null,
       setCurrentWorkspaceId: (id: string) => {
-        console.log('📌 Workspace set to:', id);
         set({ currentWorkspaceId: id });
       },
       clearWorkspace: () => set({ currentWorkspaceId: null }),
