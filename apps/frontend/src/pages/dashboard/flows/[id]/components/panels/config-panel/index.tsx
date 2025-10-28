@@ -228,8 +228,7 @@ export default memo(function ConfigPanel({ selectedPodId }: ConfigPanelProps) {
     onToken: (token) => {
       setStreamingContent((prev) => prev + token);
     },
-    onStart: (executionId) => {
-      console.log('[ConfigPanel] Execution started:', executionId);
+    onStart: (_executionId) => {
       setStreamingContent('');
       setDebouncedStreamingContent('');
     },

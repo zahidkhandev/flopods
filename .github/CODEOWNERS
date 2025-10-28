@@ -1,0 +1,24 @@
+# Flopods Code Owners
+
+# These owners will be requested for review when someone opens a pull request.
+
+# Global owner
+
+- @zahidkhandev
+
+# Backend specific
+
+/apps/backend/\*\* @zahidkhandev
+
+# Frontend specific
+
+/apps/frontend/\*\* @zahidkhandev
+
+# Database schema
+
+/packages/schema/\*\* @zahidkhandev
+
+# CI/CD and configs
+
+/.github/** @zahidkhandev
+/docker/** @zahidkhandev

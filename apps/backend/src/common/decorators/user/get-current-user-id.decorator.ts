@@ -1,7 +1,7 @@
 // src/common/decorators/user.decorator.ts
 
 import type { ExecutionContext } from '@nestjs/common';
-import { createParamDecorator, UnauthorizedException } from '@nestjs/common';
+import { createParamDecorator } from '@nestjs/common';
 
 export const GetCurrentUserId = createParamDecorator(
   (data: unknown, context: ExecutionContext): string => {

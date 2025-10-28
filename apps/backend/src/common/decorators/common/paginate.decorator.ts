@@ -1,8 +1,4 @@
-import {
-  SetMetadata,
-  createParamDecorator,
-  ExecutionContext,
-} from '@nestjs/common';
+import { SetMetadata, createParamDecorator, ExecutionContext } from '@nestjs/common';
 
 export const PAGINATE_METADATA_KEY = 'paginate';
 
@@ -38,9 +34,7 @@ export const PaginationParams = createParamDecorator(
     const sortBy = request.query.sortBy || 'createdAt';
     const order = request.query.order || 'desc';
     const search = request.query.search || '';
-    const filters = request.query.filters
-      ? JSON.parse(request.query.filters)
-      : {};
+    const filters = request.query.filters ? JSON.parse(request.query.filters) : {};
     return { page, limit, sortBy, order, search, filters };
   },
 );

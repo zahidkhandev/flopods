@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 // File: apps/frontend/src/pages/dashboard/flows/[id]/context/canvas-context.tsx
 import {
   createContext,
@@ -141,11 +142,6 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
           type: 'animated',
           animated: true,
         }));
-
-        console.log('✅ Loaded canvas:', {
-          nodes: loadedNodes.length,
-          edges: loadedEdges.length,
-        });
 
         setNodes(loadedNodes);
         setEdges(loadedEdges);
@@ -426,7 +422,6 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
           saveToHistory(nodesRef.current, newEdges);
           return newEdges;
         });
-        console.log('✅ Edge created:', backendEdge.id);
       } catch (error) {
         console.error('❌ Failed to create edge:', error);
         setEdges((prev) => prev.filter((e) => e.id !== tempEdge.id));
