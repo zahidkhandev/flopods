@@ -1,4 +1,4 @@
-import { LLMProvider } from '@actopod/schema';
+import { LLMProvider } from '@flopods/schema';
 
 // ==========================================
 // CORE TYPES

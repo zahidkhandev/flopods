@@ -4,7 +4,7 @@ export const resetPasswordTemplate = (name: string, resetUrl: string): string =>
   const content = `
     <h2>Reset Your Password</h2>
     <p>Hi ${name},</p>
-    <p>We received a request to reset your password for your Actopod account.</p>
+    <p>We received a request to reset your password for your Flopods account.</p>
 
     <p style="text-align: center;">
       <a href="${resetUrl}" class="button">Reset Password</a>

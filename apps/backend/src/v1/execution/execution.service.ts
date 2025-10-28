@@ -5,7 +5,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { DynamoDbService } from '../../common/aws/dynamodb/dynamodb.service';
 import { ProviderFactory } from './providers/provider.factory';
 import { V1ContextResolutionService } from './context-resolution.service';
-import { LLMProvider, PodExecutionStatus } from '@actopod/schema';
+import { LLMProvider, PodExecutionStatus } from '@flopods/schema';
 import { ExecutionHistoryItemDto, ExecutionDetailDto } from './dto/execution-response.dto';
 import { LLMPromptPodContent, PodContextMapping } from '../pods/types/pod-content.types';
 import { LLMStreamChunk } from './types/llm-provider.types';

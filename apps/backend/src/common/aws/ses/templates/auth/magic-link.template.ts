@@ -8,11 +8,11 @@ export const magicLinkTemplate = (
   deviceName: string,
 ): string => {
   const content = `
-    <h2>🔐 Sign in to Actopod</h2>
+    <h2>🔐 Sign in to Flopods</h2>
     <p>Hi ${name || 'there'},</p>
-    <p>Click the button below to securely sign in to your Actopod account:</p>
+    <p>Click the button below to securely sign in to your Flopods account:</p>
     <p style="text-align: center;">
-      <a href="${magicUrl}" class="button">Sign In to Actopod</a>
+      <a href="${magicUrl}" class="button">Sign In to Flopods</a>
     </p>
     <p>Or copy and paste this link into your browser:</p>
     <p style="word-break: break-all; color: #6b7280; background-color: #f3f4f6; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 14px;">
@@ -30,7 +30,7 @@ export const magicLinkTemplate = (
     <div style="margin-top: 20px; padding: 15px; background-color: #FEF2F2; border-left: 4px solid #EF4444; border-radius: 6px;">
       <p style="margin: 0; font-size: 14px; color: #991B1B;">
         <strong>⚠️ Security Warning:</strong><br>
-        If you didn't request this sign-in link, please ignore this email or contact our support team immediately at <a href="mailto:${process.env.AWS_SES_SUPPORT_EMAIL || 'support@actopod.dev'}">${process.env.AWS_SES_SUPPORT_EMAIL || 'support@actopod.dev'}</a>
+        If you didn't request this sign-in link, please ignore this email or contact our support team immediately at <a href="mailto:${process.env.AWS_SES_SUPPORT_EMAIL || 'support@flopods.dev'}">${process.env.AWS_SES_SUPPORT_EMAIL || 'support@flopods.dev'}</a>
       </p>
     </div>
   `;

@@ -1,4 +1,4 @@
-import reactConfig from '@actopod/eslint-config/react.js';
+import reactConfig from '@flopods/eslint-config/react.js';
 
 export default [
   ...reactConfig,

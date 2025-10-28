@@ -10,7 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AwsSesEmailService } from '../../common/aws/ses/ses-email.service';
 import { AuthUserType, GoogleUserData, GitHubUserData, JwtPayload } from './types';
-import { AuthProvider } from '@actopod/schema';
+import { AuthProvider } from '@flopods/schema';
 import { randomBytes, createHash } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { magicLinkTemplate } from '../../common/aws/ses/templates/auth/magic-link.template';
@@ -97,7 +97,7 @@ export class V1AuthService {
     const verificationUrl = `${this.configService.get('FRONTEND_URL')}/auth/verify-email?token=${verificationToken}`;
     await this.emailService.sendEmail({
       to: user.email,
-      subject: 'Verify your Actopod account',
+      subject: 'Verify your Flopods account',
       bodyHtml: verifyEmailTemplate(user.name || 'there', verificationUrl),
     });
 
@@ -132,7 +132,7 @@ export class V1AuthService {
 
     await this.emailService.sendEmail({
       to: account.user.email,
-      subject: 'Welcome to Actopod!',
+      subject: 'Welcome to Flopods!',
       bodyHtml: welcomeEmailTemplate(account.user.name || 'there'),
     });
 
@@ -191,7 +191,7 @@ export class V1AuthService {
     const verificationUrl = `${this.configService.get('FRONTEND_URL')}/auth/verify-email?token=${verificationToken}`;
     await this.emailService.sendEmail({
       to: user.email,
-      subject: 'Verify your Actopod account',
+      subject: 'Verify your Flopods account',
       bodyHtml: verifyEmailTemplate(user.name || 'there', verificationUrl),
     });
 
@@ -278,7 +278,7 @@ export class V1AuthService {
     const resetUrl = `${this.configService.get('FRONTEND_URL')}/auth/reset-password?token=${resetToken}`;
     await this.emailService.sendEmail({
       to: user.email,
-      subject: 'Reset your Actopod password',
+      subject: 'Reset your Flopods password',
       bodyHtml: resetPasswordTemplate(user.name || 'there', resetUrl),
     });
 
@@ -384,7 +384,7 @@ export class V1AuthService {
 
     await this.emailService.sendEmail({
       to: user.email,
-      subject: '🔐 Sign in to Actopod',
+      subject: '🔐 Sign in to Flopods',
       bodyHtml: magicLinkTemplate(
         user.name || 'there',
         magicUrl,

@@ -18,7 +18,7 @@ import { WorkspaceUpdateMemberDto } from './dto/workspace-update-member.dto';
 import { WorkspaceSendInvitationDto } from './dto/workspace-send-invitation.dto';
 import { WorkspaceAddApiKeyDto } from './dto/workspace-add-api-key.dto';
 import { WorkspaceUpdateApiKeyDto } from './dto/workspace-update-api-key.dto';
-import { WorkspaceType, WorkspaceRole, InvitationStatus, NotificationType } from '@actopod/schema';
+import { WorkspaceType, WorkspaceRole, InvitationStatus, NotificationType } from '@flopods/schema';
 import * as crypto from 'crypto';
 import { workspaceInvitationTemplate } from '../../common/aws/ses/templates/workspace/invitation.template';
 import {
@@ -664,7 +664,7 @@ export class V1WorkspaceService {
 
       await this.emailService.sendEmail({
         to: dto.email,
-        subject: `You've been invited to join ${workspace.name} on Actopod`,
+        subject: `You've been invited to join ${workspace.name} on Flopods`,
         bodyHtml: workspaceInvitationTemplate(
           workspace.name,
           inviteLink,

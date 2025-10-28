@@ -7,9 +7,9 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { S3Service } from '../../../common/aws/s3/s3.service';
 import { V1DocumentQueueProducer } from '../queues/document-queue.producer';
-import { DocumentSourceType, DocumentStatus } from '@actopod/schema';
+import { DocumentSourceType, DocumentStatus } from '@flopods/schema';
 import { validateDocumentFileType } from '../utils';
-import type { Document } from '@actopod/schema';
+import type { Document } from '@flopods/schema';
 
 @Injectable()
 export class V1DocumentsService {

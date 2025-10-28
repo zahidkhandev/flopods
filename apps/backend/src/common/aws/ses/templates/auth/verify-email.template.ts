@@ -2,7 +2,7 @@ import { baseEmailTemplate } from '../base.template';
 
 export const verifyEmailTemplate = (name: string, verificationUrl: string): string => {
   const content = `
-    <h2>Welcome to Actopod, ${name}!</h2>
+    <h2>Welcome to Flopods, ${name}!</h2>
     <p>Thank you for signing up. Please verify your email address to get started with our AI Workflow Canvas.</p>
 
     <p style="text-align: center;">
@@ -21,7 +21,7 @@ export const verifyEmailTemplate = (name: string, verificationUrl: string): stri
     </div>
 
     <p style="margin-top: 20px; color: #6b7280; font-size: 14px;">
-      If you didn't create an account with Actopod, you can safely ignore this email.
+      If you didn't create an account with Flopods, you can safely ignore this email.
     </p>
   `;
   return baseEmailTemplate(content);

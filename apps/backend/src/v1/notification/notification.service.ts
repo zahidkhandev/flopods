@@ -6,7 +6,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { NotificationType, Notification, Prisma } from '@actopod/schema';
+import { NotificationType, Notification, Prisma } from '@flopods/schema';
 import { V1NotificationGateway } from './notification.gateway';
 import { NotificationQueryDto } from './dto/notification-query.dto';
 import {

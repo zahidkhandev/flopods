@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { NotificationType } from '@actopod/schema';
+import { NotificationType } from '@flopods/schema';
 import { Exclude, Expose, Type } from 'class-transformer';
 
 @Exclude()

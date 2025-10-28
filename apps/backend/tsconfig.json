@@ -1,9 +1,9 @@
 // {
-//   "extends": "@actopod/tsconfig/nestjs.json",
+//   "extends": "@flopods/tsconfig/nestjs.json",
 //   "compilerOptions": {
 //     "outDir": "./dist",
 //     "paths": {
-//       "@actopod/schema": ["../../packages/schema/src"]
+//       "@flopods/schema": ["../../packages/schema/src"]
 //     }
 //   },
 //   "include": ["src/**/*"],
@@ -12,7 +12,7 @@
 // }
 
 {
-  "extends": "@actopod/tsconfig/nestjs.json",
+  "extends": "@flopods/tsconfig/nestjs.json",
   "compilerOptions": {
     "outDir": "./dist"
   },

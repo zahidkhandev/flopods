@@ -40,7 +40,7 @@ import { V1DocumentFoldersService } from '../services/folders.service';
 import { CreateFolderDto, UpdateFolderDto, MoveItemsDto } from '../dto';
 import { AccessTokenGuard } from '../../../common/guards/auth';
 import { GetCurrentUserId } from '../../../common/decorators/user';
-import type { DocumentFolder } from '@actopod/schema';
+import type { DocumentFolder } from '@flopods/schema';
 
 /**
  * Document folders controller

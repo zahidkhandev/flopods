@@ -2,7 +2,7 @@ import { baseEmailTemplate } from '../base.template';
 
 export const welcomeEmailTemplate = (name: string): string => {
   const content = `
-    <h2>Welcome to Actopod, ${name}! 🎉</h2>
+    <h2>Welcome to Flopods, ${name}! 🎉</h2>
     <p>Your account has been successfully verified.</p>
     <p>You're all set to start building powerful AI workflows with our Multi-LLM Node-Based Platform.</p>
 
@@ -40,7 +40,7 @@ export const welcomeEmailTemplate = (name: string): string => {
 
     <p style="margin-top: 30px;">
       Need help getting started? Our support team is here to help at
-      <a href="mailto:${process.env.AWS_SES_SUPPORT_EMAIL || 'support@actopod.dev'}">${process.env.AWS_SES_SUPPORT_EMAIL || 'support@actopod.dev'}</a>
+      <a href="mailto:${process.env.AWS_SES_SUPPORT_EMAIL || 'support@flopods.dev'}">${process.env.AWS_SES_SUPPORT_EMAIL || 'support@flopods.dev'}</a>
     </p>
   `;
   return baseEmailTemplate(content);

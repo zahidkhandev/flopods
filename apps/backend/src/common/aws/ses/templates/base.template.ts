@@ -4,7 +4,7 @@ export const baseEmailTemplate = (content: string): string => `
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Actopod</title>
+  <title>Flopods</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -73,13 +73,13 @@ export const baseEmailTemplate = (content: string): string => `
 <body>
   <div class="container">
     <div class="header">
-      <div class="logo">🚀 Actopod</div>
+      <div class="logo">🚀 Flopods</div>
     </div>
     <div class="content">
       ${content}
     </div>
     <div class="footer">
-      <p>© ${new Date().getFullYear()} Actopod. All rights reserved.</p>
+      <p>© ${new Date().getFullYear()} Flopods. All rights reserved.</p>
       <p>AI Workflow Canvas - Multi-LLM Node-Based Platform</p>
       <p>
         <a href="${process.env.FRONTEND_URL}/help">Help Center</a> •

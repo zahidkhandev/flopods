@@ -1,17 +1,17 @@
 version: '3.8'
-name: actopod
+name: flopods
 
 services:
   redis:
     image: redis:7-alpine
-    container_name: actopod-redis
+    container_name: flopods-redis
     ports:
       - '6379:6379'
     command: redis-server --requirepass yourpassword
     volumes:
       - redis-data:/data
     networks:
-      - actopod-network
+      - flopods-network
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
@@ -23,5 +23,5 @@ volumes:
     driver: local
 
 networks:
-  actopod-network:
+  flopods-network:
     driver: bridge

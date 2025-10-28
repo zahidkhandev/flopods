@@ -11,7 +11,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
-import { SubscriptionTier } from '@actopod/schema';
+import { SubscriptionTier } from '@flopods/schema';
 import { PrismaService } from '../../../prisma/prisma.service';
 
 /**

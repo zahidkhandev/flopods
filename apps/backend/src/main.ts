@@ -63,7 +63,7 @@ async function bootstrap() {
     origin: [
       process.env.FRONTEND_URL || 'http://localhost:5173',
       /^http:\/\/localhost:\d+$/, // Allow all localhost ports
-      /^https?:\/\/.*\.actopod\.dev/, // Production subdomains
+      /^https?:\/\/.*\.flopods\.dev/, // Production subdomains
     ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
@@ -119,7 +119,7 @@ async function bootstrap() {
 
   // Swagger documentation
   const swaggerConfig = new DocumentBuilder()
-    .setTitle('Actopod API v1')
+    .setTitle('Flopods API v1')
     .setDescription('AI Workflow Canvas - Multi-LLM Node-Based Platform')
     .setVersion('1.0')
     .addBearerAuth({
@@ -134,7 +134,7 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/v1/docs', app, document, {
-    customSiteTitle: 'Actopod API v1 Docs',
+    customSiteTitle: 'Flopods API v1 Docs',
     swaggerOptions: {
       persistAuthorization: true,
     },
@@ -144,7 +144,7 @@ async function bootstrap() {
   const port = parseInt(process.env.BACKEND_PORT || '3000', 10);
   await app.listen(port, '0.0.0.0');
 
-  logger.log(`🚀 Actopod Backend running on: http://localhost:${port}`);
+  logger.log(`🚀 Flopods Backend running on: http://localhost:${port}`);
   logger.log(`📚 API v1 Documentation: http://localhost:${port}/api/v1/docs`);
   logger.log(`🔍 Health Check: http://localhost:${port}/api/v1/health`);
   logger.log(`🔌 WebSocket: ws://localhost:${port}/notifications`);

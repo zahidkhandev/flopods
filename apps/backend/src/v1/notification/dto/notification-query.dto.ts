@@ -1,7 +1,7 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsBoolean, IsOptional, IsInt, Min, Max, IsEnum } from 'class-validator';
-import { NotificationType } from '@actopod/schema';
+import { NotificationType } from '@flopods/schema';
 
 export class NotificationQueryDto {
   @ApiPropertyOptional({

@@ -1,5 +1,5 @@
 {
-  "name": "@actopod/frontend",
+  "name": "@flopods/frontend",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -17,7 +17,7 @@
     "clean": "rimraf dist node_modules .turbo"
   },
   "dependencies": {
-    "@actopod/schema": "*",
+    "@flopods/schema": "*",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-avatar": "^1.1.10",
@@ -62,8 +62,8 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
-    "@actopod/eslint-config": "workspace:^",
-    "@actopod/tsconfig": "*",
+    "@flopods/eslint-config": "workspace:^",
+    "@flopods/tsconfig": "*",
     "@types/crypto-js": "^4.2.2",
     "@types/js-cookie": "^3.0.6",
     "@types/react": "^19.2.2",

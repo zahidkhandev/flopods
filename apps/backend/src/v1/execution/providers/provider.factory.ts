@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { LLMProvider, ProviderAPIKey } from '@actopod/schema';
+import { LLMProvider, ProviderAPIKey } from '@flopods/schema';
 import { OpenAIProvider } from './openai.provider';
 import { AnthropicProvider } from './anthropic.provider';
 import { GeminiProvider } from './gemini.provider';

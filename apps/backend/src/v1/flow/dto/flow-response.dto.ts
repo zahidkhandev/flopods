@@ -1,6 +1,6 @@
 import { Expose, Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { FlowVisibility, FlowAccessLevel, FlowActivityAction } from '@actopod/schema';
+import { FlowVisibility, FlowAccessLevel, FlowActivityAction } from '@flopods/schema';
 
 /**
  * Flow Response DTO

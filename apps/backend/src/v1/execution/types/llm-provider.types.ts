@@ -1,6 +1,6 @@
 // File: apps/backend/src/v1/execution/types/llm-provider.types.ts
 
-import { LLMProvider } from '@actopod/schema';
+import { LLMProvider } from '@flopods/schema';
 
 export interface LLMRequest {
   provider: LLMProvider;

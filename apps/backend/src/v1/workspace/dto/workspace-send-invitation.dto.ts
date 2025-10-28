@@ -1,6 +1,6 @@
 import { IsEmail, IsEnum, IsOptional, IsObject } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { WorkspaceRole } from '@actopod/schema';
+import { WorkspaceRole } from '@flopods/schema';
 
 /**
  * DTO for sending workspace invitation via email

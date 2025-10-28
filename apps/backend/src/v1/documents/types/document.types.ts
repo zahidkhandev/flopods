@@ -7,7 +7,7 @@
  * @module v1/documents/types/document
  */
 
-import { DocumentSourceType, DocumentStatus, DocumentProcessingType } from '@actopod/schema';
+import { DocumentSourceType, DocumentStatus, DocumentProcessingType } from '@flopods/schema';
 
 /**
  * Re-export Prisma enums for document processing

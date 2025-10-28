@@ -11,7 +11,7 @@
 
 import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
-import type { DocumentFolder } from '@actopod/schema';
+import type { DocumentFolder } from '@flopods/schema';
 
 /**
  * Folder with children type

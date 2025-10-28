@@ -138,7 +138,7 @@ FormData:
     "mimeType": "application/pdf",
     "sizeInBytes": 1048576,
     "status": "UPLOADING",
-    "s3Bucket": "actopod-documents-prod",
+    "s3Bucket": "flopods-documents-prod",
     "storageKey": "documents/ws_abc123/doc_clx123abc/Report.pdf",
     "folderId": null,
     "uploadedBy": "user_xyz789",

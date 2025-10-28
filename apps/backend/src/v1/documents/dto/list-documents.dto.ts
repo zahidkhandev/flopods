@@ -5,7 +5,7 @@
 import { IsOptional, IsString, IsEnum, IsInt, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { DocumentStatus } from '@actopod/schema';
+import { DocumentStatus } from '@flopods/schema';
 
 export class ListDocumentsDto {
   @ApiPropertyOptional({

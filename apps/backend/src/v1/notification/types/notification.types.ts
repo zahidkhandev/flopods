@@ -1,4 +1,4 @@
-import { NotificationType } from '@actopod/schema';
+import { NotificationType } from '@flopods/schema';
 
 export interface NotificationResponse {
   id: string;

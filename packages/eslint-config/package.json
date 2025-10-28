@@ -1,51 +1,51 @@
 {
-	"name": "@actopod/eslint-config",
-	"version": "0.0.1",
-	"private": true,
-	"main": "index.js",
-	"files": [
-		"*.js"
-	],
-	"devDependencies": {
-		"@eslint/js": "^9.37.0",
-		"@typescript-eslint/eslint-plugin": "^8.46.0",
-		"@typescript-eslint/parser": "^8.46.0",
-		"eslint": "^9.37.0",
-		"eslint-config-prettier": "^10.1.8",
-		"eslint-plugin-react": "^7.37.5",
-		"eslint-plugin-react-hooks": "^7.0.0",
-		"eslint-plugin-react-refresh": "^0.4.23",
-		"eslint-plugin-turbo": "^2.5.8",
-		"typescript-eslint": "^8.46.0"
-	},
-	"Transform": "AWS::Serverless-2016-10-31",
-	"Resources": {
-		"Api": {
-			"Type": "AWS::Serverless::Api",
-			"Properties": {
-				"Name": {
-					"Fn::Sub": [
-						"${ResourceName} From Stack ${AWS::StackName}",
-						{
-							"ResourceName": "Api"
-						}
-					]
-				},
-				"StageName": "Prod",
-				"DefinitionBody": {
-					"openapi": "3.0",
-					"info": {},
-					"paths": {
-						"/": {
-							"get": {
-								"responses": {}
-							}
-						}
-					}
-				},
-				"EndpointConfiguration": "REGIONAL",
-				"TracingEnabled": true
-			}
-		}
-	}
+  "name": "@flopods/eslint-config",
+  "version": "0.0.1",
+  "private": true,
+  "main": "index.js",
+  "files": [
+    "*.js"
+  ],
+  "devDependencies": {
+    "@eslint/js": "^9.37.0",
+    "@typescript-eslint/eslint-plugin": "^8.46.0",
+    "@typescript-eslint/parser": "^8.46.0",
+    "eslint": "^9.37.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.0.0",
+    "eslint-plugin-react-refresh": "^0.4.23",
+    "eslint-plugin-turbo": "^2.5.8",
+    "typescript-eslint": "^8.46.0"
+  },
+  "Transform": "AWS::Serverless-2016-10-31",
+  "Resources": {
+    "Api": {
+      "Type": "AWS::Serverless::Api",
+      "Properties": {
+        "Name": {
+          "Fn::Sub": [
+            "${ResourceName} From Stack ${AWS::StackName}",
+            {
+              "ResourceName": "Api"
+            }
+          ]
+        },
+        "StageName": "Prod",
+        "DefinitionBody": {
+          "openapi": "3.0",
+          "info": {},
+          "paths": {
+            "/": {
+              "get": {
+                "responses": {}
+              }
+            }
+          }
+        },
+        "EndpointConfiguration": "REGIONAL",
+        "TracingEnabled": true
+      }
+    }
+  }
 }

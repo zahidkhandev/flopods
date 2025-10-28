@@ -4,7 +4,7 @@
 
 import { IsNotEmpty, IsString, IsUrl, IsEnum, IsOptional, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { DocumentSourceType } from '@actopod/schema';
+import { DocumentSourceType } from '@flopods/schema';
 
 export class LinkExternalDocumentDto {
   @ApiProperty({

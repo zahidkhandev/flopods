@@ -13,7 +13,7 @@ import {
   Max,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { LLMProvider } from '@actopod/schema';
+import { LLMProvider } from '@flopods/schema';
 
 export class LLMMessageDto {
   @ApiProperty({

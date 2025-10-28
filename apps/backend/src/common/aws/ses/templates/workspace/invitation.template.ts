@@ -1,4 +1,4 @@
-import { WorkspaceRole } from '@actopod/schema';
+import { WorkspaceRole } from '@flopods/schema';
 
 export const workspaceInvitationTemplate = (
   workspaceName: string,
@@ -21,7 +21,7 @@ export const workspaceInvitationTemplate = (
 
     <div style="padding: 40px;">
       <p style="font-size: 16px; color: #333; line-height: 1.6; margin: 0 0 20px;">
-        You've been invited to join <strong>${workspaceName}</strong> as a <strong>${role}</strong> on Actopod.
+        You've been invited to join <strong>${workspaceName}</strong> as a <strong>${role}</strong> on Flopods.
       </p>
 
       <p style="font-size: 16px; color: #333; line-height: 1.6; margin: 0 0 30px;">
@@ -45,7 +45,7 @@ export const workspaceInvitationTemplate = (
 
     <div style="background-color: #f9f9f9; padding: 20px; text-align: center; border-radius: 0 0 8px 8px; border-top: 1px solid #eee;">
       <p style="margin: 0; font-size: 12px; color: #999;">
-        © ${new Date().getFullYear()} Actopod. All rights reserved.
+        © ${new Date().getFullYear()} Flopods. All rights reserved.
       </p>
     </div>
   </div>

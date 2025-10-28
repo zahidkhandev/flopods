@@ -1,6 +1,6 @@
 // src/modules/workspace/types/workspace.types.ts
 
-import { WorkspaceType, WorkspaceRole, InvitationStatus, LLMProvider } from '@actopod/schema';
+import { WorkspaceType, WorkspaceRole, InvitationStatus, LLMProvider } from '@flopods/schema';
 
 export interface InvitationDetailsResponse {
   workspace: {

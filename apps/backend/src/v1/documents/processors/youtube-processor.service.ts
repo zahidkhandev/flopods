@@ -6,7 +6,7 @@ import { Injectable, Logger, NotFoundException, BadRequestException } from '@nes
 import { YoutubeTranscript } from 'youtube-transcript';
 import { BaseDocumentProcessor } from './base-processor.abstract';
 import type { DocumentExtractedContent } from '../types';
-import { DocumentSourceType } from '@actopod/schema';
+import { DocumentSourceType } from '@flopods/schema';
 import { PrismaService } from '../../../prisma/prisma.service';
 
 @Injectable()

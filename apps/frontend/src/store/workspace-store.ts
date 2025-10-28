@@ -62,7 +62,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       clearWorkspace: () => set({ currentWorkspaceId: null }),
     }),
     {
-      name: 'actopod-workspace',
+      name: 'flopods-workspace',
       storage: createJSONStorage(() => customStorage),
     }
   )

@@ -1,6 +1,6 @@
 import { Expose } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { LLMProvider } from '@actopod/schema';
+import { LLMProvider } from '@flopods/schema';
 
 export class PodConfigResponseDto {
   @Expose()

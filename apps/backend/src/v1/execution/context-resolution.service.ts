@@ -1,5 +1,5 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { PodType } from '@actopod/schema';
+import { PodType } from '@flopods/schema';
 import { PrismaService } from '../../prisma/prisma.service';
 import { DynamoDbService } from '../../common/aws/dynamodb/dynamodb.service';
 
