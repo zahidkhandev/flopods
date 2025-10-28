@@ -13,9 +13,7 @@ export function IsNotEmptyObject(validationOptions?: ValidationOptions) {
       validator: {
         validate(value: any, args: ValidationArguments) {
           // Exclude the 'data' property itself from the check
-          const keys = Object.keys(args.object).filter(
-            (key) => key !== propertyName,
-          );
+          const keys = Object.keys(args.object).filter((key) => key !== propertyName);
           return keys.length > 0;
         },
         defaultMessage() {

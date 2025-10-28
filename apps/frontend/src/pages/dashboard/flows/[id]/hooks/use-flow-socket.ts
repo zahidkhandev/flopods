@@ -76,7 +76,6 @@ export function useFlowSocket(
     }
 
     if (socketRef.current?.connected || isConnecting.current) {
-      console.log('[FlowSocket] Connection already active or attempting.');
       return;
     }
 
@@ -97,14 +96,12 @@ export function useFlowSocket(
       const socket = socketRef.current;
 
       socket.on('connect', () => {
-        console.log('[FlowSocket] Connected:', socket.id);
         reconnectAttempts.current = 0;
         isConnecting.current = false;
         hasShownMaxReconnectError.current = false;
       });
 
       socket.on('connected', () => {
-        console.log('[FlowSocket] Authenticated & Joined');
         socket.emit('flow:join', {
           flowId,
           userName: 'User',
@@ -153,7 +150,6 @@ export function useFlowSocket(
       socket.on('pod:created', (data: { pod: any; userId: string; timestamp: string }) => {
         try {
           if (data.userId !== socket.id) {
-            console.log('[FlowSocket] Received pod:created', data.pod);
             const newNode = mapPodToNode(data.pod);
             onNodeAdded(newNode);
           }
@@ -167,7 +163,6 @@ export function useFlowSocket(
         (data: { podId: string; updates: any; userId: string; timestamp: string }) => {
           try {
             if (data.userId !== socket.id) {
-              console.log('[FlowSocket] Received pod:updated', data.podId);
               const updatedNode = mapPodToNode(data.updates);
               setNodes((nds) => nds.map((n) => (n.id === data.podId ? updatedNode : n)));
             }
@@ -333,7 +328,6 @@ export function useFlowSocket(
   }, [
     flowId,
     onNodesChange,
-    onEdgesChange,
     setNodes,
     setEdges,
     onNodeAdded,

@@ -53,7 +53,6 @@ export const useWorkspaces = () => {
         const defaultWorkspace = workspaces.find((ws) => ws.type === 'PERSONAL') || workspaces[0];
 
         setCurrentWorkspaceId(defaultWorkspace.id);
-        console.log('✅ Auto-selected workspace:', defaultWorkspace.name);
       }
     }
   }, [workspaces, currentWorkspaceId, setCurrentWorkspaceId, isLoading]);

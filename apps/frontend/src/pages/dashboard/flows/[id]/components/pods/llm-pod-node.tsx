@@ -160,8 +160,7 @@ export default memo(function LLMPodNode({
     onToken: (token) => {
       setStreamingContent((prev) => prev + token);
     },
-    onStart: (executionId) => {
-      console.log('Execution started:', executionId);
+    onStart: (_executionId) => {
       setStreamingContent('');
     },
     onComplete: ({ content, metadata, executionId }) => {
@@ -183,9 +182,7 @@ export default memo(function LLMPodNode({
       setStreamingContent('');
       setIsExecuting(false);
 
-      refetchExecutions().then(() => {
-        console.log('✅ Execution history refreshed');
-      });
+      refetchExecutions().then(() => {});
     },
     onError: (error) => {
       const errorMsg: Message = {
