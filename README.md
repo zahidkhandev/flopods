@@ -425,13 +425,13 @@ MIT License - see [LICENSE](LICENSE) file for details
 
 ---
 
-## 👨‍💻 Author
+## Author
 
 **Zahid Khan** ([@zahidkhandev](https://github.com/zahidkhandev))
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - [Turborepo](https://turbo.build) for monorepo tooling
 - [NestJS](https://nestjs.com) for backend framework
