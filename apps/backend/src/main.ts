@@ -141,6 +141,10 @@ async function bootstrap() {
   });
 
   // Start server
+
+  (BigInt.prototype as any).toJSON = function () {
+    return this.toString();
+  };
   const port = parseInt(process.env.BACKEND_PORT || '3000', 10);
   await app.listen(port, '0.0.0.0');
 

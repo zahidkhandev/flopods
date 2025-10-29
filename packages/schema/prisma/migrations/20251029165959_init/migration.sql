@@ -235,6 +235,8 @@ CREATE TABLE "billing"."Subscription" (
     "credits" INTEGER NOT NULL DEFAULT 0,
     "monthlyCreditQuota" INTEGER NOT NULL DEFAULT 0,
     "creditResetDate" TIMESTAMPTZ(6),
+    "storageQuotaBytes" BIGINT NOT NULL DEFAULT 104857600,
+    "storageUsedBytes" BIGINT NOT NULL DEFAULT 0,
     "maxCanvases" INTEGER NOT NULL DEFAULT 3,
     "maxActionPodsPerCanvas" INTEGER NOT NULL DEFAULT 50,
     "maxDocumentSizeInMB" INTEGER NOT NULL DEFAULT 10,
@@ -906,6 +908,9 @@ CREATE INDEX "Subscription_tier_status_idx" ON "billing"."Subscription"("tier", 
 
 -- CreateIndex
 CREATE INDEX "Subscription_creditResetDate_idx" ON "billing"."Subscription"("creditResetDate");
+
+-- CreateIndex
+CREATE INDEX "Subscription_storageUsedBytes_idx" ON "billing"."Subscription"("storageUsedBytes");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "CreditPurchase_stripeChargeId_key" ON "billing"."CreditPurchase"("stripeChargeId");

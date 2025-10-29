@@ -18,7 +18,14 @@ import { WorkspaceUpdateMemberDto } from './dto/workspace-update-member.dto';
 import { WorkspaceSendInvitationDto } from './dto/workspace-send-invitation.dto';
 import { WorkspaceAddApiKeyDto } from './dto/workspace-add-api-key.dto';
 import { WorkspaceUpdateApiKeyDto } from './dto/workspace-update-api-key.dto';
-import { WorkspaceType, WorkspaceRole, InvitationStatus, NotificationType } from '@flopods/schema';
+import {
+  WorkspaceType,
+  WorkspaceRole,
+  InvitationStatus,
+  NotificationType,
+  SubscriptionTier,
+  SubscriptionStatus,
+} from '@flopods/schema';
 import * as crypto from 'crypto';
 import { workspaceInvitationTemplate } from '../../common/aws/ses/templates/workspace/invitation.template';
 import {
@@ -259,45 +266,94 @@ export class V1WorkspaceService {
     }
   }
 
+  /**
+   * Create workspace with FREE subscription
+   *
+   * @description Creates workspace and automatically provisions a FREE (HOBBYIST) tier
+   * subscription with default limits. Transaction ensures both are created atomically.
+   */
   async createWorkspace(userId: string, dto: WorkspaceCreateDto): Promise<any> {
     try {
-      const workspace = await this.prisma.workspace.create({
-        data: {
-          name: dto.name,
-          type: dto.type ?? WorkspaceType.PERSONAL,
-          members: {
-            create: {
-              userId,
-              role: WorkspaceRole.OWNER,
-              canCreateCanvas: true,
-              canDeleteCanvas: true,
-              canManageBilling: true,
-              canInviteMembers: true,
-              canManageMembers: true,
-              canManageApiKeys: true,
+      // ✅ Use transaction to create workspace + subscription atomically
+      const workspace = await this.prisma.$transaction(async (tx) => {
+        // 1. Create workspace with owner
+        const newWorkspace = await tx.workspace.create({
+          data: {
+            name: dto.name,
+            type: dto.type ?? WorkspaceType.PERSONAL,
+            members: {
+              create: {
+                userId,
+                role: WorkspaceRole.OWNER,
+                canCreateCanvas: true,
+                canDeleteCanvas: true,
+                canManageBilling: true,
+                canInviteMembers: true,
+                canManageMembers: true,
+                canManageApiKeys: true,
+              },
             },
           },
-        },
-        include: {
-          members: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  email: true,
-                  name: true,
-                  image: true,
+          include: {
+            members: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    email: true,
+                    name: true,
+                    image: true,
+                  },
                 },
               },
             },
           },
-        },
+        });
+
+        // 2. Create FREE subscription (HOBBYIST tier)
+        await tx.subscription.create({
+          data: {
+            workspaceId: newWorkspace.id,
+            tier: SubscriptionTier.HOBBYIST,
+            status: SubscriptionStatus.ACTIVE,
+
+            // Credits
+            credits: 100, // 100 free credits to start
+            monthlyCreditQuota: 100,
+
+            // Storage
+            storageQuotaBytes: 104857600, // 100 MB
+            storageUsedBytes: 0,
+
+            // Limits
+            maxCanvases: 3,
+            maxActionPodsPerCanvas: 50,
+            maxDocumentSizeInMB: 10,
+            maxCollaboratorsPerCanvas: 0,
+
+            // Permissions
+            canInviteToWorkspace: false,
+            canInviteToCanvas: false,
+            canCreatePublicLinks: true,
+            canUseAdvancedModels: false,
+            canAccessAnalytics: false,
+            canExportData: false,
+
+            // BYOK
+            isByokMode: false,
+          },
+        });
+
+        return newWorkspace;
       });
 
-      this.logger.log(`✅ Workspace created: ${workspace.id} by user ${userId}`);
+      this.logger.log(
+        `[Workspaces] Created workspace ${workspace.id} with FREE subscription for user ${userId}`,
+      );
+
       return workspace;
     } catch (error) {
-      this.logger.error('Failed to create workspace:', error);
+      this.logger.error(`Failed to create workspace:`, error);
       throw new InternalServerErrorException('Failed to create workspace');
     }
   }

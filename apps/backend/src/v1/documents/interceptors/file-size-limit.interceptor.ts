@@ -18,9 +18,9 @@ import { PrismaService } from '../../../prisma/prisma.service';
  * Subscription tier file size limits (in bytes)
  */
 const FILE_SIZE_LIMITS: Record<SubscriptionTier, number> = {
-  [SubscriptionTier.HOBBYIST]: 10 * 1024 * 1024, // 10 MB
-  [SubscriptionTier.PRO]: 100 * 1024 * 1024, // 100 MB
-  [SubscriptionTier.TEAM]: 500 * 1024 * 1024, // 500 MB
+  [SubscriptionTier.HOBBYIST]: 10 * 1024 * 1024, // 10 MB ✅ (FREE PLAN)
+  [SubscriptionTier.PRO]: 100 * 1024 * 1024, // 100 MB ✅ (PRO PLAN)
+  [SubscriptionTier.TEAM]: 100 * 1024 * 1024, // 100 MB ✅ (TEAM PLAN - same as PRO)
 };
 
 /**
@@ -63,7 +63,7 @@ export class V1FileSizeLimitInterceptor implements NestInterceptor {
 
       throw new PayloadTooLargeException(
         `File size (${fileSizeMB} MB) exceeds ${subscription.tier} plan limit of ${limitMB} MB. ` +
-          `Upgrade your plan or use a smaller file.`,
+          `Upgrade to PRO plan for 100 MB limit.`,
       );
     }
 

@@ -19,6 +19,7 @@ import MaintenancePage from './pages/errors/maintenance';
 import AcceptInvitationPage from './pages/workspace/invite';
 import FlowsPage from './pages/dashboard/flows';
 import FlowIdPage from './pages/dashboard/flows/[id]';
+import DocumentsPage from './pages/dashboard/documents';
 
 export const router = createBrowserRouter([
   {
@@ -83,7 +84,7 @@ export const router = createBrowserRouter([
           },
           {
             path: 'documents',
-            element: <div>Documents Page (Coming Soon)</div>,
+            element: <DocumentsPage />,
           },
           {
             path: 'sources',

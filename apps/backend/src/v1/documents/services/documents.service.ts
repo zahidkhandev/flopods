@@ -46,9 +46,9 @@ export class V1DocumentsService {
         workspaceId,
         name: file.originalname,
         sourceType: DocumentSourceType.INTERNAL,
-        fileType: validation.category, // Required: PDF, IMAGE, TEXT, DOCUMENT
+        fileType: validation.category,
         mimeType: validation.mimeType,
-        sizeInBytes: file.size,
+        sizeInBytes: BigInt(file.size), // ✅ Convert to BigInt
         status: DocumentStatus.UPLOADING,
         storageKey: s3Key,
         s3Bucket,
@@ -67,6 +67,7 @@ export class V1DocumentsService {
 
     this.logger.log(`[Documents] Created document: ${document.id}`);
 
+    // ✅ Return only serializable data (no BigInt)
     return {
       documentId: document.id,
       status: 'queued',
