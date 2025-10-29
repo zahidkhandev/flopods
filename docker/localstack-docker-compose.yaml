@@ -4,7 +4,7 @@ name: flopods
 services:
   localstack:
     image: localstack/localstack:latest
-    container_name: flopods-localstack
+    container_name: localstack
     ports:
       - '4566:4566' # LocalStack Gateway
       - '4510-4559:4510-4559' # External services port range

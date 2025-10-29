@@ -144,6 +144,14 @@ export class V1DocumentFoldersService {
   async listFolders(workspaceId: string): Promise<FolderTreeNode[]> {
     const folders = await this.prisma.documentFolder.findMany({
       where: { workspaceId },
+      include: {
+        _count: {
+          select: {
+            documents: true,
+            children: true,
+          },
+        },
+      },
       orderBy: { createdAt: 'asc' },
     });
 

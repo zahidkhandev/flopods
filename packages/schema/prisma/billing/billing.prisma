@@ -15,6 +15,9 @@ model Subscription {
   monthlyCreditQuota Int       @default(0)
   creditResetDate    DateTime? @db.Timestamptz(6)
 
+  storageQuotaBytes BigInt @default(104857600)
+  storageUsedBytes  BigInt @default(0)
+
   maxCanvases               Int @default(3)
   maxActionPodsPerCanvas    Int @default(50)
   maxDocumentSizeInMB       Int @default(10)
@@ -46,6 +49,7 @@ model Subscription {
   @@index([status, nextBillingDate])
   @@index([tier, status])
   @@index([creditResetDate])
+  @@index([storageUsedBytes])
   @@schema("billing")
 }
 

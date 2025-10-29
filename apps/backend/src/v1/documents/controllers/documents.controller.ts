@@ -225,7 +225,7 @@ export class V1DocumentsController {
       'and queued for text extraction and embedding generation. Returns immediately ' +
       'with document ID while processing happens in background. ' +
       'Supports: PDF, PNG, JPG, DOCX, XLSX, PPTX, TXT, MD, CSV. ' +
-      'Size limits: HOBBYIST=10MB, PRO=100MB, TEAM=500MB.',
+      'Size limits: HOBBYIST=10MB, PRO=100MB, TEAM=100MB.',
   })
   @ApiParam({
     name: 'workspaceId',
@@ -312,7 +312,8 @@ export class V1DocumentsController {
     schema: {
       example: {
         statusCode: 413,
-        message: 'File size (150 MB) exceeds PRO plan limit of 100 MB. Upgrade your plan.',
+        message:
+          'File size (15.50 MB) exceeds HOBBYIST plan limit of 10 MB. Upgrade to PRO plan for 100 MB limit.',
         error: 'Payload Too Large',
       },
     },

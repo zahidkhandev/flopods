@@ -10,7 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AwsSesEmailService } from '../../common/aws/ses/ses-email.service';
 import { AuthUserType, GoogleUserData, GitHubUserData, JwtPayload } from './types';
-import { AuthProvider } from '@flopods/schema';
+import { AuthProvider, SubscriptionStatus, SubscriptionTier } from '@flopods/schema';
 import { randomBytes, createHash } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { magicLinkTemplate } from '../../common/aws/ses/templates/auth/magic-link.template';
@@ -32,6 +32,46 @@ export class V1AuthService {
     private readonly configService: ConfigService,
     private readonly emailService: AwsSesEmailService,
   ) {}
+
+  /**
+   * Create FREE subscription for new workspace
+   *
+   * @private
+   */
+  private async createFreeSubscription(tx: any, workspaceId: string): Promise<void> {
+    await tx.subscription.create({
+      data: {
+        workspaceId,
+        tier: SubscriptionTier.HOBBYIST,
+        status: SubscriptionStatus.ACTIVE,
+
+        // Credits
+        credits: 100,
+        monthlyCreditQuota: 100,
+
+        // Storage
+        storageQuotaBytes: 104857600, // 100 MB
+        storageUsedBytes: 0,
+
+        // Limits
+        maxCanvases: 3,
+        maxActionPodsPerCanvas: 50,
+        maxDocumentSizeInMB: 10,
+        maxCollaboratorsPerCanvas: 0,
+
+        // Permissions
+        canInviteToWorkspace: false,
+        canInviteToCanvas: false,
+        canCreatePublicLinks: true,
+        canUseAdvancedModels: false,
+        canAccessAnalytics: false,
+        canExportData: false,
+
+        // BYOK
+        isByokMode: false,
+      },
+    });
+  }
 
   // ============================================
   // PASSWORD AUTHENTICATION
@@ -72,7 +112,8 @@ export class V1AuthService {
         },
       });
 
-      await tx.workspace.create({
+      // Create workspace
+      const workspace = await tx.workspace.create({
         data: {
           name: `${name}'s Workspace`,
           type: 'PERSONAL',
@@ -91,6 +132,9 @@ export class V1AuthService {
         },
       });
 
+      // ✅ CREATE FREE SUBSCRIPTION
+      await this.createFreeSubscription(tx, workspace.id);
+
       return newUser;
     });
 
@@ -101,7 +145,7 @@ export class V1AuthService {
       bodyHtml: verifyEmailTemplate(user.name || 'there', verificationUrl),
     });
 
-    this.logger.log(`User registered: ${user.email}`);
+    this.logger.log(`User registered: ${user.email} with FREE subscription`);
 
     return {
       message: 'Registration successful. Please check your email to verify your account.',
@@ -468,7 +512,7 @@ export class V1AuthService {
           },
         });
 
-        await tx.workspace.create({
+        const workspace = await tx.workspace.create({
           data: {
             name: `${newUser.name}'s Workspace`,
             type: 'PERSONAL',
@@ -487,7 +531,10 @@ export class V1AuthService {
           },
         });
 
-        this.logger.log(`New user created via Google: ${newUser.email}`);
+        // ✅ CREATE FREE SUBSCRIPTION
+        await this.createFreeSubscription(tx, workspace.id);
+
+        this.logger.log(`New user created via Google: ${newUser.email} with FREE subscription`);
         return newUser;
       });
     }
@@ -532,7 +579,7 @@ export class V1AuthService {
           },
         });
 
-        await tx.workspace.create({
+        const workspace = await tx.workspace.create({
           data: {
             name: `${newUser.name}'s Workspace`,
             type: 'PERSONAL',
@@ -551,7 +598,10 @@ export class V1AuthService {
           },
         });
 
-        this.logger.log(`New user created via GitHub: ${newUser.email}`);
+        // ✅ CREATE FREE SUBSCRIPTION
+        await this.createFreeSubscription(tx, workspace.id);
+
+        this.logger.log(`New user created via GitHub: ${newUser.email} with FREE subscription`);
         return newUser;
       });
     }
