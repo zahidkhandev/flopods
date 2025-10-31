@@ -1,6 +1,11 @@
+import path from 'path';
+require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
+
 import { PrismaClient, LLMProvider, ModelCategory } from '@flopods/schema';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  log: ['error'],
+});
 
 /**
  * Model Pricing Data - October 2025
@@ -29,7 +34,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 100000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 256000,
-    maxOutputTokens: 32768, // OpenAI default for GPT-5
+    maxOutputTokens: 32768,
     supportsStreaming: true,
     supportsVision: true,
     supportsAudio: true,
@@ -50,7 +55,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 20000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 256000,
-    maxOutputTokens: 16384, // OpenAI default for mini models
+    maxOutputTokens: 16384,
     supportsStreaming: true,
     supportsVision: true,
     supportsFunctions: true,
@@ -70,7 +75,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 4000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 128000,
-    maxOutputTokens: 8192, // OpenAI default for nano models
+    maxOutputTokens: 8192,
     supportsStreaming: true,
     supportsFunctions: true,
     supportsJsonMode: true,
@@ -89,7 +94,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 1200000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 256000,
-    maxOutputTokens: 64000, // OpenAI Pro models get more output
+    maxOutputTokens: 64000,
     supportsStreaming: true,
     supportsVision: true,
     supportsAudio: true,
@@ -112,7 +117,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 120000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 128000,
-    maxOutputTokens: 16384, // GPT-4.1 standard output
+    maxOutputTokens: 16384,
     supportsStreaming: true,
     supportsVision: true,
     supportsFunctions: true,
@@ -173,8 +178,8 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 600000,
     creditsPerMillionReasoningTokens: 600000,
     maxTokens: 200000,
-    maxOutputTokens: 100000, // O-series support extended output
-    supportsStreaming: true, // O3 supports streaming
+    maxOutputTokens: 100000,
+    supportsStreaming: true,
     supportsFunctions: false,
     supportsJsonMode: false,
     supportsSystemPrompt: true,
@@ -211,7 +216,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 160000,
     creditsPerMillionReasoningTokens: 160000,
     maxTokens: 128000,
-    maxOutputTokens: 65536, // O4-mini maximum
+    maxOutputTokens: 65536,
     supportsStreaming: true,
     supportsFunctions: false,
     supportsJsonMode: false,
@@ -277,7 +282,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 150000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 200000,
-    maxOutputTokens: 64000, // Claude Sonnet 4 maximum per docs
+    maxOutputTokens: 64000,
     supportsStreaming: true,
     supportsVision: true,
     supportsFunctions: true,
@@ -297,7 +302,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 50000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 200000,
-    maxOutputTokens: 10000, // Claude Haiku maximum per docs
+    maxOutputTokens: 10000,
     supportsStreaming: true,
     supportsVision: true,
     supportsFunctions: true,
@@ -317,7 +322,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 750000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 200000,
-    maxOutputTokens: 32000, // Claude Opus 4 maximum per docs
+    maxOutputTokens: 32000,
     supportsStreaming: true,
     supportsVision: true,
     supportsFunctions: true,
@@ -339,7 +344,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 150000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 200000,
-    maxOutputTokens: 8192, // Claude 3.5 Sonnet maximum (with beta header)
+    maxOutputTokens: 8192,
     supportsStreaming: true,
     supportsVision: true,
     supportsFunctions: true,
@@ -359,7 +364,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 40000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 200000,
-    maxOutputTokens: 10000, // Claude 3 Haiku maximum per docs
+    maxOutputTokens: 10000,
     supportsStreaming: true,
     supportsVision: true,
     supportsFunctions: false,
@@ -383,7 +388,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 100000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 2000000,
-    maxOutputTokens: 65535, // Gemini 2.5 maximum per docs
+    maxOutputTokens: 65535,
     supportsStreaming: true,
     supportsVision: true,
     supportsAudio: true,
@@ -405,7 +410,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 25000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 1000000,
-    maxOutputTokens: 65535, // Gemini 2.5 maximum per docs
+    maxOutputTokens: 65535,
     supportsStreaming: true,
     supportsVision: true,
     supportsAudio: true,
@@ -426,7 +431,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 4000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 1000000,
-    maxOutputTokens: 65535, // Gemini 2.5 maximum per docs
+    maxOutputTokens: 65535,
     supportsStreaming: true,
     supportsVision: true,
     supportsFunctions: true,
@@ -448,7 +453,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 4000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 1000000,
-    maxOutputTokens: 8192, // Gemini 2.0 maximum per docs
+    maxOutputTokens: 8192,
     supportsStreaming: true,
     supportsVision: true,
     supportsFunctions: true,
@@ -468,7 +473,7 @@ export const MODEL_PRICING_DATA = [
     creditsPerMillionOutputTokens: 50000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 2000000,
-    maxOutputTokens: 8192, // Gemini 1.5 default
+    maxOutputTokens: 8192,
     supportsStreaming: true,
     supportsVision: true,
     supportsAudio: true,
@@ -479,30 +484,43 @@ export const MODEL_PRICING_DATA = [
   },
 ];
 
+/**
+ * Seeds the model pricing tiers into the database with batch processing
+ * for optimal performance. Uses parallel upserts to speed up seeding.
+ */
 async function seedModelPricing() {
   console.log('🌱 Seeding model pricing (October 2025 - Official Pricing)...\n');
 
   const effectiveFrom = new Date('2025-10-01');
+  let count = 0;
 
-  for (const model of MODEL_PRICING_DATA) {
-    await prisma.modelPricingTier.upsert({
-      where: {
-        provider_modelId_effectiveFrom: {
-          provider: model.provider,
-          modelId: model.modelId,
-          effectiveFrom,
-        },
-      },
-      update: model,
-      create: {
-        ...model,
-        effectiveFrom,
-        isActive: true,
-      },
-    });
-    console.log(
-      `  ✓ ${model.displayName.padEnd(35)} (${model.provider}) - ${model.maxOutputTokens} max output`,
+  // Batch insert for speed (5 models per batch)
+  const batchSize = 5;
+  for (let i = 0; i < MODEL_PRICING_DATA.length; i += batchSize) {
+    const batch = MODEL_PRICING_DATA.slice(i, i + batchSize);
+
+    await Promise.all(
+      batch.map((model) =>
+        prisma.modelPricingTier.upsert({
+          where: {
+            provider_modelId_effectiveFrom: {
+              provider: model.provider,
+              modelId: model.modelId,
+              effectiveFrom,
+            },
+          },
+          update: model,
+          create: {
+            ...model,
+            effectiveFrom,
+            isActive: true,
+          },
+        }),
+      ),
     );
+
+    count += batch.length;
+    console.log(`  ✓ ${count}/${MODEL_PRICING_DATA.length} models seeded...`);
   }
 
   console.log(`\n✅ Seeded ${MODEL_PRICING_DATA.length} model pricing tiers`);
@@ -514,7 +532,7 @@ async function seedModelPricing() {
   console.log('📏 Updated maxOutputTokens per official documentation');
 }
 
-// Run the seed
+// Run the seed with timeout protection
 seedModelPricing()
   .then(async () => {
     await prisma.$disconnect();
@@ -526,3 +544,9 @@ seedModelPricing()
     await prisma.$disconnect();
     process.exit(1);
   });
+
+// Force exit after 30 seconds to prevent hanging
+setTimeout(() => {
+  console.error('\n⏱️  Seed timeout after 30s');
+  process.exit(1);
+}, 30000);

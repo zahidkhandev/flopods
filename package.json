@@ -86,6 +86,7 @@
     "podman:localstack:down": "podman-compose -f docker/localstack-docker-compose.yaml down",
     "podman:localstack:restart": "yarn podman:localstack:down && yarn podman:localstack:up",
     "podman:localstack:logs": "podman-compose -f docker/localstack-docker-compose.yaml logs -f",
+    "podman:redis:clean": "podman-compose -f docker/redis-docker-compose.yaml down -v",
     "podman:localstack:clean": "podman-compose -f docker/localstack-docker-compose.yaml down -v",
     "podman:dev": "yarn podman:db:up && yarn podman:redis:up && yarn podman:localstack:up",
     "podman:dev:down": "yarn podman:db:down && yarn podman:redis:down && yarn podman:localstack:down",
