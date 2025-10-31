@@ -62,38 +62,40 @@ This project is built with a cutting-edge, production-ready stack:
 
 ## 📁 Workspace Structure
 
+```
 flopods/
 │
 ├── apps/
-│ ├── backend/ # NestJS API server
-│ │ ├── src/
-│ │ │ ├── common/ # Shared modules (AWS, Queue, Guards, Filters)
-│ │ │ ├── v1/ # API v1 (Auth, Workspaces, Documents, Flows)
-│ │ │ └── prisma/ # Prisma client
-│ │ └── dist/ # Production build
-│ │
-│ └── frontend/ # React + Vite application
-│ ├── src/
-│ │ ├── components/
-│ │ ├── pages/
-│ │ ├── hooks/
-│ │ └── lib/
-│ └── dist/ # Production build
+│   ├── backend/          # NestJS API server
+│   │   ├── src/
+│   │   │   ├── common/   # Shared modules (AWS, Queue, Guards, Filters)
+│   │   │   ├── v1/       # API v1 (Auth, Workspaces, Documents, Flows)
+│   │   │   └── prisma/   # Prisma client
+│   │   └── dist/         # Production build
+│   │
+│   └── frontend/         # React + Vite application
+│       ├── src/
+│       │   ├── components/
+│       │   ├── pages/
+│       │   ├── hooks/
+│       │   └── lib/
+│       └── dist/         # Production build
 │
 ├── packages/
-│ ├── schema/ # Prisma schema and database client
-│ ├── tsconfig/ # Shared TypeScript configurations
-│ └── eslint-config/ # Shared ESLint configurations
+│   ├── schema/           # Prisma schema and database client
+│   ├── tsconfig/         # Shared TypeScript configurations
+│   └── eslint-config/    # Shared ESLint configurations
 │
 ├── docker/
-│ ├── db-docker-compose.yaml # PostgreSQL + pgvector
-│ ├── redis-docker-compose.yaml # Redis for queues
-│ └── localstack-docker-compose.yaml # Local AWS emulation
+│   ├── db-docker-compose.yaml           # PostgreSQL + pgvector
+│   ├── redis-docker-compose.yaml        # Redis for queues
+│   └── localstack-docker-compose.yaml   # Local AWS emulation
 │
-├── setup.sh # Linux/macOS setup script
-├── setup.bat # Windows setup script
-├── .env.example # Environment template for contributors
-└── turbo.json # Turborepo configuration
+├── setup.sh              # Linux/macOS setup script
+├── setup.bat             # Windows setup script
+├── .env.example          # Environment template for contributors
+└── turbo.json            # Turborepo configuration
+```
 
 ---
 
@@ -109,14 +111,18 @@ flopods/
 
 #### Windows
 
-.\setup.bat # Uses Docker (default)
-.\setup.bat podman # Uses Podman
+```powershell
+.\setup.bat                 # Uses Docker (default)
+.\setup.bat podman          # Uses Podman
+```
 
 #### Linux / macOS
 
+```bash
 chmod +x setup.sh
-./setup.sh # Uses Docker (default)
-./setup.sh podman # Uses Podman
+./setup.sh                  # Uses Docker (default)
+./setup.sh podman           # Uses Podman
+```
 
 **The setup script will automatically:**
 
@@ -133,28 +139,34 @@ chmod +x setup.sh
 
 #### 1. Clone the Repository
 
+```bash
 git clone https://github.com/yourusername/flopods.git
 cd flopods
+```
 
 #### 2. Install Dependencies
 
+```bash
 yarn install
+```
 
 #### 3. Set Up Environment Variables
 
+```bash
 cp .env.example .env
+```
 
 **Default configuration works out-of-the-box for local development!**
 
 #### 4. Start Infrastructure Services
 
+```bash
 # Using Docker (default)
-
 yarn docker:dev
 
 # Using Podman
-
 yarn podman:dev
+```
 
 This starts:
 
@@ -164,18 +176,24 @@ This starts:
 
 #### 5. Run Database Migrations
 
+```bash
 yarn db:migrate:deploy
+```
 
 #### 6. (Optional) Seed Pricing Models
 
+```bash
 cd packages/schema
 yarn add -D tsx
 cd ../..
 yarn db:seed:pricing
+```
 
 #### 7. Start Development Servers
 
+```bash
 yarn dev
+```
 
 This starts both frontend and backend concurrently:
 
@@ -231,7 +249,9 @@ Open your browser and navigate to **http://localhost:5173** 🎉
 
 First, install podman-compose:
 
+```bash
 pip3 install podman-compose
+```
 
 | Command                       | Description                                   |
 | ----------------------------- | --------------------------------------------- |
@@ -284,30 +304,32 @@ pip3 install podman-compose
 
 ### Backend Architecture
 
+```
 apps/backend/src/
-├── common/ # Shared modules
-│ ├── aws/ # AWS services (S3, DynamoDB, SES)
-│ ├── decorators/ # Custom decorators (auth, pagination)
-│ ├── filters/ # Exception filters
-│ ├── guards/ # Auth guards (JWT, OAuth)
-│ ├── interceptors/ # Response transformation
-│ ├── queue/ # Queue abstraction (Redis/SQS)
-│ └── websocket/ # WebSocket gateway
+├── common/                    # Shared modules
+│   ├── aws/                   # AWS services (S3, DynamoDB, SES)
+│   ├── decorators/            # Custom decorators (auth, pagination)
+│   ├── filters/               # Exception filters
+│   ├── guards/                # Auth guards (JWT, OAuth)
+│   ├── interceptors/          # Response transformation
+│   ├── queue/                 # Queue abstraction (Redis/SQS)
+│   └── websocket/             # WebSocket gateway
 │
-├── v1/ # API Version 1
-│ ├── auth/ # Authentication (JWT, OAuth, Magic Link)
-│ ├── workspaces/ # Workspace management
-│ ├── flows/ # Workflow canvas
-│ ├── documents/ # Document processing & RAG
-│ ├── pods/ # Workflow nodes
-│ └── users/ # User management
+├── v1/                        # API Version 1
+│   ├── auth/                  # Authentication (JWT, OAuth, Magic Link)
+│   ├── workspaces/            # Workspace management
+│   ├── flows/                 # Workflow canvas
+│   ├── documents/             # Document processing & RAG
+│   ├── pods/                  # Workflow nodes
+│   └── users/                 # User management
 │
-└── prisma/ # Database client
+└── prisma/                    # Database client
+```
 
 ### Database Schema
 
+```
 Core Entities:
-
 - Users → Workspaces (1:N with roles)
 - Workspaces → Flows (1:N)
 - Flows → Pods (1:N, canvas nodes)
@@ -315,6 +337,7 @@ Core Entities:
 - Documents → DocumentChunks (1:N with embeddings)
 - Documents → DocumentCosts (1:N for billing)
 - ModelPricingTier (21 LLM models with real October 2025 pricing)
+```
 
 ### Technology Stack
 
@@ -327,27 +350,27 @@ Core Entities:
 
 #### Processing Pipeline
 
+```
 Upload → Validate → Queue (BullMQ) → Process (OCR/PDF) → Chunk → Embed (Gemini) → Store (pgvector) → Search
+```
 
 ---
 
 ## 🧪 Testing
 
+```bash
 # Run all tests
-
 yarn test
 
 # Run tests in watch mode
-
 yarn test:watch
 
 # Generate coverage report
-
 yarn test:cov
 
 # E2E tests (backend only)
-
 yarn test:e2e
+```
 
 ---
 
@@ -355,7 +378,9 @@ yarn test:e2e
 
 ### Build for Production
 
+```bash
 yarn build
+```
 
 Output locations:
 
@@ -382,7 +407,9 @@ Deploy `apps/backend/dist/` to Node.js runtime:
 
 ### Database Migrations (Production)
 
+```bash
 yarn db:migrate:deploy
+```
 
 ---
 
@@ -417,7 +444,9 @@ We welcome contributions from the community! Here's how to get started:
 
 Before submitting a PR, run:
 
-yarn check # Type-check + lint + format
+```bash
+yarn check  # Type-check + lint + format
+```
 
 ---
 
