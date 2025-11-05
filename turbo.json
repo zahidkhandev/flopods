@@ -59,6 +59,7 @@
         "DOCUMENT_S3_BUCKET",
         "DOCUMENT_VECTOR_S3_BUCKET",
         "GEMINI_API_KEY",
+        "PROFIT_MARKUP_MULTIPLIER",
         "VITE_*"
       ]
     },
@@ -116,6 +117,8 @@
         "DOCUMENT_S3_BUCKET",
         "DOCUMENT_VECTOR_S3_BUCKET",
         "GEMINI_API_KEY",
+        "PROFIT_MARKUP_MULTIPLIER",
+
         "VITE_*"
       ]
     },
@@ -176,6 +179,7 @@
         "DOCUMENT_S3_BUCKET",
         "DOCUMENT_VECTOR_S3_BUCKET",
         "GEMINI_API_KEY",
+        "PROFIT_MARKUP_MULTIPLIER",
         "QUEUE_BACKEND",
         "REDIS_HOST",
         "REDIS_PORT"

@@ -91,6 +91,15 @@ CREATE TYPE "documents"."DocumentSourceType" AS ENUM ('INTERNAL', 'GOOGLE_DRIVE'
 -- CreateEnum
 CREATE TYPE "documents"."DocumentProcessingType" AS ENUM ('PDF_TEXT_EXTRACTION', 'IMAGE_OCR', 'VIDEO_TRANSCRIPT', 'AUDIO_TRANSCRIPT', 'DOCUMENT_EMBEDDING', 'URL_SCRAPING', 'VISION_EXTRACTION');
 
+-- CreateEnum
+CREATE TYPE "documents"."VisionAnalysisStatus" AS ENUM ('PENDING', 'PROCESSING', 'COMPLETED', 'PARTIAL_COMPLETION', 'ERROR', 'ARCHIVED');
+
+-- CreateEnum
+CREATE TYPE "documents"."VisionExtractionType" AS ENUM ('OCR_TEXT', 'IMAGE_CAPTION', 'IMAGE_SUMMARY', 'OBJECT_DETECTION', 'SEGMENTATION_MASK', 'COLOR_ANALYSIS', 'ENTITY_RECOGNITION', 'SENTIMENT_ANALYSIS', 'SCENE_DETECTION', 'ACTIVITY_DETECTION', 'POSE_ESTIMATION', 'FACE_DETECTION', 'TEXT_EXTRACTION', 'HANDWRITING_DETECTION');
+
+-- CreateEnum
+CREATE TYPE "core"."APIRequestType" AS ENUM ('TEXT_GENERATION', 'VECTOR_SEARCH', 'DOCUMENT_EMBEDDING', 'IMAGE_ANALYSIS', 'MULTIMODAL');
+
 -- CreateTable
 CREATE TABLE "admin"."Admin" (
     "id" TEXT NOT NULL,
@@ -299,9 +308,9 @@ CREATE TABLE "billing"."ModelPricingTier" (
     "category" "billing"."ModelCategory" NOT NULL,
     "displayName" VARCHAR(255) NOT NULL,
     "description" VARCHAR(500),
-    "inputTokenCost" DECIMAL(12,8) NOT NULL,
-    "outputTokenCost" DECIMAL(12,8) NOT NULL,
-    "reasoningTokenCost" DECIMAL(12,8) NOT NULL DEFAULT 0,
+    "inputTokenCost" DECIMAL(14,10) NOT NULL,
+    "outputTokenCost" DECIMAL(14,10) NOT NULL,
+    "reasoningTokenCost" DECIMAL(14,10) NOT NULL DEFAULT 0,
     "creditsPerMillionInputTokens" INTEGER NOT NULL,
     "creditsPerMillionOutputTokens" INTEGER NOT NULL,
     "creditsPerMillionReasoningTokens" INTEGER NOT NULL DEFAULT 0,
@@ -749,6 +758,8 @@ CREATE TABLE "documents"."Document" (
     "status" "documents"."DocumentStatus" NOT NULL DEFAULT 'UPLOADING',
     "uploadedBy" TEXT,
     "metadata" JSONB,
+    "dynamoPartitionKey" VARCHAR(255) NOT NULL,
+    "dynamoSortKey" VARCHAR(255) NOT NULL,
     "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMPTZ(6) NOT NULL,
 
@@ -782,14 +793,160 @@ CREATE TABLE "documents"."DocumentProcessingCost" (
     "creditsConsumed" INTEGER NOT NULL DEFAULT 0,
     "extractionCost" DECIMAL(12,8) NOT NULL DEFAULT 0,
     "embeddingCost" DECIMAL(12,8) NOT NULL DEFAULT 0,
+    "visionCost" DECIMAL(12,8) NOT NULL DEFAULT 0,
     "totalCostInUsd" DECIMAL(12,8) NOT NULL,
     "chunkCount" INTEGER,
     "embeddingModel" VARCHAR(100),
     "processingTimeMs" INTEGER,
     "tokensProcessed" INTEGER NOT NULL DEFAULT 0,
+    "visionTokens" INTEGER NOT NULL DEFAULT 0,
     "processedAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "DocumentProcessingCost_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "documents"."VisionMetadata" (
+    "id" TEXT NOT NULL,
+    "documentId" TEXT NOT NULL,
+    "workspaceId" TEXT NOT NULL,
+    "imageOriginalWidth" INTEGER,
+    "imageOriginalHeight" INTEGER,
+    "imageColorSpace" VARCHAR(50),
+    "imageColorDepth" INTEGER,
+    "imageDPI" INTEGER,
+    "detectedLanguages" JSONB,
+    "handwriting" BOOLEAN NOT NULL DEFAULT false,
+    "handwritingConfidence" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "aestheticScore" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "brightnessScore" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "contrastScore" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "dominantColors" JSONB,
+    "colorPalette" JSONB,
+    "facesDetected" INTEGER NOT NULL DEFAULT 0,
+    "faceCount" JSONB,
+    "textLines" INTEGER NOT NULL DEFAULT 0,
+    "linesPerImage" JSONB,
+    "fileSize" BIGINT,
+    "fileFormat" VARCHAR(20),
+    "fileDuration" INTEGER,
+    "exifData" JSONB,
+    "metadata" JSONB,
+    "processingQuality" VARCHAR(50),
+    "qualityIssues" JSONB,
+    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+
+    CONSTRAINT "VisionMetadata_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "documents"."DocumentVisionAnalysis" (
+    "id" TEXT NOT NULL,
+    "documentId" TEXT NOT NULL,
+    "workspaceId" TEXT NOT NULL,
+    "provider" "core"."LLMProvider" NOT NULL DEFAULT 'GOOGLE_GEMINI',
+    "modelId" VARCHAR(100) NOT NULL,
+    "modelVersion" VARCHAR(50),
+    "ocrText" TEXT,
+    "ocrConfidence" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "ocrLanguages" JSONB,
+    "imageCaption" TEXT,
+    "captionConfidence" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "imageSummary" TEXT,
+    "imageStyle" VARCHAR(100),
+    "detectedObjects" JSONB,
+    "objectCount" INTEGER NOT NULL DEFAULT 0,
+    "detectedText" JSONB,
+    "textContent" TEXT,
+    "entityRecognition" JSONB,
+    "sentimentAnalysis" JSONB,
+    "segmentationMasks" JSONB,
+    "segmentationCount" INTEGER NOT NULL DEFAULT 0,
+    "sceneType" VARCHAR(100),
+    "sceneDescription" TEXT,
+    "activitiesDetected" JSONB,
+    "poseEstimation" JSONB,
+    "imageQuality" VARCHAR(50),
+    "imageBlur" BOOLEAN NOT NULL DEFAULT false,
+    "imageNoise" BOOLEAN NOT NULL DEFAULT false,
+    "dominantColors" JSONB,
+    "colorCount" INTEGER NOT NULL DEFAULT 0,
+    "colorHarmony" VARCHAR(50),
+    "textDetected" BOOLEAN NOT NULL DEFAULT false,
+    "qualityScore" INTEGER,
+    "imageFormat" VARCHAR(50),
+    "processingTimeMs" INTEGER,
+    "requestId" VARCHAR(255),
+    "inputTokens" INTEGER NOT NULL DEFAULT 0,
+    "outputTokens" INTEGER NOT NULL DEFAULT 0,
+    "totalTokens" INTEGER NOT NULL DEFAULT 0,
+    "estimatedCost" DECIMAL(12,8) NOT NULL,
+    "status" "documents"."VisionAnalysisStatus" NOT NULL DEFAULT 'PENDING',
+    "errorMessage" TEXT,
+    "errorCode" VARCHAR(100),
+    "retryCount" INTEGER NOT NULL DEFAULT 0,
+    "lastRetryAt" TIMESTAMPTZ(6),
+    "maxRetries" INTEGER NOT NULL DEFAULT 3,
+    "requestPayload" JSONB,
+    "responseContent" TEXT,
+    "rawResponse" JSONB,
+    "metadata" JSONB,
+    "annotations" JSONB,
+    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMPTZ(6) NOT NULL,
+    "archivedAt" TIMESTAMPTZ(6),
+
+    CONSTRAINT "DocumentVisionAnalysis_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "documents"."VisionExtractionSnapshot" (
+    "id" TEXT NOT NULL,
+    "documentId" TEXT NOT NULL,
+    "workspaceId" TEXT NOT NULL,
+    "visionAnalysisId" TEXT,
+    "provider" "core"."LLMProvider" NOT NULL,
+    "modelId" VARCHAR(100) NOT NULL,
+    "extractionType" "documents"."VisionExtractionType" NOT NULL,
+    "extractedData" TEXT NOT NULL,
+    "confidence" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "version" INTEGER NOT NULL DEFAULT 1,
+    "extractedAt" TIMESTAMP(3) NOT NULL,
+    "metadata" JSONB,
+    "summary" VARCHAR(500),
+    "rawData" JSONB,
+    "processingTimeMs" INTEGER,
+    "tokensUsed" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "archivedAt" TIMESTAMPTZ(6),
+
+    CONSTRAINT "VisionExtractionSnapshot_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "documents"."DocumentAPILog" (
+    "id" TEXT NOT NULL,
+    "workspaceId" TEXT NOT NULL,
+    "documentId" TEXT,
+    "provider" "core"."LLMProvider" NOT NULL,
+    "modelId" VARCHAR(100) NOT NULL,
+    "requestType" "core"."APIRequestType" NOT NULL,
+    "inputTokens" INTEGER NOT NULL DEFAULT 0,
+    "outputTokens" INTEGER NOT NULL DEFAULT 0,
+    "totalTokens" INTEGER NOT NULL DEFAULT 0,
+    "statusCode" INTEGER NOT NULL,
+    "success" BOOLEAN NOT NULL DEFAULT false,
+    "estimatedCost" DECIMAL(12,8) NOT NULL,
+    "actualCost" DECIMAL(12,8),
+    "errorMessage" TEXT,
+    "errorCode" VARCHAR(100),
+    "requestDurationMs" INTEGER,
+    "metadata" JSONB,
+    "processedAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "archivedAt" TIMESTAMPTZ(6),
+
+    CONSTRAINT "DocumentAPILog_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -1243,6 +1400,9 @@ CREATE INDEX "Document_fileType_workspaceId_idx" ON "documents"."Document"("file
 CREATE INDEX "Document_externalProvider_externalFileId_idx" ON "documents"."Document"("externalProvider", "externalFileId");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "Document_dynamoPartitionKey_dynamoSortKey_key" ON "documents"."Document"("dynamoPartitionKey", "dynamoSortKey");
+
+-- CreateIndex
 CREATE INDEX "Embedding_documentId_createdAt_idx" ON "documents"."Embedding"("documentId", "createdAt" DESC);
 
 -- CreateIndex
@@ -1271,6 +1431,75 @@ CREATE INDEX "DocumentProcessingCost_subscriptionId_processedAt_idx" ON "documen
 
 -- CreateIndex
 CREATE INDEX "DocumentProcessingCost_processingType_processedAt_idx" ON "documents"."DocumentProcessingCost"("processingType", "processedAt" DESC);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "VisionMetadata_documentId_key" ON "documents"."VisionMetadata"("documentId");
+
+-- CreateIndex
+CREATE INDEX "VisionMetadata_workspaceId_idx" ON "documents"."VisionMetadata"("workspaceId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "DocumentVisionAnalysis_requestId_key" ON "documents"."DocumentVisionAnalysis"("requestId");
+
+-- CreateIndex
+CREATE INDEX "DocumentVisionAnalysis_workspaceId_provider_status_createdA_idx" ON "documents"."DocumentVisionAnalysis"("workspaceId", "provider", "status", "createdAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "DocumentVisionAnalysis_documentId_provider_idx" ON "documents"."DocumentVisionAnalysis"("documentId", "provider");
+
+-- CreateIndex
+CREATE INDEX "DocumentVisionAnalysis_status_createdAt_idx" ON "documents"."DocumentVisionAnalysis"("status", "createdAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "DocumentVisionAnalysis_workspaceId_createdAt_idx" ON "documents"."DocumentVisionAnalysis"("workspaceId", "createdAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "DocumentVisionAnalysis_createdAt_idx" ON "documents"."DocumentVisionAnalysis"("createdAt");
+
+-- CreateIndex
+CREATE INDEX "DocumentVisionAnalysis_provider_createdAt_idx" ON "documents"."DocumentVisionAnalysis"("provider", "createdAt" DESC);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "DocumentVisionAnalysis_documentId_provider_key" ON "documents"."DocumentVisionAnalysis"("documentId", "provider");
+
+-- CreateIndex
+CREATE INDEX "VisionExtractionSnapshot_documentId_provider_extractionType_idx" ON "documents"."VisionExtractionSnapshot"("documentId", "provider", "extractionType", "extractedAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "VisionExtractionSnapshot_workspaceId_provider_extractedAt_idx" ON "documents"."VisionExtractionSnapshot"("workspaceId", "provider", "extractedAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "VisionExtractionSnapshot_extractionType_confidence_idx" ON "documents"."VisionExtractionSnapshot"("extractionType", "confidence");
+
+-- CreateIndex
+CREATE INDEX "VisionExtractionSnapshot_documentId_version_idx" ON "documents"."VisionExtractionSnapshot"("documentId", "version");
+
+-- CreateIndex
+CREATE INDEX "VisionExtractionSnapshot_extractedAt_idx" ON "documents"."VisionExtractionSnapshot"("extractedAt");
+
+-- CreateIndex
+CREATE INDEX "VisionExtractionSnapshot_provider_extractionType_idx" ON "documents"."VisionExtractionSnapshot"("provider", "extractionType");
+
+-- CreateIndex
+CREATE INDEX "DocumentAPILog_workspaceId_provider_processedAt_idx" ON "documents"."DocumentAPILog"("workspaceId", "provider", "processedAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "DocumentAPILog_documentId_provider_processedAt_idx" ON "documents"."DocumentAPILog"("documentId", "provider", "processedAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "DocumentAPILog_modelId_processedAt_idx" ON "documents"."DocumentAPILog"("modelId", "processedAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "DocumentAPILog_statusCode_processedAt_idx" ON "documents"."DocumentAPILog"("statusCode", "processedAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "DocumentAPILog_success_provider_processedAt_idx" ON "documents"."DocumentAPILog"("success", "provider", "processedAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "DocumentAPILog_requestType_processedAt_idx" ON "documents"."DocumentAPILog"("requestType", "processedAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "DocumentAPILog_processedAt_idx" ON "documents"."DocumentAPILog"("processedAt");
 
 -- AddForeignKey
 ALTER TABLE "admin"."AdminSession" ADD CONSTRAINT "AdminSession_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "admin"."Admin"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1427,3 +1656,15 @@ ALTER TABLE "documents"."DocumentProcessingCost" ADD CONSTRAINT "DocumentProcess
 
 -- AddForeignKey
 ALTER TABLE "documents"."DocumentProcessingCost" ADD CONSTRAINT "DocumentProcessingCost_subscriptionId_fkey" FOREIGN KEY ("subscriptionId") REFERENCES "billing"."Subscription"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "documents"."VisionMetadata" ADD CONSTRAINT "VisionMetadata_documentId_fkey" FOREIGN KEY ("documentId") REFERENCES "documents"."Document"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "documents"."DocumentVisionAnalysis" ADD CONSTRAINT "DocumentVisionAnalysis_documentId_fkey" FOREIGN KEY ("documentId") REFERENCES "documents"."Document"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "documents"."VisionExtractionSnapshot" ADD CONSTRAINT "VisionExtractionSnapshot_documentId_fkey" FOREIGN KEY ("documentId") REFERENCES "documents"."Document"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "documents"."DocumentAPILog" ADD CONSTRAINT "DocumentAPILog_documentId_fkey" FOREIGN KEY ("documentId") REFERENCES "documents"."Document"("id") ON DELETE SET NULL ON UPDATE CASCADE;

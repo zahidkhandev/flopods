@@ -1,11 +1,4 @@
-/**
- * BullMQ Document Queue Service
- *
- * @description BullMQ implementation of document queue service.
- * Used for local development with Redis.
- *
- * @module v1/documents/queues/bullmq-queue-service
- */
+// /src/modules/v1/documents/queues/bullmq-queue.service.ts
 
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -56,6 +49,11 @@ export class V1BullMQDocumentQueueService implements IDocumentQueueService, OnMo
 
   async sendDocumentMessage(message: DocumentQueueMessage): Promise<string> {
     try {
+      // ✅ Validate priority enum before use
+      if (!Object.values(DocumentMessagePriority).includes(message.priority)) {
+        throw new Error(`Invalid priority: ${message.priority}`);
+      }
+
       const priority = this.mapDocumentPriority(message.priority);
 
       const job = await this.queue.add('process-document', message, {
@@ -76,14 +74,21 @@ export class V1BullMQDocumentQueueService implements IDocumentQueueService, OnMo
   async sendDocumentMessageBatch(messages: DocumentQueueMessage[]): Promise<string[]> {
     try {
       const jobs = await this.queue.addBulk(
-        messages.map((message) => ({
-          name: 'process-document',
-          data: message,
-          opts: {
-            jobId: message.messageId,
-            priority: this.mapDocumentPriority(message.priority),
-          },
-        })),
+        messages.map((message) => {
+          // ✅ Validate priority enum before use
+          if (!Object.values(DocumentMessagePriority).includes(message.priority)) {
+            throw new Error(`Invalid priority: ${message.priority}`);
+          }
+
+          return {
+            name: 'process-document',
+            data: message,
+            opts: {
+              jobId: message.messageId,
+              priority: this.mapDocumentPriority(message.priority),
+            },
+          };
+        }),
       );
 
       const jobIds = jobs.map((job) => job.id!);

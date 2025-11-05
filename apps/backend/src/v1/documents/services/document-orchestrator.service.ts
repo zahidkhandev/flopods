@@ -1,11 +1,10 @@
-/**
- * Document Orchestrator Service - WITH IMAGE SUPPORT
- */
+// /src/modules/v1/documents/services/document-orchestrator.service.ts
 
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { S3Service } from '../../../common/aws/s3/s3.service';
 import { V1DocumentEmbeddingsService } from './embeddings.service';
+import { V1GeminiVisionService } from './gemini-vision.service';
 import { DocumentStatus, DocumentSourceType } from '@flopods/schema';
 import type { DocumentQueueMessage } from '../types';
 import { PDFParse } from 'pdf-parse';
@@ -18,14 +17,15 @@ export class V1DocumentOrchestratorService {
     private readonly prisma: PrismaService,
     private readonly s3Service: S3Service,
     private readonly embeddingsService: V1DocumentEmbeddingsService,
+    private readonly visionService: V1GeminiVisionService,
   ) {}
 
   async processDocument(message: DocumentQueueMessage): Promise<void> {
     const startTime = Date.now();
-    const { documentId, action } = message;
+    const { documentId } = message;
 
     try {
-      this.logger.log(`[Orchestrator] 🚀 Starting ${action} for: ${documentId}`);
+      this.logger.log(`[Orchestrator] 🚀 Starting process for: ${documentId}`);
 
       const document = await this.prisma.document.findUnique({
         where: { id: documentId },
@@ -44,29 +44,58 @@ export class V1DocumentOrchestratorService {
       });
 
       if (!document) {
-        throw new BadRequestException(`Document not found: ${documentId}`);
+        this.logger.warn(`[Orchestrator] ⚠️ Document not found (likely deleted): ${documentId}`);
+        return;
       }
-
       await this.prisma.document.update({
         where: { id: documentId },
         data: { status: DocumentStatus.PROCESSING },
       });
 
-      const extractedText =
-        document.sourceType === DocumentSourceType.INTERNAL
-          ? await this.extractTextFromS3Document(document.storageKey!, document.mimeType!)
-          : await this.extractTextFromExternalDocument(document.externalUrl!, document.sourceType);
+      let extractedText = '';
+
+      if (document.sourceType === DocumentSourceType.INTERNAL) {
+        extractedText = await this.extractTextFromS3Document(
+          document.storageKey!,
+          document.mimeType!,
+        );
+      } else {
+        extractedText = await this.extractTextFromExternalDocument(
+          document.externalUrl!,
+          document.sourceType,
+        );
+      }
 
       this.logger.debug(`[Orchestrator] 📄 Extracted ${extractedText.length} chars`);
 
       await this.embeddingsService.generateDocumentEmbeddings(documentId, extractedText);
+
+      if (document.mimeType?.startsWith('image/')) {
+        try {
+          const signedUrl = await this.s3Service.getSignedUrl(document.storageKey!, 3600);
+          const response = await fetch(signedUrl);
+          const imageBuffer = Buffer.from(await response.arrayBuffer());
+
+          await this.visionService.analyzeImageVision(
+            documentId,
+            document.workspaceId,
+            imageBuffer,
+            document.mimeType,
+          );
+
+          this.logger.log(`[Orchestrator] 🖼️ Vision analysis completed for: ${documentId}`);
+        } catch (visionError) {
+          const err = visionError instanceof Error ? visionError.message : 'Unknown error';
+          this.logger.warn(`Vision analysis warning (non-blocking): ${err}`);
+        }
+      }
 
       await this.prisma.document.update({
         where: { id: documentId },
         data: {
           status: DocumentStatus.READY,
           metadata: {
-            ...(document.metadata as any),
+            ...(typeof document.metadata === 'object' ? document.metadata : {}),
             processedAt: new Date().toISOString(),
             textLength: extractedText.length,
           },
@@ -74,7 +103,7 @@ export class V1DocumentOrchestratorService {
       });
 
       const duration = Date.now() - startTime;
-      this.logger.log(`[Orchestrator] 🎉 Completed ${documentId} in ${duration}ms`);
+      this.logger.log(`[Orchestrator] 🎉 Completed: ${documentId} in ${duration}ms`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const errorStack = error instanceof Error ? error.stack : undefined;
@@ -96,8 +125,13 @@ export class V1DocumentOrchestratorService {
             },
           },
         });
-      } catch {
-        this.logger.error(`[Orchestrator] ❌ Failed to update error status`);
+      } catch (updateError) {
+        // Silently handle if document was already deleted
+        if (updateError instanceof Error && updateError.message.includes('No record was found')) {
+          this.logger.debug(`[Orchestrator] Document already deleted, skipping error update`);
+          return;
+        }
+        this.logger.error(`Failed to update error status: ${updateError}`);
       }
 
       throw error;
@@ -109,6 +143,11 @@ export class V1DocumentOrchestratorService {
 
     const signedUrl = await this.s3Service.getSignedUrl(storageKey, 3600);
     const response = await fetch(signedUrl);
+
+    if (!response.ok) {
+      throw new Error(`Failed to download from S3: ${response.statusText}`);
+    }
+
     const buffer = Buffer.from(await response.arrayBuffer());
 
     this.logger.debug(`[Orchestrator] ✅ Downloaded ${buffer.length} bytes`);
@@ -136,9 +175,6 @@ export class V1DocumentOrchestratorService {
     }
   }
 
-  /**
-   * ✅ UPDATED: Added image support
-   */
   private async extractTextFromBuffer(buffer: Buffer, mimeType: string): Promise<string> {
     switch (mimeType) {
       case 'application/pdf':
@@ -147,15 +183,11 @@ export class V1DocumentOrchestratorService {
       case 'text/plain':
         return buffer.toString('utf-8');
 
-      // ✅ IMAGE SUPPORT - Placeholder for now
       case 'image/png':
       case 'image/jpeg':
       case 'image/jpg':
-        return this.extractTextFromImage(buffer, mimeType);
-
-      case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
-      case 'application/msword':
-        throw new Error('DOCX extraction not yet implemented');
+      case 'image/webp':
+        return '[Image detected - Gemini Vision will analyze in background]';
 
       default:
         throw new Error(`Unsupported MIME type: ${mimeType}`);
@@ -175,23 +207,11 @@ export class V1DocumentOrchestratorService {
     }
   }
 
-  /**
-   * ✅ NEW: Extract text from images using OCR
-   * TODO: Implement Gemini Vision API or Tesseract.js
-   */
-  private async extractTextFromImage(buffer: Buffer, mimeType: string): Promise<string> {
-    this.logger.warn(`[Orchestrator] ⚠️ Image OCR not yet implemented for ${mimeType}`);
-
-    // For now, return a placeholder to allow processing
-    // TODO: Implement Gemini Vision API for OCR
-    return `[Image file: ${mimeType}. OCR extraction not yet implemented. This is a placeholder to allow document processing to continue. Implement Gemini Vision API or Tesseract.js for actual text extraction.]`;
-  }
-
   private async extractTextFromWebPage(url: string): Promise<string> {
     try {
       const response = await fetch(url, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; Flopods/1.0; +https://flopods.dev)',
+          'User-Agent': 'Mozilla/5.0 (compatible; Flopods/1.0)',
         },
       });
 

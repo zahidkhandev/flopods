@@ -232,6 +232,7 @@ export class V1ExecutionService {
         apiKey,
         customEndpoint,
         apiKeyId: keyId,
+        workspaceId,
         stream: true,
       };
 

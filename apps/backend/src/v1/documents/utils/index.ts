@@ -1,12 +1,6 @@
-/**
- * Document Utilities Barrel Export
- *
- * @description Centralized export for all document processing utilities.
- *
- * @module v1/documents/utils
- */
+// /src/modules/v1/documents/utils/index.ts
 
-export { countDocumentTokens, freeDocumentEncoder } from './token-counter.util';
+export { countDocumentTokens, freeDocumentEncoder, getDocumentEncoder } from './token-counter.util';
 export {
   chunkDocumentText,
   DEFAULT_DOCUMENT_CHUNK_CONFIG,
@@ -16,6 +10,7 @@ export {
   calculateDocumentEmbeddingCost,
   convertDocumentCostToCredits,
   estimateDocumentProcessingCost,
+  calculateDocumentCreditsFromTokens,
 } from './cost-calculator.util';
 export {
   detectDocumentMimeType,

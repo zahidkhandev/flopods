@@ -1,3 +1,5 @@
+// src/modules/v1/documents/documents.module.ts
+
 /**
  * V1 Document Module
  *
@@ -21,6 +23,7 @@ import { V1DocumentVectorSearchService } from './services/vector-search.service'
 import { V1DocumentCostTrackingService } from './services/cost-tracking.service';
 import { V1DocumentEmbeddingsService } from './services/embeddings.service';
 import { V1DocumentOrchestratorService } from './services/document-orchestrator.service';
+import { V1GeminiVisionService } from './services/gemini-vision.service';
 
 import { V1WorkspaceOwnershipGuard } from './guards/workspace-ownership.guard';
 import { V1DocumentAccessGuard } from './guards/document-access.guard';
@@ -38,6 +41,8 @@ import {
 
 import { PrismaModule } from '../../prisma/prisma.module';
 import { AwsModule } from '../../common/aws/aws.module';
+import { V1ApiKeyService } from '../workspace/services/api-key.service';
+import { ApiKeyEncryptionService } from '../../common/services/encryption.service';
 
 @Module({
   imports: [ConfigModule, PrismaModule, AwsModule],
@@ -48,19 +53,26 @@ import { AwsModule } from '../../common/aws/aws.module';
     V1EmbeddingsController,
   ],
   providers: [
+    // ✅ Services
+    ApiKeyEncryptionService,
+    V1ApiKeyService,
     V1DocumentsService,
     V1DocumentFoldersService,
     V1DocumentVectorSearchService,
     V1DocumentCostTrackingService,
     V1DocumentEmbeddingsService,
     V1DocumentOrchestratorService,
+    V1GeminiVisionService,
 
+    // ✅ Guards
     V1WorkspaceOwnershipGuard,
     V1DocumentAccessGuard,
 
+    // ✅ Interceptors
     V1FileSizeLimitInterceptor,
     V1FileTypeValidatorInterceptor,
 
+    // ✅ Queue services
     V1BullMQDocumentQueueService,
     V1SQSDocumentQueueService,
     V1DocumentQueueProducer,
@@ -74,6 +86,7 @@ import { AwsModule } from '../../common/aws/aws.module';
     V1DocumentCostTrackingService,
     V1DocumentEmbeddingsService,
     V1DocumentOrchestratorService,
+    V1GeminiVisionService,
     V1DocumentQueueProducer,
   ],
 })

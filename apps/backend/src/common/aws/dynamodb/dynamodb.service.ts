@@ -122,14 +122,24 @@ export class DynamoDbService implements OnModuleInit {
 
   private async verifyTables() {
     try {
-      await Promise.all([
+      const results = await Promise.allSettled([
         this.dynamoClient!.send(new DescribeTableCommand({ TableName: this.podTableName })),
         this.dynamoClient!.send(new DescribeTableCommand({ TableName: this.executionTableName })),
         this.dynamoClient!.send(new DescribeTableCommand({ TableName: this.contextTableName })),
       ]);
-      this.logger.log('✅ All DynamoDB tables verified');
+
+      const successful = results.filter((r) => r.status === 'fulfilled').length;
+      this.logger.log(`✅ ${successful}/3 DynamoDB tables verified`);
+
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          this.logger.warn(
+            `⚠️  Table ${[this.podTableName, this.executionTableName, this.contextTableName][index]} issue: ${result.reason?.message}`,
+          );
+        }
+      });
     } catch (error: any) {
-      this.logger.warn(`⚠️  Some tables may not exist: ${error.message}`);
+      this.logger.warn(`⚠️  DynamoDB table verification: ${error.message}`);
     }
   }
 

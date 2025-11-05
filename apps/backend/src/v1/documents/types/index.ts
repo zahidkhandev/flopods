@@ -1,3 +1,5 @@
+// src/modules/v1/documents/types/index.ts
+
 /**
  * Document Types Barrel Export
  *
@@ -14,7 +16,6 @@
  *   DocumentQueueMessage,
  *   DocumentTextChunk,
  *   DocumentEmbeddingProvider,
- *   GEMINI_EMBEDDING_PROVIDER,
  * } from '../types';
  * ```
  */

@@ -11,55 +11,6 @@
  * queue messages from BullMQ (Redis) or AWS SQS. Automatically starts on module
  * initialization and gracefully shuts down on application termination.
  *
- * **Core Features:**
- * ✅ Automatic startup on module initialization
- * ✅ Graceful shutdown with proper cleanup
- * ✅ Integration with OrchestratorService for document processing
- * ✅ Comprehensive error handling and logging
- * ✅ Performance metrics tracking
- * ✅ Queue retry logic support
- * ✅ Concurrent message processing (configurable)
- *
- * **Processing Flow:**
- * 1. Consumer starts and listens for messages from queue
- * 2. Message received → handleDocumentMessage() called
- * 3. Message validated and passed to OrchestratorService
- * 4. Orchestrator processes document (text extraction + embeddings)
- * 5. Success → Message acknowledged and removed from queue
- * 6. Failure → Error logged, message re-queued for retry
- *
- * **Queue Backends:**
- * - **BullMQ (Redis):** Development and local testing
- * - **AWS SQS:** Production deployment
- * - Selection via QUEUE_BACKEND environment variable
- *
- * **Error Handling:**
- * - Automatic retry on transient failures (network, timeout)
- * - Exponential backoff between retries (2s, 4s, 8s)
- * - Dead letter queue after max retries (3 attempts)
- * - Document status updated to ERROR on permanent failure
- *
- * **Monitoring:**
- * - Processing time logged for each message
- * - Success/failure metrics tracked
- * - Queue depth monitoring via getDocumentQueueMetrics()
- *
- * @author Zahid Khan <zahid@flopods.dev>
- * @version 1.0.0
- * @since 2025-10-29
- *
- * @example
- * ```
- * // Automatically starts on module initialization
- * // No manual setup required - just add to module providers
- *
- * @Module({
- *   providers: [
- *     DocumentQueueConsumer, // ← Automatically starts consuming
- *   ],
- * })
- * export class V1DocumentsModule {}
- * ```
  */
 
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
@@ -98,26 +49,6 @@ export class V1DocumentQueueConsumer implements OnModuleInit, OnModuleDestroy {
    * Lifecycle hook called when NestJS module initializes. Automatically starts
    * the queue consumer and begins processing messages.
    *
-   * **Startup Process:**
-   * 1. Connect to queue backend (BullMQ or SQS)
-   * 2. Register message handler (handleDocumentMessage)
-   * 3. Begin polling for messages
-   * 4. Log successful startup
-   *
-   * **Concurrency:**
-   * - BullMQ: 10 concurrent workers (configurable in bullmq-queue.service.ts)
-   * - SQS: Polling interval 1s (configurable in sqs-queue.service.ts)
-   *
-   * @throws {Error} If queue connection fails or configuration invalid
-   *
-   * @example
-   * ```
-   * // Called automatically by NestJS - no manual invocation needed
-   * // On app startup:
-   * // 1. Module loads
-   * // 2. onModuleInit() called
-   * // 3. Consumer starts listening
-   * ```
    */
   async onModuleInit() {
     this.logger.log('🚀 Starting document queue consumer...');
@@ -181,30 +112,6 @@ export class V1DocumentQueueConsumer implements OnModuleInit, OnModuleDestroy {
    * Core message processing handler. Called automatically by queue service for
    * each message received. Delegates to OrchestratorService for actual document
    * processing (text extraction + embedding generation).
-   *
-   * **Processing Steps:**
-   * 1. Log message receipt with document ID and action
-   * 2. Call orchestratorService.processDocument()
-   * 3. Orchestrator handles complete pipeline:
-   *    - Download document from S3
-   *    - Extract text (PDF, DOCX, URL)
-   *    - Generate embeddings with Gemini
-   *    - Store in PostgreSQL + S3
-   *    - Update document status to READY
-   * 4. Log success with processing time
-   * 5. Queue automatically ACKs message on success
-   *
-   * **Error Handling:**
-   * - Catches all errors from orchestrator
-   * - Logs error with full stack trace
-   * - Re-throws error for queue retry logic
-   * - Queue automatically retries with exponential backoff
-   * - After 3 failures → Dead letter queue
-   *
-   * **Performance Tracking:**
-   * - Measures processing time (startTime → endTime)
-   * - Logs metrics for monitoring
-   * - Average processing time: 5-30 seconds per document
    *
    * @param {DocumentQueueMessage} message - Queue message with document details
    * @param {string} message.messageId - Unique message identifier
@@ -280,33 +187,9 @@ export class V1DocumentQueueConsumer implements OnModuleInit, OnModuleDestroy {
    * Retrieves current queue metrics for monitoring and health checks. Returns
    * real-time statistics about queue depth, processing rates, and job status.
    *
-   * **Metrics Returned:**
-   * - **waiting:** Jobs waiting to be processed
-   * - **active:** Jobs currently being processed
-   * - **completed:** Successfully completed jobs (last 24h)
-   * - **failed:** Failed jobs (last 7 days)
-   * - **delayed:** Scheduled jobs (future processing)
-   *
-   * **Use Cases:**
-   * - Health check endpoints
-   * - Admin dashboard monitoring
-   * - Alerting and scaling decisions
-   * - Performance analysis
-   *
    * @returns {Promise<DocumentQueueMetrics>} Queue metrics object
    *
    * @example
-   * ```
-   * const metrics = await consumer.getDocumentQueueMetrics();
-   * console.log(`Active: ${metrics.active}, Waiting: ${metrics.waiting}`);
-   * // Output: Active: 5, Waiting: 23
-   *
-   * // Use in health check endpoint:
-   * @Get('health/queue')
-   * async getQueueHealth() {
-   *   return this.queueConsumer.getDocumentQueueMetrics();
-   * }
-   * ```
    */
   async getDocumentQueueMetrics() {
     return this.queueService.getDocumentQueueMetrics();

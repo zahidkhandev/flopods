@@ -1,3 +1,5 @@
+// src/modules/v1/llm/providers/gemini.provider.ts
+
 import { Injectable } from '@nestjs/common';
 import axios, { AxiosError } from 'axios';
 import { BaseLLMProvider } from './base-llm.provider';
@@ -30,7 +32,7 @@ export class GeminiProvider extends BaseLLMProvider {
 
       const requestBody = this.buildRequestBody(request, contents);
 
-      this.logger.debug(`Executing Gemini request: model=${request.model}`);
+      this.logger.debug(`Executing Gemini: model=${request.model}`);
 
       const response = await this.retryWithBackoff(() =>
         axios.post(
@@ -60,9 +62,38 @@ export class GeminiProvider extends BaseLLMProvider {
       const data = this.validateResponse(response.data);
       const llmResponse = this.parseResponse(data, request.model);
 
+      // ✅ Calculate and record profit from DB pricing
+      if (request.workspaceId) {
+        const modelPricing = await this.getModelPricing(LLMProvider.GOOGLE_GEMINI, request.model);
+        if (modelPricing) {
+          const profitData = this.calculateProfit(modelPricing, {
+            promptTokens: llmResponse.usage.promptTokens,
+            completionTokens: llmResponse.usage.completionTokens,
+          });
+
+          await this.recordExecutionCost(
+            request.workspaceId,
+            `gemini_${data.modelVersion || request.model}_${Date.now()}`,
+            request.model,
+            LLMProvider.GOOGLE_GEMINI,
+            {
+              promptTokens: llmResponse.usage.promptTokens,
+              completionTokens: llmResponse.usage.completionTokens,
+            },
+            profitData,
+          );
+
+          llmResponse.profit = profitData;
+
+          this.logger.log(
+            `✅ Gemini: ${llmResponse.usage.totalTokens} tokens | Profit: $${profitData.profitUsd.toFixed(6)}`,
+          );
+        }
+      }
+
       const executionTime = Date.now() - startTime;
       this.logger.log(
-        `✅ Gemini execution completed: ${llmResponse.usage.totalTokens} tokens in ${executionTime}ms`,
+        `✅ Gemini completed: ${llmResponse.usage.totalTokens} tokens in ${executionTime}ms`,
       );
 
       return llmResponse;
@@ -88,8 +119,7 @@ export class GeminiProvider extends BaseLLMProvider {
 
       const requestBody = this.buildRequestBody(request, contents);
 
-      this.logger.debug(`Streaming Gemini request: model=${request.model}`);
-      this.logger.debug(`Request body: ${JSON.stringify(requestBody, null, 2)}`);
+      this.logger.debug(`Streaming Gemini: model=${request.model}`);
 
       const response = await axios.post(
         `${baseUrl}/models/${request.model}:streamGenerateContent?key=${request.apiKey}&alt=sse`,
@@ -132,8 +162,6 @@ export class GeminiProvider extends BaseLLMProvider {
           try {
             const data = JSON.parse(jsonStr);
 
-            this.logger.debug(`Received SSE data: ${JSON.stringify(data).substring(0, 200)}`);
-
             if (data.candidates && Array.isArray(data.candidates)) {
               for (const candidate of data.candidates) {
                 if (candidate.content?.parts && Array.isArray(candidate.content.parts)) {
@@ -141,10 +169,7 @@ export class GeminiProvider extends BaseLLMProvider {
                     if (part.text && typeof part.text === 'string' && part.text.length > 0) {
                       hasContent = true;
                       fullContent += part.text;
-
                       yield { type: 'token', content: part.text };
-
-                      this.logger.debug(`Streaming token: ${part.text.substring(0, 50)}...`);
                     }
                   }
                 }
@@ -161,12 +186,9 @@ export class GeminiProvider extends BaseLLMProvider {
                 completionTokens: data.usageMetadata.candidatesTokenCount || 0,
                 totalTokens: data.usageMetadata.totalTokenCount || 0,
               };
-
-              this.logger.debug(`Usage metadata: ${JSON.stringify(totalUsage)}`);
             }
           } catch (parseError) {
-            this.logger.warn(`Failed to parse SSE line: ${trimmedLine.substring(0, 100)}`);
-            this.logger.error('Parse error:', parseError);
+            this.logger.warn(`Failed to parse SSE line`);
           }
         }
       }
@@ -202,9 +224,32 @@ export class GeminiProvider extends BaseLLMProvider {
                 };
               }
             } catch {
-              this.logger.warn(`Failed to parse final buffer: ${trimmedBuffer.substring(0, 100)}`);
+              this.logger.warn(`Failed to parse final buffer`);
             }
           }
+        }
+      }
+
+      // ✅ Calculate and record profit from DB pricing
+      if (request.workspaceId) {
+        const modelPricing = await this.getModelPricing(LLMProvider.GOOGLE_GEMINI, request.model);
+        if (modelPricing) {
+          const profitData = this.calculateProfit(modelPricing, {
+            promptTokens: totalUsage.promptTokens,
+            completionTokens: totalUsage.completionTokens,
+          });
+
+          await this.recordExecutionCost(
+            request.workspaceId,
+            `gemini_stream_${Date.now()}`,
+            request.model,
+            LLMProvider.GOOGLE_GEMINI,
+            {
+              promptTokens: totalUsage.promptTokens,
+              completionTokens: totalUsage.completionTokens,
+            },
+            profitData,
+          );
         }
       }
 
@@ -215,9 +260,7 @@ export class GeminiProvider extends BaseLLMProvider {
       };
 
       if (!hasContent) {
-        this.logger.warn(
-          `⚠️ Gemini stream completed with NO content. Full response may have been filtered by safety settings.`,
-        );
+        this.logger.warn(`⚠️ Gemini stream completed with NO content`);
       } else {
         this.logger.log(
           `✅ Gemini stream completed (${totalUsage.totalTokens} tokens, ${fullContent.length} chars)`,
@@ -225,11 +268,6 @@ export class GeminiProvider extends BaseLLMProvider {
       }
     } catch (error) {
       this.logger.error(`❌ Gemini stream failed: ${this.getErrorMessage(error)}`);
-
-      if (axios.isAxiosError(error) && error.response) {
-        this.logger.error(`Response status: ${error.response.status}`);
-        this.logger.error(`Response data: ${JSON.stringify(error.response.data)}`);
-      }
 
       yield {
         type: 'error',
@@ -280,15 +318,12 @@ export class GeminiProvider extends BaseLLMProvider {
     }
   }
 
-  private convertMessagesToGeminiFormat(messages: LLMRequest['messages']): Array<{
-    role: string;
-    parts: Array<{ text: string }>;
-  }> {
+  private convertMessagesToGeminiFormat(messages: LLMRequest['messages']) {
     return messages
       .filter((m) => m.role !== 'system')
       .map((m) => {
         if (!m.role || !m.content) {
-          this.logger.warn(`Skipping invalid message: ${JSON.stringify(m)}`);
+          this.logger.warn(`Skipping invalid message`);
           return null;
         }
 
@@ -300,7 +335,6 @@ export class GeminiProvider extends BaseLLMProvider {
               : String(m.content);
 
         if (text.length === 0) {
-          this.logger.warn(`Skipping empty message from role: ${m.role}`);
           return null;
         }
 
@@ -354,8 +388,6 @@ export class GeminiProvider extends BaseLLMProvider {
       }
     }
 
-    // ✅ CRITICAL: MUST explicitly set BLOCK_NONE for all categories
-    // Without this, Gemini defaults to strict filtering that blocks code
     requestBody.safetySettings = [
       { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
       { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
@@ -445,7 +477,7 @@ export class GeminiProvider extends BaseLLMProvider {
       });
 
       if (response.status === 200) {
-        this.logger.log('✅ Gemini API key validation successful');
+        this.logger.log('✅ Gemini API key valid');
         return true;
       }
 

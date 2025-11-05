@@ -1,4 +1,4 @@
-// File: apps/backend/src/v1/execution/types/llm-provider.types.ts
+// src/modules/v1/execution/types/llm-provider.types.ts
 
 import { LLMProvider } from '@flopods/schema';
 
@@ -9,6 +9,7 @@ export interface LLMRequest {
   apiKey: string;
   customEndpoint?: string;
   apiKeyId?: string;
+  workspaceId?: string;
   temperature?: number;
   maxTokens?: number;
   topP?: number;
@@ -27,6 +28,14 @@ export interface LLMUsage {
   cachedTokens?: number;
 }
 
+export interface LLMProfit {
+  actualCostUsd: number;
+  userChargeUsd: number;
+  profitUsd: number;
+  profitMarginPercentage: number;
+  roi: number;
+}
+
 export interface LLMResponse {
   id: string;
   model: string;
@@ -36,9 +45,9 @@ export interface LLMResponse {
   usage: LLMUsage;
   rawResponse: any;
   timestamp: Date;
+  profit?: LLMProfit | null; // ✅ Allow null
 }
 
-// ✅ FIXED: Added executionId to start event
 export type LLMStreamChunk =
   | { type: 'start'; executionId?: string }
   | { type: 'token'; content: string }

@@ -1,16 +1,14 @@
-// /prisma/schemas/documents.prisma
+// prisma/schemas/documents.schema.prisma
 
 // ==========================================
-// DOCUMENTS SCHEMA - File Storage, Embeddings & Processing
+// DOCUMENTS SCHEMA - WITH UNIFIED API LOGGING
 // ==========================================
 
-// Document Folders (like Google Drive folders)
 model DocumentFolder {
   id          String @id @default(cuid())
   workspaceId String
   name        String @db.VarChar(255)
 
-  // Self-referential for nested folders (folder within folder)
   parentId String?
   parent   DocumentFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
   children DocumentFolder[] @relation("FolderHierarchy")
@@ -25,7 +23,7 @@ model DocumentFolder {
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
   workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  documents Document[] // Documents in this folder
+  documents Document[]
 
   @@unique([workspaceId, parentId, name])
   @@index([workspaceId, parentId, sortOrder])
@@ -36,16 +34,14 @@ model DocumentFolder {
 model Document {
   id          String  @id @default(cuid())
   workspaceId String
-  folderId    String? // Optional folder location
+  folderId    String?
   name        String  @db.VarChar(255)
 
   sourceType DocumentSourceType @default(INTERNAL)
 
-  // For INTERNAL (uploaded files)
   storageKey String? @unique @db.VarChar(512)
   s3Bucket   String? @db.VarChar(255)
 
-  // For EXTERNAL (YouTube, Google Drive, URLs, etc.)
   externalUrl      String? @db.VarChar(2048)
   externalProvider String? @db.VarChar(50)
   externalFileId   String? @db.VarChar(512)
@@ -56,7 +52,10 @@ model Document {
   status      DocumentStatus @default(UPLOADING)
   uploadedBy  String?
 
-  metadata Json? // Store thumbnails, duration, channel info, etc.
+  metadata Json?
+
+  dynamoPartitionKey String @db.VarChar(255)
+  dynamoSortKey      String @db.VarChar(255)
 
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
@@ -66,6 +65,10 @@ model Document {
   embeddings            Embedding[]
   pods                  Pod[]
   processingCostRecords DocumentProcessingCost[]
+  visionAnalyses        DocumentVisionAnalysis[]
+  visionSnapshots       VisionExtractionSnapshot[]
+  visionMetadata        VisionMetadata?
+  apiLogs               DocumentAPILog[]
 
   @@index([workspaceId, folderId, status, createdAt(sort: Desc)])
   @@index([workspaceId, status, createdAt(sort: Desc)])
@@ -75,6 +78,7 @@ model Document {
   @@index([status, updatedAt])
   @@index([fileType, workspaceId])
   @@index([externalProvider, externalFileId])
+  @@unique([dynamoPartitionKey, dynamoSortKey])
   @@schema("documents")
 }
 
@@ -85,10 +89,8 @@ model Embedding {
   chunkIndex Int
   chunkText  String @db.Text
 
-  // Dual storage: PostgreSQL pgvector (768d for Gemini) + S3 backup
   vector Unsupported("vector(768)")?
 
-  // S3 Vectors - AWS S3 storage for backup/archive
   s3VectorBucket  String @db.VarChar(255)
   s3VectorKey     String @db.VarChar(512)
   vectorDimension Int    @default(768)
@@ -118,16 +120,16 @@ model DocumentProcessingCost {
 
   creditsConsumed Int @default(0)
 
-  // Cost breakdown
-  extractionCost Decimal @default(0) @db.Decimal(12, 8) // YouTube transcript, OCR, etc.
-  embeddingCost  Decimal @default(0) @db.Decimal(12, 8) // Embedding generation cost
+  extractionCost Decimal @default(0) @db.Decimal(12, 8)
+  embeddingCost  Decimal @default(0) @db.Decimal(12, 8)
+  visionCost     Decimal @default(0) @db.Decimal(12, 8)
   totalCostInUsd Decimal @db.Decimal(12, 8)
 
-  // Processing stats
   chunkCount       Int?
   embeddingModel   String? @db.VarChar(100)
   processingTimeMs Int?
   tokensProcessed  Int     @default(0)
+  visionTokens     Int     @default(0)
 
   processedAt DateTime @default(now()) @db.Timestamptz(6)
 
@@ -140,6 +142,226 @@ model DocumentProcessingCost {
   @@index([processingType, processedAt(sort: Desc)])
   @@schema("documents")
 }
+
+model VisionMetadata {
+  id         String @id @default(cuid())
+  documentId String @unique
+  workspaceId String
+
+  imageOriginalWidth    Int?
+  imageOriginalHeight   Int?
+  imageColorSpace       String? @db.VarChar(50)
+  imageColorDepth       Int?
+  imageDPI              Int?
+
+  detectedLanguages     Json?
+  handwriting           Boolean @default(false)
+  handwritingConfidence Float @default(0)
+
+  aestheticScore        Float @default(0)
+  brightnessScore       Float @default(0)
+  contrastScore         Float @default(0)
+
+  dominantColors        Json?
+  colorPalette          Json?
+
+  facesDetected         Int @default(0)
+  faceCount             Json?
+
+  textLines             Int @default(0)
+  linesPerImage         Json?
+
+  fileSize              BigInt?
+  fileFormat            String? @db.VarChar(20)
+  fileDuration          Int?
+
+  exifData              Json?
+  metadata              Json?
+
+  processingQuality     String? @db.VarChar(50)
+  qualityIssues         Json?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@schema("documents")
+}
+
+model DocumentVisionAnalysis {
+  id         String @id @default(cuid())
+  documentId String
+  workspaceId String
+
+  provider        LLMProvider @default(GOOGLE_GEMINI) // ✅ Use LLMProvider from core
+  modelId         String @db.VarChar(100)
+  modelVersion    String? @db.VarChar(50)
+
+  ocrText                    String? @db.Text
+  ocrConfidence              Float @default(0)
+  ocrLanguages               Json?
+
+  imageCaption               String? @db.Text
+  captionConfidence          Float @default(0)
+  imageSummary               String? @db.Text
+  imageStyle                 String? @db.VarChar(100)
+
+  detectedObjects            Json?
+  objectCount                Int @default(0)
+
+  detectedText               Json?
+  textContent                String? @db.Text
+
+  entityRecognition          Json?
+  sentimentAnalysis          Json?
+
+  segmentationMasks          Json?
+  segmentationCount          Int @default(0)
+
+  sceneType                  String? @db.VarChar(100)
+  sceneDescription           String? @db.Text
+
+  activitiesDetected         Json?
+  poseEstimation             Json?
+
+  imageQuality               String? @db.VarChar(50)
+  imageBlur                  Boolean @default(false)
+  imageNoise                 Boolean @default(false)
+
+  dominantColors             Json?
+  colorCount                 Int @default(0)
+  colorHarmony               String? @db.VarChar(50)
+
+  textDetected               Boolean @default(false)
+  qualityScore               Int?
+  imageFormat                String? @db.VarChar(50)
+
+  processingTimeMs           Int?
+  requestId                  String? @unique @db.VarChar(255)
+
+  inputTokens                Int @default(0)
+  outputTokens               Int @default(0)
+  totalTokens                Int @default(0)
+  estimatedCost              Decimal @db.Decimal(12, 8)
+
+  status                     VisionAnalysisStatus @default(PENDING)
+  errorMessage               String? @db.Text
+  errorCode                  String? @db.VarChar(100)
+  retryCount                 Int @default(0)
+  lastRetryAt                DateTime? @db.Timestamptz(6)
+  maxRetries                 Int @default(3)
+
+  requestPayload             Json?
+  responseContent            String? @db.Text
+  rawResponse                Json?
+
+  metadata                   Json?
+  annotations                Json?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  archivedAt DateTime? @db.Timestamptz(6)
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, provider])
+  @@index([workspaceId, provider, status, createdAt(sort: Desc)])
+  @@index([documentId, provider])
+  @@index([status, createdAt(sort: Desc)])
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([createdAt])
+  @@index([provider, createdAt(sort: Desc)])
+  @@schema("documents")
+}
+
+model VisionExtractionSnapshot {
+  id                  String @id @default(cuid())
+  documentId          String
+  workspaceId         String
+  visionAnalysisId    String?
+
+  provider            LLMProvider // ✅ Use LLMProvider from core
+  modelId             String @db.VarChar(100)
+  extractionType      VisionExtractionType
+  extractedData       String @db.Text
+
+  confidence          Float @default(0)
+  version             Int @default(1)
+  extractedAt         DateTime
+
+  metadata            Json?
+  summary             String? @db.VarChar(500)
+  rawData             Json?
+
+  processingTimeMs    Int?
+  tokensUsed          Int @default(0)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  archivedAt DateTime? @db.Timestamptz(6)
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([documentId, provider, extractionType, extractedAt(sort: Desc)])
+  @@index([workspaceId, provider, extractedAt(sort: Desc)])
+  @@index([extractionType, confidence])
+  @@index([documentId, version])
+  @@index([extractedAt])
+  @@index([provider, extractionType])
+  @@schema("documents")
+}
+
+// ✅ UNIFIED API LOG FOR ALL OPERATIONS
+model DocumentAPILog {
+  id          String @id @default(cuid())
+  workspaceId String
+  documentId  String?
+
+  // ✅ Unified provider & request type from core
+  provider        LLMProvider
+  modelId         String @db.VarChar(100)
+  requestType     APIRequestType
+
+  // Token tracking
+  inputTokens     Int @default(0)
+  outputTokens    Int @default(0)
+  totalTokens     Int @default(0)
+
+  // Cost & success tracking
+  statusCode      Int
+  success         Boolean @default(false)
+  estimatedCost   Decimal @db.Decimal(12, 8)
+  actualCost      Decimal? @db.Decimal(12, 8)
+
+  // Error tracking
+  errorMessage    String? @db.Text
+  errorCode       String? @db.VarChar(100)
+
+  // Performance
+  requestDurationMs Int?
+
+  // Extensible metadata (profit, credits, multiplier, etc)
+  metadata        Json?
+
+  processedAt DateTime @default(now()) @db.Timestamptz(6)
+  archivedAt  DateTime? @db.Timestamptz(6)
+
+  document Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, provider, processedAt(sort: Desc)])
+  @@index([documentId, provider, processedAt(sort: Desc)])
+  @@index([modelId, processedAt(sort: Desc)])
+  @@index([statusCode, processedAt(sort: Desc)])
+  @@index([success, provider, processedAt(sort: Desc)])
+  @@index([requestType, processedAt(sort: Desc)])
+  @@index([processedAt])
+  @@schema("documents")
+}
+
+// ==========================================
+// ENUMS
+// ==========================================
 
 enum DocumentStatus {
   UPLOADING
@@ -165,11 +387,54 @@ enum DocumentSourceType {
 enum DocumentProcessingType {
   PDF_TEXT_EXTRACTION
   IMAGE_OCR
-  VIDEO_TRANSCRIPT // YouTube, Vimeo, Loom
+  VIDEO_TRANSCRIPT
   AUDIO_TRANSCRIPT
-  DOCUMENT_EMBEDDING // General embedding generation
+  DOCUMENT_EMBEDDING
   URL_SCRAPING
-  VISION_EXTRACTION // Image description via GPT-4V/Claude Vision
+  VISION_EXTRACTION
 
   @@schema("documents")
+}
+
+enum VisionAnalysisStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  PARTIAL_COMPLETION
+  ERROR
+  ARCHIVED
+
+  @@schema("documents")
+}
+
+enum VisionExtractionType {
+  OCR_TEXT
+  IMAGE_CAPTION
+  IMAGE_SUMMARY
+  OBJECT_DETECTION
+  SEGMENTATION_MASK
+  COLOR_ANALYSIS
+  ENTITY_RECOGNITION
+  SENTIMENT_ANALYSIS
+  SCENE_DETECTION
+  ACTIVITY_DETECTION
+  POSE_ESTIMATION
+  FACE_DETECTION
+  TEXT_EXTRACTION
+  HANDWRITING_DETECTION
+
+  @@schema("documents")
+}
+
+// ✅ ADD THIS NEW ENUM TO CORE
+// Add to prisma/schemas/core.prisma after LLMProvider enum
+
+enum APIRequestType {
+  TEXT_GENERATION       // LLM prompts (OpenAI, Claude, Gemini)
+  VECTOR_SEARCH         // Embedding queries
+  DOCUMENT_EMBEDDING    // Creating embeddings
+  IMAGE_ANALYSIS        // Vision analysis
+  MULTIMODAL            // Any multimodal operation
+
+  @@schema("core")
 }

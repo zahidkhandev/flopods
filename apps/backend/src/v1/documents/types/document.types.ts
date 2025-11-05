@@ -1,165 +1,152 @@
-/**
- * Document Type Definitions
- *
- * @description Core type definitions for document processing system.
- * Re-exports Prisma enums and adds application-specific types.
- *
- * @module v1/documents/types/document
- */
+// src/modules/v1/documents/types/document.types.ts
 
 import { DocumentSourceType, DocumentStatus, DocumentProcessingType } from '@flopods/schema';
 
-/**
- * Re-export Prisma enums for document processing
- */
+// ✅ REMOVE: export { VisionProvider };
+
 export { DocumentSourceType, DocumentStatus, DocumentProcessingType };
 
-/**
- * Document processing actions for queue messages
- */
 export enum DocumentProcessingAction {
-  /** Initial document processing with text extraction and embedding generation */
   PROCESS = 'PROCESS',
-
-  /** Regenerate embeddings for existing document (e.g., after model upgrade) */
   REPROCESS = 'REPROCESS',
-
-  /** Generate thumbnail for document (PDF first page, video frame) */
   THUMBNAIL = 'THUMBNAIL',
 }
 
-/**
- * Document queue message priority levels
- */
 export enum DocumentMessagePriority {
-  /** User-initiated uploads, immediate processing required */
   HIGH = 'HIGH',
-
-  /** Bulk uploads, reprocessing, scheduled jobs */
   NORMAL = 'NORMAL',
-
-  /** Thumbnail generation, cleanup, maintenance tasks */
   LOW = 'LOW',
 }
 
-/**
- * Document metadata structure for various source types
- */
 export interface DocumentMetadata {
-  /** MIME type of the file (e.g., 'application/pdf', 'image/jpeg') */
   fileType?: string;
-
-  /** Source type of the document */
   sourceType?: DocumentSourceType;
-
-  /** Estimated token count before processing */
   estimatedTokens?: number;
-
-  /** Number of retry attempts for failed processing */
   retryCount?: number;
-
-  /** Number of pages (PDFs) */
   pageCount?: number;
-
-  /** Video duration in seconds (YouTube) */
   duration?: number;
-
-  /** Thumbnail URL */
   thumbnail?: string;
-
-  /** Document author/creator */
   author?: string;
-
-  /** YouTube channel name */
   channelName?: string;
-
-  /** Original URL (for external sources) */
   url?: string;
 }
 
-/**
- * Result of document processing operation
- */
 export interface DocumentProcessingResult {
-  /** Whether processing completed successfully */
   success: boolean;
-
-  /** Document ID that was processed */
   documentId: string;
-
-  /** Number of text chunks generated */
   chunkCount?: number;
-
-  /** Total tokens processed */
   tokensProcessed?: number;
-
-  /** Processing time in milliseconds */
   processingTimeMs?: number;
-
-  /** Error message if processing failed */
   error?: string;
+  profitUsd?: number;
+  costUsd?: number;
 }
 
-/**
- * Vector search result with document context
- */
 export interface DocumentVectorSearchResult {
-  /** Embedding ID */
   embeddingId: string;
-
-  /** Document ID */
   documentId: string;
-
-  /** Document name */
   documentName: string;
-
-  /** Chunk index in document */
   chunkIndex: number;
-
-  /** Chunk text content */
   chunkText: string;
-
-  /** Similarity score (0-1, higher is more similar) */
   similarity: number;
-
-  /** Document metadata */
   documentMetadata: Record<string, any>;
 }
 
-/**
- * Cost summary for a time period
- */
 export interface DocumentCostSummary {
-  /** Total USD cost */
   totalCost: number;
-
-  /** Total credits consumed */
+  totalProfit: number;
+  totalRevenue: number;
   totalCredits: number;
-
-  /** Total documents processed */
   documentsProcessed: number;
-
-  /** Total tokens processed */
   tokensProcessed: number;
-
-  /** Total chunks created */
   chunksCreated: number;
-
-  /** Breakdown by processing type */
-  byType: {
+  profitMarginPercentage: number;
+  avgCostPerDocument: number;
+  avgProfitPerDocument: number;
+  byType: Array<{
     type: DocumentProcessingType;
     cost: number;
+    profit: number;
+    revenue: number;
     credits: number;
     count: number;
-  }[];
+  }>;
 }
 
-/**
- * Daily cost breakdown
- */
 export interface DocumentDailyCost {
   date: string;
   cost: number;
+  profit: number;
+  revenue: number;
   credits: number;
   documentsProcessed: number;
+}
+
+export interface DocumentCostDetail {
+  documentId: string;
+  documentName: string;
+  fileSize: number | null;
+  processingType: DocumentProcessingType;
+  totalCostUsd: number;
+  profitUsd: number;
+  revenueUsd: number;
+  creditsConsumed: number;
+  extractionCost: number;
+  embeddingCost: number;
+  visionCost: number;
+  tokensProcessed: number;
+  visionTokens: number;
+  chunkCount: number;
+  embeddingModel: string | null;
+  roi: number;
+  profitMarginPercentage: number;
+  processedAt: Date;
+}
+
+export interface ROIMetrics {
+  totalCostUsd: number;
+  totalProfitUsd: number;
+  totalRevenueUsd: number;
+  profitMarginPercentage: number;
+  roi: number;
+  documentsProcessed: number;
+  tokensProcessed: number;
+  avgCostPerDocument: number;
+  avgProfitPerDocument: number;
+  byProcessingType: Array<{
+    type: DocumentProcessingType;
+    costUsd: number;
+    profitUsd: number;
+    revenueUsd: number;
+    documentsProcessed: number;
+    roi: number;
+  }>;
+}
+
+export interface ProfitableDocument {
+  documentId: string;
+  documentName: string;
+  fileSize: number | null;
+  costUsd: number;
+  profitUsd: number;
+  revenueUsd: number;
+  roi: number;
+  creditsCharged: number;
+  tokensProcessed: number;
+  visionTokens: number;
+  chunksCreated: number;
+  processedAt: Date;
+}
+
+export interface DocumentVisionAnalysisResult {
+  documentId: string;
+  provider: string; // ✅ Changed from VisionProvider
+  ocrText?: string;
+  caption?: string;
+  summary?: string;
+  detectedObjects?: any[];
+  confidence: number;
+  tokensUsed: number;
+  costUsd: number;
+  profitUsd: number;
 }
