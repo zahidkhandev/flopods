@@ -2004,6 +2004,7 @@ __metadata:
     tsconfig-paths: "npm:^4.2.0"
     typescript: "npm:^5.9.3"
     ua-parser-js: "npm:^2.0.6"
+    youtube-caption-extractor: "npm:^1.9.1"
     youtube-transcript: "npm:^1.2.1"
   languageName: unknown
   linkType: soft
@@ -10976,6 +10977,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"he@npm:^1.2.0":
+  version: 1.2.0
+  resolution: "he@npm:1.2.0"
+  bin:
+    he: bin/he
+  checksum: 10c0/a27d478befe3c8192f006cdd0639a66798979dfa6e2125c6ac582a19a5ebfec62ad83e8382e6036170d873f46e4536a7e795bf8b95bf7c247f4cc0825ccc8c17
+  languageName: node
+  linkType: hard
+
 "hermes-estree@npm:0.25.1":
   version: 0.25.1
   resolution: "hermes-estree@npm:0.25.1"
@@ -16235,6 +16245,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"striptags@npm:^3.2.0":
+  version: 3.2.0
+  resolution: "striptags@npm:3.2.0"
+  checksum: 10c0/72c8eea03c04ca8522511caf44ffd2bde4b5f36cbeb5d43140906c0a7ee19e98b3341bf96370ccb643e55972587eafac772d4a3f7f526d3045c2cf36270511e6
+  languageName: node
+  linkType: hard
+
 "strnum@npm:^2.1.0":
   version: 2.1.1
   resolution: "strnum@npm:2.1.1"
@@ -18083,6 +18100,16 @@ __metadata:
   version: 2.1.3
   resolution: "yoctocolors-cjs@npm:2.1.3"
   checksum: 10c0/584168ef98eb5d913473a4858dce128803c4a6cd87c0f09e954fa01126a59a33ab9e513b633ad9ab953786ed16efdd8c8700097a51635aafaeed3fef7712fa79
+  languageName: node
+  linkType: hard
+
+"youtube-caption-extractor@npm:^1.9.1":
+  version: 1.9.1
+  resolution: "youtube-caption-extractor@npm:1.9.1"
+  dependencies:
+    he: "npm:^1.2.0"
+    striptags: "npm:^3.2.0"
+  checksum: 10c0/68237e85fd76cbbc7bc00e44d3fa17fe7b491197092668b001a3b08e75adea993399d1c86c163487efe0001e9e932bedebe0355ca9a9eda112c735d88d2704ab
   languageName: node
   linkType: hard
 

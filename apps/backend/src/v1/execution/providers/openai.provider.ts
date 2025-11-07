@@ -1,5 +1,3 @@
-// src/modules/v1/llm/providers/openai.provider.ts
-
 import { Injectable } from '@nestjs/common';
 import axios from 'axios';
 import { LLMProvider } from '@flopods/schema';
@@ -16,6 +14,8 @@ export class OpenAIProvider extends BaseLLMProvider {
   }
 
   async execute(request: LLMRequest): Promise<LLMResponse> {
+    const startTime = Date.now();
+
     try {
       const baseUrl = request.customEndpoint || this.defaultBaseUrl;
 
@@ -71,7 +71,6 @@ export class OpenAIProvider extends BaseLLMProvider {
       const data = response.data;
       const choice = data.choices[0];
 
-      // ✅ Calculate profit if pricing available
       let profitData: any = null;
       if (modelPricing) {
         profitData = this.calculateProfit(modelPricing, {
@@ -80,7 +79,6 @@ export class OpenAIProvider extends BaseLLMProvider {
           reasoningTokens: data.usage.completion_tokens_details?.reasoning_tokens,
         });
 
-        // ✅ Record to database
         if (request.workspaceId) {
           await this.recordExecutionCost(
             request.workspaceId,
@@ -112,18 +110,26 @@ export class OpenAIProvider extends BaseLLMProvider {
         },
         rawResponse: data,
         timestamp: new Date(),
-        profit: profitData || undefined,
       };
 
-      const profitMsg = profitData ? ` | Profit: $${profitData.profitUsd.toFixed(6)}` : '';
+      const profitMsg = profitData
+        ? ` | Cost: $${profitData.actualCostUsd.toFixed(6)} | Charge: $${profitData.userChargeUsd.toFixed(6)} | Profit: $${profitData.profitUsd.toFixed(6)} (${profitData.profitMarginPercentage.toFixed(2)}%)`
+        : '';
+      const reasoningMsg = result.usage.reasoningTokens
+        ? ` + ${result.usage.reasoningTokens} reasoning`
+        : '';
       this.logger.log(
-        `✅ OpenAI: ${result.usage.totalTokens} tokens (${result.usage.promptTokens} in + ${result.usage.completionTokens} out${result.usage.reasoningTokens ? ` + ${result.usage.reasoningTokens} reasoning` : ''})${profitMsg}`,
+        `✅ OpenAI: ${result.usage.totalTokens} tokens (${result.usage.promptTokens} in + ${result.usage.completionTokens} out${reasoningMsg})${profitMsg}`,
       );
+
+      const executionTime = Date.now() - startTime;
+      this.logger.log(`✅ OpenAI completed in ${executionTime}ms`);
 
       return result;
     } catch (error) {
+      const executionTime = Date.now() - startTime;
       this.logger.error(
-        `❌ OpenAI execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `❌ OpenAI execution failed after ${executionTime}ms: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
       this.handleError(error, 'OpenAI');
     }
@@ -205,7 +211,6 @@ export class OpenAIProvider extends BaseLLMProvider {
             if (data.choices?.[0]?.finish_reason) {
               finalUsage = data.usage;
 
-              // ✅ Calculate profit before completion
               let profitData: any = null;
               if (modelPricing && finalUsage) {
                 profitData = this.calculateProfit(modelPricing, {
@@ -278,28 +283,19 @@ export class OpenAIProvider extends BaseLLMProvider {
   }
 
   async getAvailableModels(): Promise<string[]> {
-    const dbModels = await this.getModelsFromDb(LLMProvider.OPENAI);
-    if (dbModels.length > 0) {
-      this.logger.debug(`Loaded ${dbModels.length} OpenAI models from database`);
+    try {
+      const dbModels = await this.getModelsFromDb(LLMProvider.OPENAI);
+
+      if (dbModels.length === 0) {
+        this.logger.warn('No OpenAI models found in database - please seed ModelPricingTier');
+      } else {
+        this.logger.debug(`Loaded ${dbModels.length} OpenAI models from database`);
+      }
+
       return dbModels;
+    } catch (error) {
+      this.logger.error('Failed to fetch OpenAI models:', error);
+      return [];
     }
-
-    const fallbackModels = [
-      'gpt-5',
-      'gpt-5-mini',
-      'gpt-5-nano',
-      'gpt-5-pro',
-      'gpt-4.1',
-      'gpt-4.1-mini',
-      'gpt-4.1-nano',
-      'o3',
-      'o3-pro',
-      'o4-mini',
-      'gpt-4o',
-      'gpt-4o-mini',
-    ];
-
-    this.logger.debug(`Using ${fallbackModels.length} fallback OpenAI models`);
-    return fallbackModels;
   }
 }

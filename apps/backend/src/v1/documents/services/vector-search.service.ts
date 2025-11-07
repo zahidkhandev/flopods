@@ -1,6 +1,4 @@
-// /src/modules/v1/documents/services/vector-search.service.ts
-
-import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ConfigService } from '@nestjs/config';
 import { LLMProvider } from '@flopods/schema';
@@ -11,8 +9,9 @@ import {
   calculateProfitData,
   calculateCreditsFromCharge,
   PROFIT_CONFIG,
-} from '../../../config/profit.config';
+} from '../../../common/config/profit.config';
 import { Decimal } from '@prisma/client/runtime/library';
+import { createDecipheriv } from 'crypto';
 
 @Injectable()
 export class V1DocumentVectorSearchService {
@@ -23,11 +22,7 @@ export class V1DocumentVectorSearchService {
     private readonly configService: ConfigService,
   ) {}
 
-  // ✅ Get embedding pricing from DB
-  private async getEmbeddingPricing(): Promise<{
-    pricing: any;
-    provider: DocumentEmbeddingProvider;
-  }> {
+  private async getEmbeddingPricing(): Promise<{ provider: DocumentEmbeddingProvider }> {
     const pricing = await this.prisma.modelPricingTier.findFirst({
       where: {
         provider: LLMProvider.GOOGLE_GEMINI,
@@ -40,14 +35,14 @@ export class V1DocumentVectorSearchService {
     });
 
     if (!pricing) {
-      throw new NotFoundException('Embedding pricing not found in database');
+      throw new BadRequestException('Embedding pricing not found in database');
     }
 
     let providerConfig: any = {};
     if (pricing.providerConfig) {
       try {
         providerConfig = JSON.parse(pricing.providerConfig as string);
-      } catch (e) {
+      } catch {
         this.logger.warn('Failed to parse providerConfig, using defaults');
       }
     }
@@ -58,7 +53,7 @@ export class V1DocumentVectorSearchService {
       costPer1MTokens: Number(pricing.inputTokenCost),
     };
 
-    return { pricing, provider };
+    return { provider };
   }
 
   async searchDocuments(
@@ -75,96 +70,125 @@ export class V1DocumentVectorSearchService {
 
     this.logger.log(`[Vector Search] Query: "${query}" (workspace: ${workspaceId})`);
 
-    const queryEmbedding = await this.generateQueryEmbedding(query, workspaceId);
-    const vectorString = `[${queryEmbedding.join(',')}]`;
+    try {
+      const queryEmbedding = await this.generateQueryEmbedding(query, workspaceId);
+      const vectorString = `[${queryEmbedding.join(',')}]`;
 
-    const results = await this.prisma.$queryRaw<
-      Array<{
-        embedding_id: string;
-        document_id: string;
-        document_name: string;
-        chunk_index: number;
-        chunk_text: string;
-        similarity: number;
-        document_metadata: any;
-      }>
-    >`
-      SELECT
-        e.id as embedding_id,
-        d.id as document_id,
-        d.name as document_name,
-        e."chunkIndex" as chunk_index,
-        e."chunkText" as chunk_text,
-        1 - (e.vector <=> ${vectorString}::vector) as similarity,
-        d.metadata as document_metadata
-      FROM documents."Embedding" e
-      INNER JOIN documents."Document" d ON e."documentId" = d.id
-      WHERE d."workspaceId" = ${workspaceId}
-        AND d.status = 'READY'
-        ${documentIds && documentIds.length > 0 ? `AND d.id = ANY(${JSON.stringify(documentIds)}::text[])` : ''}
-        ${folderId ? `AND d."folderId" = '${folderId}'` : ''}
-        AND 1 - (e.vector <=> ${vectorString}::vector) >= ${minSimilarity}
-      ORDER BY e.vector <=> ${vectorString}::vector
-      LIMIT ${topK}
-    `;
+      const results = await this.prisma.$queryRawUnsafe<
+        Array<{
+          embedding_id: string;
+          document_id: string;
+          document_name: string;
+          chunk_index: number;
+          chunk_text: string;
+          similarity: number;
+          document_metadata: any;
+        }>
+      >(
+        `
+        SELECT
+          e.id as embedding_id,
+          d.id as document_id,
+          d.name as document_name,
+          e."chunkIndex" as chunk_index,
+          e."chunkText" as chunk_text,
+          1 - (e.vector <=> ${vectorString}::vector) as similarity,
+          d.metadata as document_metadata
+        FROM documents."Embedding" e
+        INNER JOIN documents."Document" d ON e."documentId" = d.id
+        WHERE d."workspaceId" = $1
+          AND d.status = 'READY'
+          ${documentIds && documentIds.length > 0 ? `AND d.id = ANY($2)` : ''}
+          ${folderId ? `AND d."folderId" = $3` : ''}
+          AND 1 - (e.vector <=> ${vectorString}::vector) >= $4
+        ORDER BY e.vector <=> ${vectorString}::vector
+        LIMIT $5
+      `,
+        workspaceId,
+        documentIds ?? [],
+        folderId ?? null,
+        minSimilarity,
+        topK,
+      );
 
-    const searchResults: DocumentVectorSearchResult[] = results.map((row) => ({
-      embeddingId: row.embedding_id,
-      documentId: row.document_id,
-      documentName: row.document_name,
-      chunkIndex: row.chunk_index,
-      chunkText: row.chunk_text,
-      similarity: Number(row.similarity.toFixed(4)),
-      documentMetadata: row.document_metadata || {},
-    }));
+      const searchResults: DocumentVectorSearchResult[] = results.map((row) => ({
+        embeddingId: row.embedding_id,
+        documentId: row.document_id,
+        documentName: row.document_name,
+        chunkIndex: row.chunk_index,
+        chunkText: row.chunk_text,
+        similarity: Number(Number(row.similarity).toFixed(4)),
+        documentMetadata: row.document_metadata || {},
+      }));
 
-    this.logger.log(
-      `[Vector Search] Found ${searchResults.length} results (min similarity: ${minSimilarity})`,
-    );
+      this.logger.log(
+        `[Vector Search] Found ${searchResults.length} results (min similarity: ${minSimilarity})`,
+      );
 
-    // ✅ Track search cost
-    await this.trackSearchCost(workspaceId, query, searchResults.length);
+      await this.trackSearchCost(workspaceId, query, searchResults.length);
 
-    return searchResults;
+      return searchResults;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`[Vector Search] ❌ Search failed: ${errorMessage}`);
+
+      if (errorMessage.includes('429') || errorMessage.includes('quota')) {
+        this.logger.warn(`[Vector Search] ⚠️ QUOTA EXHAUSTED - Returning empty results`);
+        return [];
+      }
+
+      throw error;
+    }
   }
 
   private async generateQueryEmbedding(query: string, workspaceId: string): Promise<number[]> {
-    const workspaceApiKey = await this.prisma.providerAPIKey.findFirst({
-      where: {
-        workspaceId,
-        provider: 'GOOGLE_GEMINI',
-        isActive: true,
-      },
-    });
+    try {
+      const workspaceApiKey = await this.prisma.providerAPIKey.findFirst({
+        where: {
+          workspaceId,
+          provider: 'GOOGLE_GEMINI',
+          isActive: true,
+        },
+      });
 
-    // ✅ Get embedding pricing from DB
-    const { provider } = await this.getEmbeddingPricing();
+      const { provider } = await this.getEmbeddingPricing();
 
-    const apiKey = workspaceApiKey
-      ? this.decryptApiKey(workspaceApiKey.keyHash)
-      : this.configService.get<string>('GEMINI_API_KEY');
+      const apiKey = workspaceApiKey
+        ? this.decryptApiKey(workspaceApiKey.keyHash)
+        : this.configService.get<string>('GEMINI_API_KEY');
 
-    if (!apiKey) {
-      throw new BadRequestException('Gemini API key not configured');
+      if (!apiKey) {
+        throw new BadRequestException('Gemini API key not configured');
+      }
+
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: provider.model });
+
+      const result = await model.embedContent(query);
+      return result.embedding.values;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      if (errorMessage.includes('429') || errorMessage.includes('quota')) {
+        this.logger.error(`[Vector Search] 🚫 QUOTA EXCEEDED (429) for query embedding generation`);
+        throw new BadRequestException(
+          'Gemini API quota exceeded. Please upgrade to paid tier or try again later.',
+        );
+      }
+
+      this.logger.error(`[Vector Search] ❌ Embedding generation failed: ${errorMessage}`);
+      throw error;
     }
-
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: provider.model });
-
-    const result = await model.embedContent(query);
-    return result.embedding.values;
   }
 
-  // ✅ Track search cost with profit
   private async trackSearchCost(
     workspaceId: string,
     query: string,
     resultsCount: number,
   ): Promise<void> {
     try {
-      const { provider, pricing } = await this.getEmbeddingPricing();
+      const { provider } = await this.getEmbeddingPricing();
 
-      // Estimate tokens for query (rough: ~0.25 tokens per char)
       const queryTokens = Math.ceil(query.length * 0.25);
 
       const actualCostUsd = (queryTokens / 1_000_000) * provider.costPer1MTokens;
@@ -181,7 +205,6 @@ export class V1DocumentVectorSearchService {
         return;
       }
 
-      // Log vector search
       await this.prisma.documentAPILog.create({
         data: {
           workspaceId,
@@ -193,8 +216,8 @@ export class V1DocumentVectorSearchService {
           totalTokens: queryTokens,
           statusCode: 200,
           success: true,
-          estimatedCost: new Decimal(actualCostUsd).toString(),
-          actualCost: new Decimal(actualCostUsd).toString(),
+          estimatedCost: new Decimal(actualCostUsd),
+          actualCost: new Decimal(actualCostUsd),
           metadata: {
             query: query.substring(0, 100),
             resultsCount,
@@ -207,7 +230,6 @@ export class V1DocumentVectorSearchService {
         },
       });
 
-      // Track credits
       await this.prisma.creditUsageLog.create({
         data: {
           subscriptionId: subscription.id,
@@ -225,17 +247,15 @@ export class V1DocumentVectorSearchService {
       });
 
       this.logger.debug(
-        `[Vector Search] 💰 Query cost: $${actualCostUsd.toFixed(6)} | ` +
-          `Charge: $${profitData.userChargeUsd.toFixed(6)} | ` +
-          `Profit: $${profitData.profitUsd.toFixed(6)}`,
+        `[Vector Search] 💰 Query cost: $${actualCostUsd.toFixed(6)} | Charge: $${profitData.userChargeUsd.toFixed(6)} | Profit: $${profitData.profitUsd.toFixed(6)}`,
       );
     } catch (error) {
-      this.logger.warn(`Failed to track search cost: ${error}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.warn(`Failed to track search cost: ${errorMessage}`);
     }
   }
 
   private decryptApiKey(encryptedKey: string): string {
-    const { createDecipheriv } = require('crypto');
     const key = this.configService.get<string>('API_KEY_ENCRYPTION_SECRET');
     if (!key) throw new Error('API_KEY_ENCRYPTION_SECRET not configured');
 

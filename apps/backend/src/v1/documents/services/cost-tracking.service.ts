@@ -1,5 +1,3 @@
-// src/modules/v1/documents/services/cost-tracking.service.ts
-
 import { Injectable, Logger } from '@nestjs/common';
 import type { DocumentProcessingType } from '@flopods/schema';
 import { PrismaService } from '../../../prisma/prisma.service';
@@ -10,15 +8,23 @@ import {
   ROIMetrics,
   ProfitableDocument,
 } from '../types';
+import {
+  calculateDocumentEmbeddingCost,
+  convertUsdToCredits,
+  estimateTokensFromBytes,
+  getEmbeddingProvider,
+} from '../utils/cost-calculator.util';
 
 @Injectable()
 export class V1DocumentCostTrackingService {
   private readonly logger = new Logger(V1DocumentCostTrackingService.name);
-  private readonly ACTUAL_EMBEDDING_COST_PER_1M = 0.15; // Google's actual cost
+
+  // Centralized monetization rule (revenue = cost * MARKUP_MULTIPLIER)
+  private readonly MARKUP_MULTIPLIER = 2;
 
   constructor(private readonly prisma: PrismaService) {}
 
-  // ✅ Get workspace profit summary (not just costs)
+  // ✅ Profit summary derived from recorded costs + centralized revenue rule
   async getWorkspaceProfitSummary(workspaceId: string, startDate?: Date, endDate?: Date) {
     this.logger.log(`[Cost Tracking] Getting PROFIT summary for workspace: ${workspaceId}`);
 
@@ -47,9 +53,8 @@ export class V1DocumentCostTrackingService {
     const tokensProcessed = costs.reduce((sum, c) => sum + c.tokensProcessed, 0);
     const chunksCreated = costs.reduce((sum, c) => sum + (c.chunkCount || 0), 0);
 
-    // ✅ Calculate profit: 100% markup (2x cost model)
-    const totalProfit = totalCost;
-    const totalRevenue = totalCost * 2;
+    const totalRevenue = totalCost * this.MARKUP_MULTIPLIER;
+    const totalProfit = totalRevenue - totalCost;
 
     const typeMap = new Map<
       DocumentProcessingType,
@@ -65,12 +70,13 @@ export class V1DocumentCostTrackingService {
         revenue: 0,
       };
       const costAmount = Number(c.totalCostInUsd);
+      const revenueAmount = costAmount * this.MARKUP_MULTIPLIER;
       typeMap.set(c.processingType, {
         cost: existing.cost + costAmount,
         credits: existing.credits + c.creditsConsumed,
         count: existing.count + 1,
-        profit: existing.profit + costAmount,
-        revenue: existing.revenue + costAmount * 2,
+        profit: existing.profit + (revenueAmount - costAmount),
+        revenue: existing.revenue + revenueAmount,
       });
     });
 
@@ -87,7 +93,8 @@ export class V1DocumentCostTrackingService {
       totalCost,
       totalProfit,
       totalRevenue,
-      profitMarginPercentage: totalCost > 0 ? 100 : 0,
+      totalCredits,
+      profitMarginPercentage: totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0,
       documentsProcessed,
       tokensProcessed,
       chunksCreated,
@@ -128,6 +135,9 @@ export class V1DocumentCostTrackingService {
     const tokensProcessed = costs.reduce((sum, c) => sum + c.tokensProcessed, 0);
     const chunksCreated = costs.reduce((sum, c) => sum + (c.chunkCount || 0), 0);
 
+    const totalRevenue = totalCost * this.MARKUP_MULTIPLIER;
+    const totalProfit = totalRevenue - totalCost;
+
     const typeMap = new Map<
       DocumentProcessingType,
       { cost: number; credits: number; count: number; profit: number; revenue: number }
@@ -142,12 +152,14 @@ export class V1DocumentCostTrackingService {
         revenue: 0,
       };
       const costAmount = Number(c.totalCostInUsd);
+      const revenueAmount = costAmount * this.MARKUP_MULTIPLIER;
+
       typeMap.set(c.processingType, {
         cost: existing.cost + costAmount,
         credits: existing.credits + c.creditsConsumed,
         count: existing.count + 1,
-        profit: existing.profit + costAmount,
-        revenue: existing.revenue + costAmount * 2,
+        profit: existing.profit + (revenueAmount - costAmount),
+        revenue: existing.revenue + revenueAmount,
       });
     });
 
@@ -162,15 +174,15 @@ export class V1DocumentCostTrackingService {
 
     return {
       totalCost,
-      totalProfit: totalCost,
-      totalRevenue: totalCost * 2,
+      totalProfit,
+      totalRevenue,
       totalCredits,
       documentsProcessed,
       tokensProcessed,
       chunksCreated,
-      profitMarginPercentage: 100,
+      profitMarginPercentage: totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0,
       avgCostPerDocument: documentsProcessed > 0 ? totalCost / documentsProcessed : 0,
-      avgProfitPerDocument: documentsProcessed > 0 ? totalCost / documentsProcessed : 0,
+      avgProfitPerDocument: documentsProcessed > 0 ? totalProfit / documentsProcessed : 0,
       byType,
     };
   }
@@ -185,12 +197,7 @@ export class V1DocumentCostTrackingService {
     startDate.setDate(startDate.getDate() - days);
 
     const results = await this.prisma.$queryRaw<
-      Array<{
-        date: Date;
-        total_cost: number;
-        total_credits: number;
-        doc_count: number;
-      }>
+      Array<{ date: Date; total_cost: number; total_credits: number; doc_count: number }>
     >`
       SELECT
         DATE("processedAt") as date,
@@ -204,67 +211,27 @@ export class V1DocumentCostTrackingService {
       ORDER BY date DESC
     `;
 
-    return results.map((r) => ({
-      date: r.date.toISOString().split('T')[0],
-      cost: Number(r.total_cost),
-      profit: Number(r.total_cost),
-      revenue: Number(r.total_cost) * 2,
-      credits: Number(r.total_credits),
-      documentsProcessed: r.doc_count,
-    }));
+    return results.map((r) => {
+      const cost = Number(r.total_cost);
+      const revenue = cost * this.MARKUP_MULTIPLIER;
+      const profit = revenue - cost;
+
+      return {
+        date: r.date.toISOString().split('T')[0],
+        cost,
+        profit,
+        revenue,
+        credits: Number(r.total_credits),
+        documentsProcessed: r.doc_count,
+      };
+    });
   }
 
   async getDocumentCostWithROI(documentId: string): Promise<ProfitableDocument | null> {
     const cost = await this.prisma.documentProcessingCost.findFirst({
       where: { documentId },
       select: {
-        document: {
-          select: {
-            id: true,
-            name: true,
-            sizeInBytes: true,
-          },
-        },
-        processingType: true,
-        totalCostInUsd: true,
-        creditsConsumed: true,
-        extractionCost: true,
-        embeddingCost: true,
-        visionCost: true,
-        tokensProcessed: true,
-        visionTokens: true,
-        chunkCount: true,
-        embeddingModel: true,
-        processedAt: true,
-      },
-    });
-
-    if (!cost) return null;
-
-    const totalCostUsd = Number(cost.totalCostInUsd);
-    const profitUsd = totalCostUsd;
-    const revenueUsd = totalCostUsd * 2;
-
-    return {
-      documentId: cost.document.id,
-      documentName: cost.document.name,
-      fileSize: Number(cost.document.sizeInBytes || 0),
-      costUsd: totalCostUsd,
-      profitUsd,
-      revenueUsd,
-      roi: 100,
-      creditsCharged: cost.creditsConsumed,
-      tokensProcessed: cost.tokensProcessed,
-      visionTokens: cost.visionTokens,
-      chunksCreated: cost.chunkCount || 0,
-      processedAt: cost.processedAt,
-    };
-  }
-
-  async getDocumentCost(documentId: string): Promise<DocumentCostDetail | null> {
-    const cost = await this.prisma.documentProcessingCost.findFirst({
-      where: { documentId },
-      select: {
+        document: { select: { id: true, name: true, sizeInBytes: true } },
         processingType: true,
         totalCostInUsd: true,
         creditsConsumed: true,
@@ -282,15 +249,58 @@ export class V1DocumentCostTrackingService {
     if (!cost) return null;
 
     const costUsd = Number(cost.totalCostInUsd);
+    const revenueUsd = costUsd * this.MARKUP_MULTIPLIER;
+    const profitUsd = revenueUsd - costUsd;
 
     return {
-      documentId: '',
-      documentName: '',
-      fileSize: null,
+      documentId: cost.document.id,
+      documentName: cost.document.name,
+      fileSize: Number(cost.document.sizeInBytes || 0),
+      costUsd,
+      profitUsd,
+      revenueUsd,
+      roi: costUsd > 0 ? (profitUsd / costUsd) * 100 : 0,
+      creditsCharged: cost.creditsConsumed,
+      tokensProcessed: cost.tokensProcessed,
+      visionTokens: cost.visionTokens,
+      chunksCreated: cost.chunkCount || 0,
+      processedAt: cost.processedAt,
+    };
+  }
+
+  async getDocumentCost(documentId: string): Promise<DocumentCostDetail | null> {
+    const cost = await this.prisma.documentProcessingCost.findFirst({
+      where: { documentId },
+      select: {
+        document: { select: { id: true, name: true, sizeInBytes: true } },
+        processingType: true,
+        totalCostInUsd: true,
+        creditsConsumed: true,
+        extractionCost: true,
+        embeddingCost: true,
+        visionCost: true,
+        tokensProcessed: true,
+        visionTokens: true,
+        chunkCount: true,
+        embeddingModel: true,
+        processedAt: true,
+      },
+    });
+
+    if (!cost) return null;
+
+    const costUsd = Number(cost.totalCostInUsd);
+    const revenueUsd = costUsd * this.MARKUP_MULTIPLIER;
+    const profitUsd = revenueUsd - costUsd;
+
+    return {
+      documentId: cost.document.id,
+      documentName: cost.document.name,
+      fileSize: cost.document.sizeInBytes ? Number(cost.document.sizeInBytes) : null,
       processingType: cost.processingType,
       totalCostUsd: costUsd,
-      profitUsd: costUsd,
-      revenueUsd: costUsd * 2,
+      profitUsd,
+      revenueUsd,
       creditsConsumed: cost.creditsConsumed,
       extractionCost: Number(cost.extractionCost),
       embeddingCost: Number(cost.embeddingCost),
@@ -299,8 +309,8 @@ export class V1DocumentCostTrackingService {
       visionTokens: cost.visionTokens,
       chunkCount: cost.chunkCount || 0,
       embeddingModel: cost.embeddingModel,
-      roi: 100,
-      profitMarginPercentage: 100,
+      roi: costUsd > 0 ? (profitUsd / costUsd) * 100 : 0,
+      profitMarginPercentage: revenueUsd > 0 ? (profitUsd / revenueUsd) * 100 : 0,
       processedAt: cost.processedAt,
     };
   }
@@ -314,13 +324,7 @@ export class V1DocumentCostTrackingService {
       orderBy: { totalCostInUsd: 'desc' },
       take: limit,
       select: {
-        document: {
-          select: {
-            id: true,
-            name: true,
-            sizeInBytes: true,
-          },
-        },
+        document: { select: { id: true, name: true, sizeInBytes: true } },
         totalCostInUsd: true,
         creditsConsumed: true,
         tokensProcessed: true,
@@ -332,14 +336,17 @@ export class V1DocumentCostTrackingService {
 
     return costs.map((c) => {
       const costUsd = Number(c.totalCostInUsd);
+      const revenueUsd = costUsd * this.MARKUP_MULTIPLIER;
+      const profitUsd = revenueUsd - costUsd;
+
       return {
         documentId: c.document.id,
         documentName: c.document.name,
         fileSize: c.document.sizeInBytes ? Number(c.document.sizeInBytes) : null,
         costUsd,
-        profitUsd: costUsd,
-        revenueUsd: costUsd * 2,
-        roi: 100,
+        profitUsd,
+        revenueUsd,
+        roi: costUsd > 0 ? (profitUsd / costUsd) * 100 : 0,
         creditsCharged: c.creditsConsumed,
         tokensProcessed: c.tokensProcessed,
         visionTokens: c.visionTokens,
@@ -358,13 +365,7 @@ export class V1DocumentCostTrackingService {
       orderBy: { totalCostInUsd: 'desc' },
       take: limit,
       select: {
-        document: {
-          select: {
-            id: true,
-            name: true,
-            sizeInBytes: true,
-          },
-        },
+        document: { select: { id: true, name: true, sizeInBytes: true } },
         totalCostInUsd: true,
         creditsConsumed: true,
         tokensProcessed: true,
@@ -376,14 +377,17 @@ export class V1DocumentCostTrackingService {
 
     return costs.map((c) => {
       const costUsd = Number(c.totalCostInUsd);
+      const revenueUsd = costUsd * this.MARKUP_MULTIPLIER;
+      const profitUsd = revenueUsd - costUsd;
+
       return {
         documentId: c.document.id,
         documentName: c.document.name,
         fileSize: c.document.sizeInBytes ? Number(c.document.sizeInBytes) : null,
         costUsd,
-        profitUsd: costUsd,
-        revenueUsd: costUsd * 2,
-        roi: 100,
+        profitUsd,
+        revenueUsd,
+        roi: costUsd > 0 ? (profitUsd / costUsd) * 100 : 0,
         creditsCharged: c.creditsConsumed,
         tokensProcessed: c.tokensProcessed,
         visionTokens: c.visionTokens,
@@ -393,13 +397,19 @@ export class V1DocumentCostTrackingService {
     });
   }
 
+  /**
+   * Centralized estimate using the utils (provider price from DB).
+   */
   async estimateDocumentCost(fileSizeBytes: number) {
-    const estimatedPages = (fileSizeBytes / (1024 * 100)) * 1;
-    const estimatedTokens = Math.ceil(estimatedPages * 300);
-    const estimatedCostUsd = (estimatedTokens / 1_000_000) * this.ACTUAL_EMBEDDING_COST_PER_1M;
-    const estimatedProfitUsd = estimatedCostUsd;
-    const estimatedRevenueUsd = estimatedCostUsd * 2;
-    const estimatedCredits = Math.ceil(estimatedCostUsd / 0.0001);
+    const estimatedTokens = estimateTokensFromBytes(fileSizeBytes);
+    const provider = await getEmbeddingProvider(this.prisma);
+    const estimatedCostUsd = calculateDocumentEmbeddingCost(
+      estimatedTokens,
+      provider.costPer1MTokens,
+    );
+    const estimatedCredits = convertUsdToCredits(estimatedCostUsd);
+    const estimatedRevenueUsd = estimatedCostUsd * this.MARKUP_MULTIPLIER;
+    const estimatedProfitUsd = estimatedRevenueUsd - estimatedCostUsd;
 
     return {
       estimatedTokens,
@@ -417,8 +427,8 @@ export class V1DocumentCostTrackingService {
       totalCostUsd: Number(summary.totalCost.toFixed(6)),
       totalProfitUsd: Number(summary.totalProfit.toFixed(6)),
       totalRevenueUsd: Number(summary.totalRevenue.toFixed(6)),
-      profitMarginPercentage: 100,
-      roi: 100,
+      profitMarginPercentage: summary.profitMarginPercentage,
+      roi: summary.totalCost > 0 ? (summary.totalProfit / summary.totalCost) * 100 : 0,
       documentsProcessed: summary.documentsProcessed,
       tokensProcessed: summary.tokensProcessed,
       avgCostPerDocument: Number(summary.avgCostPerDocument.toFixed(6)),
@@ -429,7 +439,7 @@ export class V1DocumentCostTrackingService {
         profitUsd: Number(t.profit.toFixed(6)),
         revenueUsd: Number(t.revenue.toFixed(6)),
         documentsProcessed: t.count,
-        roi: 100,
+        roi: t.cost > 0 ? ((t.revenue - t.cost) / t.cost) * 100 : 0,
       })),
     };
   }

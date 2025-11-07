@@ -15,7 +15,7 @@ import {
   calculateProfitData,
   calculateCreditsFromCharge,
   PROFIT_CONFIG,
-} from '../../../config/profit.config';
+} from '../../../common/config/profit.config';
 import { Decimal } from '@prisma/client/runtime/library';
 import axios from 'axios';
 

@@ -1,5 +1,3 @@
-// /src/modules/v1/documents/queues/document-queue.producer.ts
-
 import { Injectable, Logger } from '@nestjs/common';
 import { LLMProvider } from '@flopods/schema';
 import type { IDocumentQueueService } from './queue.interface';
@@ -24,7 +22,7 @@ export class V1DocumentQueueProducer {
     sourceType: string;
     externalUrl?: string;
     estimatedTokens?: number;
-    visionProvider?: LLMProvider; // ✅ Changed from VisionProvider
+    visionProvider?: LLMProvider;
   }): Promise<string> {
     const message: DocumentQueueMessage = {
       messageId: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -36,21 +34,113 @@ export class V1DocumentQueueProducer {
       metadata: {
         fileType: params.fileType,
         sourceType: params.sourceType as any,
-        externalUrl: params.externalUrl,
+        externalUrl: params.externalUrl, // ✅ NOW DEFINED IN DocumentMetadata
         estimatedTokens: params.estimatedTokens,
-        visionProvider: params.visionProvider || LLMProvider.GOOGLE_GEMINI, // ✅ Default to LLMProvider
-        retryCount: 0,
       },
       timestamp: new Date().toISOString(),
     };
 
     try {
       const messageId = await this.queueService.sendDocumentMessage(message);
-      this.logger.log(`Document processing job queued: ${params.documentId}`);
+      this.logger.log(`[Producer] Document processing job queued: ${params.documentId}`);
+      return messageId;
+    } catch (error) {
+      const _errorMessage = error instanceof Error ? error.message : 'Unknown error'; // ✅ FIXED: Prefixed with _ for unused variable
+      this.logger.error(`[Producer] Failed to queue: ${params.documentId} - ${_errorMessage}`);
+      throw error;
+    }
+  }
+
+  async queueEmbeddingsNow(payload: {
+    documentId: string;
+    workspaceId: string;
+    userId: string;
+    extractedText: string; // pass text so we don't re-fetch
+  }): Promise<string> {
+    const { documentId, workspaceId, userId, extractedText } = payload;
+
+    const message: DocumentQueueMessage = {
+      messageId: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      documentId,
+      workspaceId,
+      userId,
+      action: DocumentProcessingAction.GENERATE_EMBEDDINGS,
+      priority: DocumentMessagePriority.HIGH, // run ASAP
+      metadata: {
+        fileType: '',
+        sourceType: '' as any,
+        retryCount: 0, // first attempt
+        extractedText, // supply text for embeddings
+      },
+      timestamp: new Date().toISOString(),
+    };
+
+    try {
+      this.logger.log(`[Producer] ▶️ Queueing embeddings NOW for ${documentId}`);
+      const messageId = await this.queueService.sendDocumentMessage(message);
+      this.logger.log(`[Producer] ✅ Embeddings queued now: ${documentId}`);
       return messageId;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error(`Failed to queue: ${params.documentId} - ${errorMessage}`);
+      this.logger.error(`[Producer] ❌ Failed to queue embeddings now: ${errorMessage}`);
+      throw error;
+    }
+  }
+
+  /**
+   * ✅ Queue embeddings with exponential backoff
+   */
+  async queueEmbeddingGenerationWithBackoff(payload: {
+    documentId: string;
+    workspaceId: string;
+    userId: string;
+    extractedText: string;
+    retryCount: number;
+  }): Promise<string> {
+    const { documentId, workspaceId, userId, extractedText, retryCount } = payload;
+
+    // ✅ Exponential backoff delays in milliseconds
+    const backoffDelays = [
+      5 * 60 * 1000, // 5 minutes
+      15 * 60 * 1000, // 15 minutes
+      30 * 60 * 1000, // 30 minutes
+      60 * 60 * 1000, // 1 hour
+      2 * 60 * 60 * 1000, // 2 hours
+      4 * 60 * 60 * 1000, // 4 hours
+      8 * 60 * 60 * 1000, // 8 hours
+    ];
+
+    const delayMs = backoffDelays[Math.min(retryCount, 6)];
+    const delaySeconds = Math.ceil(delayMs / 1000);
+
+    const message: DocumentQueueMessage = {
+      messageId: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      documentId,
+      workspaceId,
+      userId,
+      action: DocumentProcessingAction.GENERATE_EMBEDDINGS,
+      priority: DocumentMessagePriority.LOW,
+      metadata: {
+        fileType: '',
+        sourceType: '' as any,
+        retryCount,
+        extractedText, // ✅ Include text for embeddings
+      },
+      timestamp: new Date().toISOString(),
+    };
+
+    try {
+      this.logger.log(
+        `[Producer] ⏰ Queueing embeddings for ${documentId} in ${delaySeconds}s (attempt ${retryCount + 1})`,
+      );
+
+      const messageId = await this.queueService.sendDocumentMessageWithDelay(message, delayMs);
+
+      this.logger.log(`[Producer] ✅ Embeddings queued with backoff: ${documentId}`);
+      return messageId;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`[Producer] ❌ Failed to queue embeddings with backoff: ${errorMessage}`);
       throw error;
     }
   }
@@ -70,18 +160,17 @@ export class V1DocumentQueueProducer {
       metadata: {
         fileType: '',
         sourceType: '' as any,
-        retryCount: 0,
       },
       timestamp: new Date().toISOString(),
     };
 
     try {
       const messageId = await this.queueService.sendDocumentMessage(message);
-      this.logger.log(`Document reprocessing job queued: ${params.documentId}`);
+      this.logger.log(`[Producer] Document reprocessing job queued: ${params.documentId}`);
       return messageId;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error(`Failed to queue reprocessing: ${params.documentId}`);
+      this.logger.error(`[Producer] ❌ Failed to queue reprocessing: ${errorMessage}`);
       throw error;
     }
   }
@@ -94,7 +183,7 @@ export class V1DocumentQueueProducer {
       fileType: string;
       sourceType: string;
       estimatedTokens?: number;
-      visionProvider?: LLMProvider; // ✅ Changed from VisionProvider
+      visionProvider?: LLMProvider;
     }>,
   ): Promise<string[]> {
     const messages: DocumentQueueMessage[] = documents.map((doc) => ({
@@ -108,19 +197,17 @@ export class V1DocumentQueueProducer {
         fileType: doc.fileType,
         sourceType: doc.sourceType as any,
         estimatedTokens: doc.estimatedTokens,
-        visionProvider: doc.visionProvider || LLMProvider.GOOGLE_GEMINI, // ✅ Default to LLMProvider
-        retryCount: 0,
       },
       timestamp: new Date().toISOString(),
     }));
 
     try {
       const messageIds = await this.queueService.sendDocumentMessageBatch(messages);
-      this.logger.log(`Bulk jobs queued: ${documents.length} documents`);
+      this.logger.log(`[Producer] Bulk jobs queued: ${documents.length}`);
       return messageIds;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error(`Failed bulk queue: ${errorMessage}`);
+      this.logger.error(`[Producer] ❌ Failed bulk queue: ${errorMessage}`);
       throw error;
     }
   }

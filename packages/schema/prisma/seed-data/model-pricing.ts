@@ -1,5 +1,5 @@
 import path from 'path';
-require('dotenv').config({ path: path.resolve(__dirname, '.env') });
+require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 import { PrismaClient, LLMProvider, ModelCategory, Prisma } from '@flopods/schema';
 
@@ -9,11 +9,11 @@ const prisma = new PrismaClient({
 
 /**
  * Model Pricing Data - November 2025 (PRODUCTION READY)
- * ONLY LATEST & VALID MODELS - All deprecated removed
- * Based on official pricing from:
- * - OpenAI: https://openai.com/api/pricing/
- * - Anthropic: https://www.anthropic.com/pricing/claude
- * - Google: https://ai.google.dev/gemini-api/docs/pricing
+ * Prices are PER 1M TOKENS, multiplied by 1M (Decimal USD).
+ * Sources:
+ * - OpenAI: https://openai.com/gpt-5/ and model docs for o3/o3-pro
+ * - Anthropic: Haiku 4.5 ($1/$5), Sonnet 4.5 ($3/$15)
+ * - Google Gemini: 2.5 Pro (≤200k tokens tier), Flash, Flash-Lite, Flash Vision, Embedding
  */
 export const MODEL_PRICING_DATA = [
   // ==========================================
@@ -25,8 +25,8 @@ export const MODEL_PRICING_DATA = [
     category: 'POWERHOUSE' as ModelCategory,
     displayName: 'GPT-5',
     description: 'Best model for coding and agentic tasks',
-    inputTokenCost: new Prisma.Decimal('0.00000125'),
-    outputTokenCost: new Prisma.Decimal('0.00001'),
+    inputTokenCost: new Prisma.Decimal('1.25'),
+    outputTokenCost: new Prisma.Decimal('10'),
     reasoningTokenCost: new Prisma.Decimal('0'),
     creditsPerMillionInputTokens: 12500,
     creditsPerMillionOutputTokens: 100000,
@@ -46,8 +46,8 @@ export const MODEL_PRICING_DATA = [
     category: 'WORKHORSE' as ModelCategory,
     displayName: 'GPT-5 Mini',
     description: 'Fast & affordable variant of GPT-5',
-    inputTokenCost: new Prisma.Decimal('0.00000025'),
-    outputTokenCost: new Prisma.Decimal('0.000002'),
+    inputTokenCost: new Prisma.Decimal('0.25'),
+    outputTokenCost: new Prisma.Decimal('2'),
     reasoningTokenCost: new Prisma.Decimal('0'),
     creditsPerMillionInputTokens: 2500,
     creditsPerMillionOutputTokens: 20000,
@@ -66,8 +66,8 @@ export const MODEL_PRICING_DATA = [
     category: 'POWERHOUSE' as ModelCategory,
     displayName: 'GPT-5 Pro',
     description: 'Smartest & most precise model',
-    inputTokenCost: new Prisma.Decimal('0.000015'),
-    outputTokenCost: new Prisma.Decimal('0.00012'),
+    inputTokenCost: new Prisma.Decimal('15'),
+    outputTokenCost: new Prisma.Decimal('120'),
     reasoningTokenCost: new Prisma.Decimal('0'),
     creditsPerMillionInputTokens: 150000,
     creditsPerMillionOutputTokens: 1200000,
@@ -87,12 +87,13 @@ export const MODEL_PRICING_DATA = [
     category: 'REASONING' as ModelCategory,
     displayName: 'O3',
     description: 'Advanced reasoning model',
-    inputTokenCost: new Prisma.Decimal('0.000015'),
-    outputTokenCost: new Prisma.Decimal('0.00006'),
-    reasoningTokenCost: new Prisma.Decimal('0.00006'),
-    creditsPerMillionInputTokens: 150000,
-    creditsPerMillionOutputTokens: 600000,
-    creditsPerMillionReasoningTokens: 600000,
+    // OpenAI lists only input/output; “thinking” tokens are included in output.
+    inputTokenCost: new Prisma.Decimal('2'),
+    outputTokenCost: new Prisma.Decimal('8'),
+    reasoningTokenCost: new Prisma.Decimal('0'),
+    creditsPerMillionInputTokens: 20000,
+    creditsPerMillionOutputTokens: 80000,
+    creditsPerMillionReasoningTokens: 0,
     maxTokens: 200000,
     maxOutputTokens: 100000,
     supportsStreaming: true,
@@ -106,12 +107,12 @@ export const MODEL_PRICING_DATA = [
     category: 'REASONING' as ModelCategory,
     displayName: 'O3 Pro',
     description: 'Enhanced reasoning with more compute',
-    inputTokenCost: new Prisma.Decimal('0.00003'),
-    outputTokenCost: new Prisma.Decimal('0.00012'),
-    reasoningTokenCost: new Prisma.Decimal('0.00012'),
-    creditsPerMillionInputTokens: 300000,
-    creditsPerMillionOutputTokens: 1200000,
-    creditsPerMillionReasoningTokens: 1200000,
+    inputTokenCost: new Prisma.Decimal('20'),
+    outputTokenCost: new Prisma.Decimal('80'),
+    reasoningTokenCost: new Prisma.Decimal('0'),
+    creditsPerMillionInputTokens: 200000,
+    creditsPerMillionOutputTokens: 800000,
+    creditsPerMillionReasoningTokens: 0,
     maxTokens: 200000,
     maxOutputTokens: 100000,
     supportsStreaming: true,
@@ -129,8 +130,8 @@ export const MODEL_PRICING_DATA = [
     category: 'POWERHOUSE' as ModelCategory,
     displayName: 'Claude Sonnet 4.5',
     description: 'Smartest for complex agents & coding',
-    inputTokenCost: new Prisma.Decimal('0.000003'),
-    outputTokenCost: new Prisma.Decimal('0.000015'),
+    inputTokenCost: new Prisma.Decimal('3'),
+    outputTokenCost: new Prisma.Decimal('15'),
     reasoningTokenCost: new Prisma.Decimal('0'),
     creditsPerMillionInputTokens: 30000,
     creditsPerMillionOutputTokens: 150000,
@@ -149,11 +150,11 @@ export const MODEL_PRICING_DATA = [
     category: 'WORKHORSE' as ModelCategory,
     displayName: 'Claude Haiku 4.5',
     description: 'Fastest with near-frontier intelligence',
-    inputTokenCost: new Prisma.Decimal('0.0000008'),
-    outputTokenCost: new Prisma.Decimal('0.000004'),
+    inputTokenCost: new Prisma.Decimal('1'),
+    outputTokenCost: new Prisma.Decimal('5'),
     reasoningTokenCost: new Prisma.Decimal('0'),
-    creditsPerMillionInputTokens: 8000,
-    creditsPerMillionOutputTokens: 40000,
+    creditsPerMillionInputTokens: 10000,
+    creditsPerMillionOutputTokens: 50000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 200000,
     maxOutputTokens: 10000,
@@ -169,8 +170,8 @@ export const MODEL_PRICING_DATA = [
     category: 'POWERHOUSE' as ModelCategory,
     displayName: 'Claude Opus 4.1',
     description: 'Exceptional for specialized reasoning',
-    inputTokenCost: new Prisma.Decimal('0.000015'),
-    outputTokenCost: new Prisma.Decimal('0.000075'),
+    inputTokenCost: new Prisma.Decimal('15'),
+    outputTokenCost: new Prisma.Decimal('75'),
     reasoningTokenCost: new Prisma.Decimal('0'),
     creditsPerMillionInputTokens: 150000,
     creditsPerMillionOutputTokens: 750000,
@@ -192,12 +193,13 @@ export const MODEL_PRICING_DATA = [
     modelId: 'gemini-2.5-pro',
     category: 'POWERHOUSE' as ModelCategory,
     displayName: 'Gemini 2.5 Pro',
-    description: 'State-of-the-art for complex reasoning',
-    inputTokenCost: new Prisma.Decimal('0.00000125'),
-    outputTokenCost: new Prisma.Decimal('0.00001'),
+    description: 'State-of-the-art for complex reasoning (priced at ≤200k prompt tier)',
+    // NOTE: Google prices Pro differently for prompts >200k (1.25/7.50).
+    inputTokenCost: new Prisma.Decimal('0.625'),
+    outputTokenCost: new Prisma.Decimal('5'),
     reasoningTokenCost: new Prisma.Decimal('0'),
-    creditsPerMillionInputTokens: 12500,
-    creditsPerMillionOutputTokens: 100000,
+    creditsPerMillionInputTokens: 6250,
+    creditsPerMillionOutputTokens: 50000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 2000000,
     maxOutputTokens: 65535,
@@ -214,12 +216,12 @@ export const MODEL_PRICING_DATA = [
     modelId: 'gemini-2.5-flash',
     category: 'WORKHORSE' as ModelCategory,
     displayName: 'Gemini 2.5 Flash',
-    description: 'Best price-performance multimodal',
-    inputTokenCost: new Prisma.Decimal('0.00000015'),
-    outputTokenCost: new Prisma.Decimal('0.0000006'),
+    description: 'Hybrid reasoning; strong price-performance',
+    inputTokenCost: new Prisma.Decimal('0.30'),
+    outputTokenCost: new Prisma.Decimal('2.50'),
     reasoningTokenCost: new Prisma.Decimal('0'),
-    creditsPerMillionInputTokens: 1500,
-    creditsPerMillionOutputTokens: 6000,
+    creditsPerMillionInputTokens: 3000,
+    creditsPerMillionOutputTokens: 25000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 1000000,
     maxOutputTokens: 65535,
@@ -235,12 +237,12 @@ export const MODEL_PRICING_DATA = [
     modelId: 'gemini-2.5-flash-vision',
     category: 'SPECIALIST' as ModelCategory,
     displayName: 'Gemini 2.5 Flash Vision',
-    description: 'Optimized for image analysis & OCR',
-    inputTokenCost: new Prisma.Decimal('0.00000015'),
-    outputTokenCost: new Prisma.Decimal('0.0000006'),
+    description: 'Optimized for image analysis & OCR (same pricing as Flash)',
+    inputTokenCost: new Prisma.Decimal('0.30'),
+    outputTokenCost: new Prisma.Decimal('2.50'),
     reasoningTokenCost: new Prisma.Decimal('0'),
-    creditsPerMillionInputTokens: 1500,
-    creditsPerMillionOutputTokens: 6000,
+    creditsPerMillionInputTokens: 3000,
+    creditsPerMillionOutputTokens: 25000,
     creditsPerMillionReasoningTokens: 0,
     maxTokens: 1000000,
     maxOutputTokens: 32768,
@@ -256,8 +258,8 @@ export const MODEL_PRICING_DATA = [
     category: 'WORKHORSE' as ModelCategory,
     displayName: 'Gemini 2.5 Flash-Lite',
     description: 'Ultra-fast & cost-efficient',
-    inputTokenCost: new Prisma.Decimal('0.0000001'),
-    outputTokenCost: new Prisma.Decimal('0.0000004'),
+    inputTokenCost: new Prisma.Decimal('0.10'),
+    outputTokenCost: new Prisma.Decimal('0.40'),
     reasoningTokenCost: new Prisma.Decimal('0'),
     creditsPerMillionInputTokens: 1000,
     creditsPerMillionOutputTokens: 4000,
@@ -280,7 +282,7 @@ export const MODEL_PRICING_DATA = [
     category: 'EMBEDDING' as ModelCategory,
     displayName: 'Gemini Embedding',
     description: 'Document & text embeddings - 768d',
-    inputTokenCost: new Prisma.Decimal('0.00000015'),
+    inputTokenCost: new Prisma.Decimal('0.15'),
     outputTokenCost: new Prisma.Decimal('0'),
     reasoningTokenCost: new Prisma.Decimal('0'),
     creditsPerMillionInputTokens: 1500,
@@ -341,9 +343,9 @@ async function seedModelPricing() {
   console.log(`\n✅ Seeded ${MODEL_PRICING_DATA.length} LATEST models only`);
   console.log('\n📊 Active Models:');
   console.log('  🟠 OpenAI:    5 models (GPT-5 series + O3)');
-  console.log('  🔴 Anthropic:  3 models (Claude 4.5 latest)');
-  console.log('  🟡 Google:     5 models (Gemini 2.5 + embedding)');
-  console.log('\n💰 All deprecated models removed');
+  console.log('  🔴 Anthropic: 3 models (Claude 4.5 latest)');
+  console.log('  🟡 Google:    5 models (Gemini 2.5 + embedding)');
+  console.log('\n💰 Pricing multiplied by 1M (per 1M tokens)');
   console.log('✅ Ready for production');
 }
 

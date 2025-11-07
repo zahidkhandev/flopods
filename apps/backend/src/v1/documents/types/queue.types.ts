@@ -1,24 +1,24 @@
-// /src/modules/v1/documents/types/queue.types.ts
-
 import { DocumentSourceType, LLMProvider } from '@flopods/schema';
 import { DocumentProcessingAction, DocumentMessagePriority } from './document.types';
 
 export interface DocumentQueueMessage {
-  messageId: string;
+  messageId?: string;
   documentId: string;
-  workspaceId: string;
-  userId: string;
+  workspaceId?: string;
+  userId?: string;
   action: DocumentProcessingAction;
   priority: DocumentMessagePriority;
-  metadata: {
-    fileType: string;
-    sourceType: DocumentSourceType;
+  metadata?: {
+    fileType?: string;
+    sourceType?: DocumentSourceType;
     externalUrl?: string;
     estimatedTokens?: number;
     visionProvider?: LLMProvider;
-    retryCount: number;
+    retryCount?: number;
+    extractedText?: string;
   };
   timestamp: string;
+  retryCount?: number;
 }
 
 export interface DocumentQueueMetrics {
@@ -26,7 +26,7 @@ export interface DocumentQueueMetrics {
   active: number;
   completed?: number;
   failed?: number;
-  delayed?: number;
+  delayed: number;
 }
 
 export interface DocumentProcessingJobData {
@@ -37,5 +37,5 @@ export interface DocumentProcessingJobData {
   sourceType: string;
   externalUrl?: string;
   estimatedTokens?: number;
-  visionProvider?: LLMProvider; // ✅ Changed from VisionProvider to LLMProvider
+  visionProvider?: LLMProvider;
 }

@@ -1,5 +1,3 @@
-// src/modules/v1/documents/types/document.types.ts
-
 import { DocumentSourceType, DocumentStatus, DocumentProcessingType } from '@flopods/schema';
 
 export { DocumentSourceType, DocumentStatus, DocumentProcessingType };
@@ -8,6 +6,7 @@ export enum DocumentProcessingAction {
   PROCESS = 'PROCESS',
   REPROCESS = 'REPROCESS',
   THUMBNAIL = 'THUMBNAIL',
+  GENERATE_EMBEDDINGS = 'GENERATE_EMBEDDINGS',
 }
 
 export enum DocumentMessagePriority {
@@ -27,6 +26,12 @@ export interface DocumentMetadata {
   author?: string;
   channelName?: string;
   url?: string;
+  externalUrl?: string;
+  extractedText?: string;
+  embeddingStatus?: 'PENDING' | 'COMPLETE' | 'FAILED' | 'QUOTA_EXCEEDED';
+  embeddingsGeneratedAt?: string;
+  embeddingFailedAt?: string;
+  lastEmbeddingError?: string;
 }
 
 export interface DocumentProcessingResult {
@@ -138,7 +143,7 @@ export interface ProfitableDocument {
 
 export interface DocumentVisionAnalysisResult {
   documentId: string;
-  provider: string; // ✅ Changed from VisionProvider
+  provider: string;
   ocrText?: string;
   caption?: string;
   summary?: string;

@@ -1,22 +1,15 @@
 import { Injectable, Logger } from '@nestjs/common';
-import axios, { AxiosInstance } from 'axios';
-import { YoutubeTranscript } from 'youtube-transcript';
+import { getSubtitles, getVideoDetails, Subtitle } from 'youtube-caption-extractor';
 import { YouTubeTranscriptResult, YouTubeExtractionOptions } from '../types/youtube.types';
-import { createHttpClient } from '../../../common/config/http-client';
-
-interface Caption {
-  text: string;
-  start: string;
-  dur: string;
-}
 
 @Injectable()
 export class V1YouTubeTranscriptExtractor {
   private readonly logger = new Logger(V1YouTubeTranscriptExtractor.name);
-  private readonly httpClient: AxiosInstance;
 
   constructor() {
-    this.httpClient = createHttpClient();
+    this.logger.log(
+      '[Extractor] ✅ YouTube Extractor initialized (using youtube-caption-extractor v1.9.1)',
+    );
   }
 
   async extractTranscript(
@@ -28,213 +21,184 @@ export class V1YouTubeTranscriptExtractor {
 
     this.logger.debug(`[Extractor] 🎬 Starting extraction: ${videoId}`);
 
-    const maxRetries = 3;
-    let lastError: any;
+    try {
+      // Validate video ID format
+      if (!this.isValidVideoId(videoId)) {
+        throw new Error(`Invalid video ID format: ${videoId}`);
+      }
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        this.logger.debug(
-          `[Extractor] 🔍 Fetching transcript (attempt ${attempt}/${maxRetries}): ${videoId}`,
-        );
+      const lang = options?.preferredLanguage || 'en';
+      const maxRetries = options?.maxRetries || 3;
 
-        // Try timedtext API first (fastest)
-        const transcript = await this.fetchGoogleTimedText(videoId, options).catch((error) => {
-          this.logger.warn(
-            `[Extractor] ⚠️ Timedtext API failed: ${
+      this.logger.debug(
+        `[Extractor] 📦 Fetching subtitles - Language: ${lang}, Retries: ${maxRetries}`,
+      );
+
+      let subtitles: Subtitle[] = [];
+
+      // Retry logic for network resilience
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          subtitles = await getSubtitles({
+            videoID: videoId,
+            lang: lang,
+          });
+
+          if (subtitles && subtitles.length > 0) {
+            this.logger.debug(`[Extractor] ✅ Captions fetched on attempt ${attempt}`);
+            break;
+          }
+        } catch (error) {
+          this.logger.debug(
+            `[Extractor] ⚠️ Attempt ${attempt}/${maxRetries} failed: ${
               error instanceof Error ? error.message : 'Unknown error'
             }`,
           );
-          return null;
-        });
 
-        if (transcript) {
-          const duration = Date.now() - startTime;
-          this.logger.log(
-            `[Extractor] ✅ Extraction complete (${duration}ms): ${transcript.length} chars`,
-          );
-
-          return {
-            videoId,
-            videoTitle: `YouTube Video ${videoId}`,
-            transcript,
-            language: options?.preferredLanguage || 'en',
-            captionType: 'manual',
-            characterCount: transcript.length,
-            captionEventCount: transcript.split('\n').length,
-            extractedAt: new Date(),
-          };
+          if (attempt < maxRetries) {
+            await this.delay(1000 * attempt);
+          }
         }
+      }
 
-        // Fallback to youtube-transcript package
-        this.logger.debug(`[Extractor] 🔄 Falling back to youtube-transcript package...`);
-
-        const fallbackTranscript = await this.fetchUsingYoutubeTranscript(videoId, options);
-
-        const duration = Date.now() - startTime;
-        this.logger.log(
-          `[Extractor] ✅ Extraction complete (${duration}ms): ${fallbackTranscript.length} chars`,
-        );
+      // Handle case where no subtitles were found
+      if (!subtitles || subtitles.length === 0) {
+        this.logger.warn(`[Extractor] ⚠️ No subtitles found for video: ${videoId}`);
 
         return {
           videoId,
           videoTitle: `YouTube Video ${videoId}`,
-          transcript: fallbackTranscript,
-          language: options?.preferredLanguage || 'en',
-          captionType: 'manual',
-          characterCount: fallbackTranscript.length,
-          captionEventCount: fallbackTranscript.split('\n').length,
+          transcript: '[No captions available for this video]',
+          language: lang,
+          captionType: 'none',
+          characterCount: 0,
+          captionEventCount: 0,
           extractedAt: new Date(),
+          hasTranscript: false,
+          source: 'no_captions',
         };
-      } catch (error) {
-        lastError = error;
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-        this.logger.warn(`[Extractor] ⚠️ Attempt ${attempt} failed: ${errorMessage}. Retrying...`);
-
-        if (attempt < maxRetries) {
-          await this.delay(1000 * attempt);
-        }
-      }
-    }
-
-    const duration = Date.now() - startTime;
-    const errorMessage = lastError instanceof Error ? lastError.message : 'Unknown error';
-
-    this.logger.error(
-      `[Extractor] ❌ Failed (${duration}ms) after ${maxRetries} retries: ${errorMessage}`,
-    );
-
-    throw lastError;
-  }
-
-  private async fetchUsingYoutubeTranscript(
-    videoId: string,
-    options: YouTubeExtractionOptions,
-  ): Promise<string> {
-    try {
-      this.logger.debug(`[Extractor] 📦 Using youtube-transcript package...`);
-
-      const transcriptData = await YoutubeTranscript.fetchTranscript(videoId, {
-        lang: options?.preferredLanguage || 'en',
-      });
-
-      if (!Array.isArray(transcriptData) || transcriptData.length === 0) {
-        throw new Error('youtube-transcript returned empty array');
       }
 
-      const text = transcriptData
-        .map((item: any) => item.text || '')
-        .join(' ')
-        .replace(/\s+/g, ' ')
-        .trim();
+      // Format subtitles into readable text
+      const transcript = this.formatSubtitles(subtitles);
+      const duration = Date.now() - startTime;
 
       this.logger.log(
-        `[Extractor] ✅ youtube-transcript: ${transcriptData.length} items, ${text.length} chars`,
+        `[Extractor] ✅ Extraction complete (${duration}ms): ${subtitles.length} captions, ${transcript.length} chars`,
       );
 
-      return text;
+      return {
+        videoId,
+        videoTitle: `YouTube Video ${videoId}`,
+        transcript,
+        language: lang,
+        captionType: 'manual',
+        characterCount: transcript.length,
+        captionEventCount: subtitles.length,
+        extractedAt: new Date(),
+        hasTranscript: true,
+        source: 'subtitles',
+      };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      throw new Error(`youtube-transcript failed: ${errorMessage}`);
+      const duration = Date.now() - startTime;
+
+      this.logger.error(`[Extractor] ❌ Extraction failed (${duration}ms): ${errorMessage}`);
+
+      // Return graceful fallback instead of throwing
+      return {
+        videoId,
+        videoTitle: `YouTube Video ${videoId}`,
+        transcript: '[Failed to extract captions - video may have no subtitles available]',
+        language: options?.preferredLanguage || 'en',
+        captionType: 'none',
+        characterCount: 0,
+        captionEventCount: 0,
+        extractedAt: new Date(),
+        hasTranscript: false,
+        error: errorMessage,
+        source: 'error',
+      };
     }
   }
 
-  private async fetchGoogleTimedText(
+  /**
+   * Get comprehensive video details including title and description
+   */
+  async getVideoDetails(
     videoId: string,
-    options: YouTubeExtractionOptions,
-  ): Promise<string> {
-    const lang = options?.preferredLanguage || 'en';
-
-    this.logger.debug(`[Extractor] 🌐 Trying Google timedtext API...`);
-
-    // TIER 1: Manual captions
+    lang: string = 'en',
+  ): Promise<{
+    title: string;
+    description: string;
+    subtitleCount: number;
+    success: boolean;
+  }> {
     try {
-      const manualUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=${lang}`;
-      this.logger.debug(`[Extractor] 📡 Requesting: ${manualUrl.substring(0, 80)}...`);
+      this.logger.debug(`[Extractor] 📹 Fetching video details: ${videoId}`);
 
-      const response = await this.httpClient.get(manualUrl, {
-        timeout: 10000,
+      if (!this.isValidVideoId(videoId)) {
+        throw new Error(`Invalid video ID format: ${videoId}`);
+      }
+
+      const videoDetails = await getVideoDetails({
+        videoID: videoId,
+        lang: lang,
       });
 
-      const captions = this.parseXmlCaptions(response.data);
+      this.logger.log(`[Extractor] ✅ Video details fetched: ${videoDetails.title || 'Unknown'}`);
 
-      if (captions.length > 0) {
-        this.logger.log(`[Extractor] ✅ Manual captions: ${captions.length} items`);
-        return this.formatCaptions(captions);
-      }
+      return {
+        title: videoDetails.title || `YouTube Video ${videoId}`,
+        description: videoDetails.description || '',
+        subtitleCount: videoDetails.subtitles?.length || 0,
+        success: true,
+      };
     } catch (error) {
-      this.logger.debug(
-        `[Extractor] ⚠️ Manual captions failed: ${
-          error instanceof Error ? error.message : 'Unknown'
-        }`,
-      );
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.warn(`[Extractor] ⚠️ Failed to fetch video details: ${errorMessage}`);
+
+      return {
+        title: `YouTube Video ${videoId}`,
+        description: '',
+        subtitleCount: 0,
+        success: false,
+      };
     }
-
-    // TIER 2: Auto-generated (ASR)
-    try {
-      const asrUrl = `https://www.youtube.com/api/timedtext?v=${videoId}&lang=${lang}&track=asr`;
-      this.logger.debug(`[Extractor] 📡 Requesting ASR: ${asrUrl.substring(0, 80)}...`);
-
-      const response = await this.httpClient.get(asrUrl, {
-        timeout: 10000,
-      });
-
-      const captions = this.parseXmlCaptions(response.data);
-
-      if (captions.length > 0) {
-        this.logger.log(`[Extractor] ✅ Auto-generated captions: ${captions.length} items`);
-        return this.formatCaptions(captions);
-      }
-    } catch (error) {
-      this.logger.debug(
-        `[Extractor] ⚠️ Auto captions failed: ${
-          error instanceof Error ? error.message : 'Unknown'
-        }`,
-      );
-    }
-
-    throw new Error(`No captions found via timedtext API for ${videoId} in language ${lang}`);
   }
 
-  private parseXmlCaptions(xmlData: string): Caption[] {
-    const captions: Caption[] = [];
-
-    const regex = /<text[^>]*start="([^"]*)"[^>]*dur="([^"]*)"[^>]*>([^<]*)<\/text>/g;
-    let match;
-
-    while ((match = regex.exec(xmlData)) !== null) {
-      captions.push({
-        start: match[1],
-        dur: match[2],
-        text: this.decodeHtml(match[3]),
-      });
-    }
-
-    return captions;
+  /**
+   * Health check endpoint
+   */
+  async healthCheck(): Promise<{ status: string; message: string }> {
+    return {
+      status: 'healthy',
+      message: '✅ YouTube Transcript Service (youtube-caption-extractor v1.9.1) ready',
+    };
   }
 
-  private formatCaptions(captions: Caption[]): string {
-    return captions
-      .map((c) => c.text)
+  /**
+   * Format subtitles array into readable transcript
+   */
+  private formatSubtitles(subtitles: Subtitle[]): string {
+    return subtitles
+      .map((subtitle) => subtitle.text || '')
+      .filter((text) => text.trim().length > 0)
       .join(' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&#39;/g, "'")
-      .replace(/&quot;/g, '"')
       .replace(/\s+/g, ' ')
       .trim();
   }
 
-  private decodeHtml(html: string): string {
-    return html
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&#39;/g, "'")
-      .replace(/&quot;/g, '"');
+  /**
+   * Validate YouTube video ID format
+   */
+  private isValidVideoId(videoId: string): boolean {
+    return /^[a-zA-Z0-9_-]{11}$/.test(videoId);
   }
 
+  /**
+   * Utility delay function for retries
+   */
   private delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }

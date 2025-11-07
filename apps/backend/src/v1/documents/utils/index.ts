@@ -23,12 +23,7 @@ export {
   DEFAULT_DOCUMENT_CHUNK_CONFIG,
   type DocumentChunkConfig,
 } from './text-chunker.util';
-export {
-  calculateDocumentEmbeddingCost,
-  convertDocumentCostToCredits,
-  estimateDocumentProcessingCost,
-  calculateDocumentCreditsFromTokens,
-} from './cost-calculator.util';
+export * from './cost-calculator.util';
 export {
   detectDocumentMimeType,
   isDocumentMimeTypeSupported,

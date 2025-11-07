@@ -1,5 +1,3 @@
-// src/modules/v1/execution/types/llm-provider.types.ts
-
 import { LLMProvider } from '@flopods/schema';
 
 export interface LLMRequest {
@@ -28,12 +26,15 @@ export interface LLMUsage {
   cachedTokens?: number;
 }
 
+// ✅ PROFIT MARKUP STRUCT
 export interface LLMProfit {
   actualCostUsd: number;
   userChargeUsd: number;
   profitUsd: number;
   profitMarginPercentage: number;
   roi: number;
+  markupMultiplier: number; // How many times the actual cost
+  creditsCharged: number;
 }
 
 export interface LLMResponse {
@@ -43,15 +44,15 @@ export interface LLMResponse {
   content: string;
   finishReason: string;
   usage: LLMUsage;
+  profit?: LLMProfit;
   rawResponse: any;
   timestamp: Date;
-  profit?: LLMProfit | null; // ✅ Allow null
 }
 
 export type LLMStreamChunk =
   | { type: 'start'; executionId?: string }
   | { type: 'token'; content: string }
-  | { type: 'done'; finishReason?: string; usage?: LLMUsage }
+  | { type: 'done'; finishReason?: string; usage?: LLMUsage; profit?: LLMProfit }
   | { type: 'error'; error: string }
   | { type: 'metadata'; metadata?: Record<string, any> };
 

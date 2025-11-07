@@ -1,5 +1,3 @@
-// /src/modules/v1/documents/services/embeddings.service.ts
-
 import axios, { AxiosError } from 'axios';
 import {
   Injectable,
@@ -13,12 +11,18 @@ import { DocumentStatus, LLMProvider } from '@flopods/schema';
 import { Decimal } from '@prisma/client/runtime/library';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { S3Service } from '../../../common/aws/s3/s3.service';
-import { ApiKeyEncryptionService } from '../../../common/services/encryption.service'; // ✅ Import
+import { ApiKeyEncryptionService } from '../../../common/services/encryption.service';
 import { chunkDocumentText } from '../utils';
-import type { DocumentEmbeddingConfig, DocumentEmbeddingProvider } from '../types';
+import type { DocumentEmbeddingConfig } from '../types';
 import { V1DocumentQueueProducer } from '../queues/document-queue.producer';
-import { calculateProfitData, calculateCreditsFromCharge } from '../../../config/profit.config';
+import {
+  calculateProfitData,
+  calculateCreditsFromCharge,
+} from '../../../common/config/profit.config';
 import { V1ApiKeyService } from '../../workspace/services/api-key.service';
+
+// ✅ centralized pricing util
+import { getEmbeddingProvider } from '../utils/cost-calculator.util';
 
 interface GeminiEmbeddingResponse {
   embedding?: { values?: number[] };
@@ -68,51 +72,21 @@ export class V1DocumentEmbeddingsService {
     private readonly s3Service: S3Service,
     private readonly configService: ConfigService,
     private readonly queueProducer: V1DocumentQueueProducer,
-    private readonly encryptionService: ApiKeyEncryptionService, // ✅ Inject
-    private readonly apiKeyService: V1ApiKeyService, // ✅ Inject
+    private readonly encryptionService: ApiKeyEncryptionService,
+    private readonly apiKeyService: V1ApiKeyService,
   ) {}
 
   private sanitizeText(text: string): string {
     return text
-      .replace(/\0/g, '')
-      .replace(/\uFFFD/g, '')
-      .replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, '')
+      .split('')
+      .filter((char) => {
+        const code = char.charCodeAt(0);
+        if (code < 32 && code !== 9 && code !== 10 && code !== 13) return false;
+        if (code === 127 || code === 65533) return false;
+        return true;
+      })
+      .join('')
       .trim();
-  }
-
-  private async getEmbeddingPricing(): Promise<{
-    pricing: any;
-    provider: DocumentEmbeddingProvider;
-  }> {
-    const pricing = await this.prisma.modelPricingTier.findFirst({
-      where: {
-        provider: LLMProvider.GOOGLE_GEMINI,
-        modelId: 'embedding-001',
-        isActive: true,
-      },
-      orderBy: { effectiveFrom: 'desc' },
-    });
-
-    if (!pricing) {
-      throw new NotFoundException('Embedding pricing not found in database');
-    }
-
-    let providerConfig: any = {};
-    if (pricing.providerConfig) {
-      try {
-        providerConfig = JSON.parse(pricing.providerConfig as string);
-      } catch (e) {
-        this.logger.warn('Failed to parse providerConfig, using defaults');
-      }
-    }
-
-    const provider: DocumentEmbeddingProvider = {
-      model: pricing.modelId,
-      dimensions: providerConfig.dimensions || 768,
-      costPer1MTokens: Number(pricing.inputTokenCost),
-    };
-
-    return { pricing, provider };
   }
 
   // ✅ Get or init rate limit state
@@ -138,7 +112,6 @@ export class V1DocumentEmbeddingsService {
     const limits = this.RATE_LIMITS[tier];
     const now = Date.now();
 
-    // ✅ Check if in hard cooldown
     if (state.cooldownUntil > now) {
       const waitTime = state.cooldownUntil - now;
       this.logger.warn(
@@ -150,13 +123,11 @@ export class V1DocumentEmbeddingsService {
       return;
     }
 
-    // Reset minute counter if 60s passed
     if (now - state.lastResetTime > 60000) {
       state.requestsThisMinute = 0;
       state.lastResetTime = now;
     }
 
-    // ✅ Prevent queuing more than limit per minute
     if (state.requestsThisMinute >= limits.requestsPerMinute) {
       const waitTime = 60000 - (now - state.lastResetTime);
       this.logger.warn(
@@ -170,7 +141,6 @@ export class V1DocumentEmbeddingsService {
     state.requestsThisMinute++;
   }
 
-  // ✅ Detect tier (FREE vs PAID)
   private async detectTier(apiKey: string): Promise<'FREE_TIER' | 'PAID'> {
     if (apiKey === this.configService.get<string>('GEMINI_API_KEY')) {
       return 'FREE_TIER';
@@ -178,7 +148,6 @@ export class V1DocumentEmbeddingsService {
     return 'PAID';
   }
 
-  // ✅ FIXED: Use axios with smart cooldown
   private async embedChunkWithRetry(
     apiKey: string,
     text: string,
@@ -200,14 +169,12 @@ export class V1DocumentEmbeddingsService {
           `[Embeddings] 🔄 Embedding attempt ${attempt + 1}/${maxRetries} (${tier})`,
         );
 
-        // ✅ Check rate limit BEFORE making request
         await this.checkRateLimit(apiKeyFingerprint, tier);
 
         const url = `${this.defaultBaseUrl}/models/${modelId}:embedContent?key=${apiKey}`;
-
         try {
           new URL(url);
-        } catch (e) {
+        } catch {
           throw new Error('Invalid API URL constructed');
         }
 
@@ -227,12 +194,10 @@ export class V1DocumentEmbeddingsService {
 
         const data = response.data;
         const embedding = data.embedding?.values;
-
         if (!embedding || !Array.isArray(embedding)) {
           throw new Error(`Invalid embedding response: ${JSON.stringify(data)}`);
         }
 
-        // ✅ Success! Reset error counter
         const state = this.getOrInitRateLimitState(apiKeyFingerprint);
         state.consecutiveErrors = 0;
 
@@ -248,28 +213,22 @@ export class V1DocumentEmbeddingsService {
 
           this.logger.error(`[Embeddings] ❌ HTTP ${status}: ${errorMsg}`);
 
-          // ✅ Handle 429 with escalating cooldown
           if (status === 429) {
             state.consecutiveErrors++;
-
-            let cooldownTime = this.COOLDOWN.FIRST_429;
+            let cooldownTime = 5000;
             let cooldownLevel = 'SOFT';
-
             if (state.consecutiveErrors >= 3) {
-              cooldownTime = this.COOLDOWN.THIRD_429;
+              cooldownTime = 300000;
               cooldownLevel = 'HARD';
             } else if (state.consecutiveErrors >= 2) {
-              cooldownTime = this.COOLDOWN.SECOND_429;
+              cooldownTime = 30000;
               cooldownLevel = 'MEDIUM';
             }
-
             state.cooldownUntil = Date.now() + cooldownTime;
             state.isRateLimited = true;
 
             this.logger.error(
-              `[Embeddings] 🚫 QUOTA EXCEEDED (429) - ${cooldownLevel} COOLDOWN. ` +
-                `Consecutive errors: ${state.consecutiveErrors}/3. ` +
-                `Waiting ${Math.round(cooldownTime / 1000)}s before next attempt...`,
+              `[Embeddings] 🚫 QUOTA EXCEEDED (429) - ${cooldownLevel} COOLDOWN. Consecutive errors: ${state.consecutiveErrors}/3. Waiting ${Math.round(cooldownTime / 1000)}s...`,
             );
 
             if (attempt < maxRetries - 1) {
@@ -278,15 +237,13 @@ export class V1DocumentEmbeddingsService {
             }
 
             throw new Error(
-              `Rate limited (429) after ${state.consecutiveErrors} consecutive errors. ` +
-                `Exceeded Gemini API quota. Upgrade to paid tier or wait until quota resets.`,
+              `Rate limited (429) after ${state.consecutiveErrors} consecutive errors. Exceeded Gemini API quota.`,
             );
           }
 
           if (status === 401 || status === 403) {
             throw new Error(`Unauthorized: Invalid or expired API key. Status: ${status}.`);
           }
-
           if (status === 500 || status === 503) {
             throw new Error(`Service unavailable. Status: ${status}`);
           }
@@ -300,17 +257,10 @@ export class V1DocumentEmbeddingsService {
           lastError = axiosError as Error;
         }
 
-        // ✅ Exponential backoff for non-429 errors
         if (attempt < maxRetries - 1) {
           const baseWait = Math.pow(2, attempt) * 1000;
           const jitter = Math.random() * 500;
-          const totalWait = baseWait + jitter;
-
-          this.logger.warn(
-            `[Embeddings] ⚠️ Attempt ${attempt + 1} failed, retrying in ${Math.round(totalWait)}ms: ${lastError.message}`,
-          );
-
-          await new Promise((resolve) => setTimeout(resolve, totalWait));
+          await new Promise((resolve) => setTimeout(resolve, baseWait + jitter));
         }
       }
     }
@@ -322,7 +272,6 @@ export class V1DocumentEmbeddingsService {
     this.logger.log(`[Embeddings] 🚀 Starting for: ${documentId}`);
 
     const sanitizedText = this.sanitizeText(text);
-
     if (!sanitizedText || sanitizedText.length < 10) {
       throw new BadRequestException('Document text is empty or too short after sanitization');
     }
@@ -331,36 +280,29 @@ export class V1DocumentEmbeddingsService {
       where: { id: documentId },
       select: { id: true, workspaceId: true, name: true },
     });
-
-    if (!document) {
-      throw new BadRequestException(`Document not found: ${documentId}`);
-    }
+    if (!document) throw new BadRequestException(`Document not found: ${documentId}`);
 
     const config = await this.getDocumentEmbeddingConfig(document.workspaceId);
     const chunks = chunkDocumentText(sanitizedText);
     const totalTokens = chunks.reduce((sum, chunk) => sum + chunk.tokenCount, 0);
 
-    const { pricing, provider } = await this.getEmbeddingPricing();
+    // ✅ Use centralized provider
+    const provider = await getEmbeddingProvider(this.prisma);
 
     const actualCostUsd = (totalTokens / 1_000_000) * provider.costPer1MTokens;
     const profitData = calculateProfitData(actualCostUsd);
     const creditsToCharge = calculateCreditsFromCharge(profitData.userChargeUsd);
 
-    this.logger.debug(
-      `[Embeddings] 📊 ${chunks.length} chunks, ${totalTokens} tokens | ` +
-        `Model: ${provider.model} (${provider.dimensions}d) | ` +
-        `Cost: $${actualCostUsd.toFixed(6)} | Charge: $${profitData.userChargeUsd.toFixed(6)} | ` +
-        `Profit: $${profitData.profitUsd.toFixed(6)}`,
+    // 🔊 promote to info-level so you see it by default
+    this.logger.log(
+      `[Embeddings] 📊 ${chunks.length} chunks, ${totalTokens} tokens | Model: ${provider.model} (${provider.dimensions}d) | Cost=$${actualCostUsd.toFixed(6)} | Charge=$${profitData.userChargeUsd.toFixed(6)} | Profit=$${profitData.profitUsd.toFixed(6)} | Credits=${creditsToCharge}`,
     );
 
     const subscription = await this.prisma.subscription.findUnique({
       where: { workspaceId: document.workspaceId },
       select: { id: true, credits: true, isByokMode: true },
     });
-
-    if (!subscription) {
-      throw new ForbiddenException('No active subscription found');
-    }
+    if (!subscription) throw new ForbiddenException('No active subscription found');
 
     if (!subscription.isByokMode && subscription.credits < creditsToCharge) {
       throw new ForbiddenException(
@@ -370,9 +312,7 @@ export class V1DocumentEmbeddingsService {
 
     const vectorBucket = this.configService.getOrThrow<string>('DOCUMENT_VECTOR_S3_BUCKET');
 
-    // ✅ PROCESS CHUNKS SEQUENTIALLY - ONE AT A TIME
-    const apiKeyFingerprint = this.encryptionService.getFingerprint(config.apiKey); // ✅ Use service
-
+    const apiKeyFingerprint = this.encryptionService.getFingerprint(config.apiKey);
     this.logger.log(
       `[Embeddings] 📋 Processing ${chunks.length} chunks sequentially (respecting rate limits)...`,
     );
@@ -414,6 +354,7 @@ export class V1DocumentEmbeddingsService {
 
       const vectorString = `[${embedding.join(',')}]`;
 
+      // ✅ use real dimension, not hard-coded 768
       await this.prisma.$executeRaw`
         INSERT INTO "documents"."Embedding"
         (id, "documentId", model, "chunkIndex", "chunkText", vector, "s3VectorBucket", "s3VectorKey", "vectorDimension", metadata, "createdAt")
@@ -423,7 +364,7 @@ export class V1DocumentEmbeddingsService {
           ${provider.model},
           ${chunk.index},
           ${cleanChunkText},
-          ${vectorString}::vector(768),
+          ${vectorString}::vector(${provider.dimensions}),
           ${vectorBucket},
           ${s3Key},
           ${provider.dimensions},
@@ -463,23 +404,23 @@ export class V1DocumentEmbeddingsService {
     );
 
     this.logger.log(
-      `[Embeddings] 🎉 Completed ${documentId}: ${chunks.length} embeddings (${provider.dimensions}d) | ` +
-        `Profit: $${profitData.profitUsd.toFixed(6)} 💰`,
+      `[Embeddings] 🎉 Completed ${documentId}: ${chunks.length} embeddings (${provider.dimensions}d) | Profit=$${profitData.profitUsd.toFixed(6)}`,
     );
   }
 
   private async getDocumentEmbeddingConfig(
     workspaceId: string,
   ): Promise<DocumentEmbeddingConfig & { isPlatformKey: boolean }> {
-    // ✅ FIX: Use ApiKeyService to get active key
     try {
       const apiKey = await this.apiKeyService.getActiveKey(workspaceId, LLMProvider.GOOGLE_GEMINI);
-
       if (apiKey) {
         this.logger.log(`[Embeddings] 🔑 Using workspace API key for: ${workspaceId}`);
-
         return {
-          provider: { model: 'embedding-001', dimensions: 768, costPer1MTokens: 0.15 },
+          provider: {
+            model: 'embedding-001',
+            dimensions: 768,
+            costPer1MTokens: 0.15,
+          },
           apiKey,
           batchSize: 1,
           concurrency: 1,
@@ -493,14 +434,12 @@ export class V1DocumentEmbeddingsService {
       );
     }
 
-    // ✅ Fallback to platform key
     const platformKey = this.configService.get<string>('GEMINI_API_KEY');
     if (!platformKey) {
       throw new ForbiddenException(
         'No Gemini API key available. Configure GEMINI_API_KEY in .env or add workspace key with paid tier.',
       );
     }
-
     if (platformKey.length < 20) {
       throw new ForbiddenException(
         'GEMINI_API_KEY is invalid (too short). Please check your .env configuration.',
@@ -512,7 +451,11 @@ export class V1DocumentEmbeddingsService {
     );
 
     return {
-      provider: { model: 'embedding-001', dimensions: 768, costPer1MTokens: 0.15 },
+      provider: {
+        model: 'embedding-001',
+        dimensions: 768,
+        costPer1MTokens: 0.15,
+      },
       apiKey: platformKey,
       batchSize: 1,
       concurrency: 1,
@@ -571,12 +514,10 @@ export class V1DocumentEmbeddingsService {
       },
     });
 
-    this.logger.debug(
-      `[Embeddings] 💰 Cost recorded: $${actualCostUsd.toFixed(6)} | Credits: ${creditsCharged}`,
+    this.logger.log(
+      `[Embeddings] 💰 Cost recorded: $${actualCostUsd.toFixed(6)} | Credits=${creditsCharged}`,
     );
   }
-
-  // ✅ REMOVED: encryptApiKey & decryptApiKey (now in EncryptionService)
 
   async regenerateDocumentEmbeddings(documentId: string): Promise<{
     documentId: string;
@@ -605,7 +546,6 @@ export class V1DocumentEmbeddingsService {
       throw new BadRequestException('Document has no source file to regenerate from');
     }
 
-    // ✅ Delete existing embeddings
     const existingEmbeddings = await this.prisma.embedding.findMany({
       where: { documentId },
       select: { s3VectorKey: true },
@@ -623,7 +563,6 @@ export class V1DocumentEmbeddingsService {
       }
     }
 
-    // ✅ Update document status to PROCESSING
     await this.prisma.document.update({
       where: { id: documentId },
       data: { status: DocumentStatus.PROCESSING },
@@ -631,7 +570,6 @@ export class V1DocumentEmbeddingsService {
 
     this.logger.log(`[Embeddings] 📋 Document marked as PROCESSING`);
 
-    // ✅ Queue the regeneration job
     const jobId = await this.queueProducer.sendDocumentReprocessingJob({
       documentId: document.id,
       workspaceId: document.workspaceId,

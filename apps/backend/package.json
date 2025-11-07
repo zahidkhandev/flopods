@@ -72,6 +72,7 @@
     "tesseract.js": "^6.0.1",
     "tiktoken": "^1.0.22",
     "ua-parser-js": "^2.0.6",
+    "youtube-caption-extractor": "^1.9.1",
     "youtube-transcript": "^1.2.1"
   },
   "devDependencies": {

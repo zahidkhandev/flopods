@@ -15,7 +15,7 @@ import {
   calculateProfitData,
   calculateCreditsFromCharge,
   PROFIT_CONFIG,
-} from '../../../config/profit.config';
+} from '../../../common/config/profit.config';
 import { V1ApiKeyService } from '../../workspace/services/api-key.service';
 
 interface VisionAnalysisResponse {
@@ -72,9 +72,6 @@ export class V1GeminiVisionService {
     return pricing;
   }
 
-  /**
-   * ✅ Get API key for workspace or fallback to platform key
-   */
   private async getApiKeyForWorkspace(workspaceId: string): Promise<string> {
     try {
       const workspaceKey = await this.apiKeyService.getActiveKey(
@@ -101,6 +98,7 @@ export class V1GeminiVisionService {
     this.logger.debug(`[Vision] Using platform API key (fallback)`);
     return platformKey;
   }
+
   async analyzeImageVision(
     documentId: string,
     workspaceId: string,
@@ -121,6 +119,8 @@ export class V1GeminiVisionService {
 
     try {
       const apiKey = await this.getApiKeyForWorkspace(workspaceId);
+      const pricing = await this.getVisionPricing();
+      const modelId = pricing.modelId; // use DB model id consistently
 
       this.logger.debug(
         `[Vision] API Key: ${apiKey.substring(0, 10)}...${apiKey.substring(apiKey.length - 10)} (length: ${apiKey.length})`,
@@ -160,7 +160,7 @@ Respond in JSON format:
   "contrastScore": 80
 }`;
 
-      const url = `${this.defaultBaseUrl}/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+      const url = `${this.defaultBaseUrl}/models/${modelId}:generateContent?key=${apiKey}`;
 
       this.logger.debug(`[Vision] 📡 Calling: ${url.substring(0, 80)}...`);
 
@@ -207,54 +207,42 @@ Respond in JSON format:
 
       const usageMetadata = response.data?.usageMetadata;
       totalTokens = usageMetadata?.totalTokenCount || 0;
-      inputTokens = usageMetadata?.promptTokenCount || 0;
-      // ✅ FIX: candidateTokenCount (singular) not candidatesTokenCount
-      outputTokens = usageMetadata?.candidatesTokenCount || 0;
+      const promptTokens = usageMetadata?.promptTokenCount || 0;
+      const candidatesTokens = usageMetadata?.candidatesTokenCount || 0;
+      inputTokens = promptTokens;
+      outputTokens = candidatesTokens;
 
-      // ✅ DEBUG: Log the raw response
       this.logger.debug(`[Vision] 📋 Usage metadata: ${JSON.stringify(usageMetadata)}`);
       this.logger.debug(
         `[Vision] 🔢 Parsed tokens - Input: ${inputTokens}, Output: ${outputTokens}, Total: ${totalTokens}`,
       );
 
-      // ✅ ALERT if something looks wrong
       if (totalTokens === 0) {
         this.logger.warn(
           `[Vision] ⚠️ WARNING: Total tokens is 0! Response: ${JSON.stringify(response.data)}`,
         );
       }
-      // ✅ Get pricing from DB
-      const visionPricing = await this.getVisionPricing();
 
-      // ✅ CONVERT from scientific notation immediately
-      const inputCostPerMillion = parseFloat(visionPricing.inputTokenCost.toString());
-      const outputCostPerMillion = parseFloat(visionPricing.outputTokenCost.toString());
+      // Pricing from DB (Decimal-safe)
+      const inputCostPerMillion = parseFloat(pricing.inputTokenCost.toString());
+      const outputCostPerMillion = parseFloat(pricing.outputTokenCost.toString());
 
-      // ✅ Calculate cost properly
       const inputCost = (inputTokens / 1_000_000) * inputCostPerMillion;
       const outputCost = (outputTokens / 1_000_000) * outputCostPerMillion;
       const totalCostUsd = inputCost + outputCost;
-      actualCostUsd = new Decimal(totalCostUsd.toFixed(10)); // ✅ Round to 10 decimals
+      actualCostUsd = new Decimal(Number(totalCostUsd.toFixed(10)));
 
-      this.logger.debug(
-        `[Vision] 💵 Pricing - Input: ${inputCostPerMillion}, Output: ${outputCostPerMillion}`,
-      );
       this.logger.debug(
         `[Vision] 💵 Costs - Input: $${inputCost}, Output: $${outputCost}, Total: $${totalCostUsd}`,
       );
 
-      // ✅ Calculate profit using global multiplier
       profitData = calculateProfitData(totalCostUsd);
       creditsToCharge = calculateCreditsFromCharge(profitData.userChargeUsd);
 
       this.logger.debug(
-        `[Vision] 💰 ${inputTokens}in/${outputTokens}out tokens | ` +
-          `Cost: $${totalCostUsd.toFixed(10)} | Charge: $${profitData.userChargeUsd.toFixed(10)} | ` +
-          `Profit: $${profitData.profitUsd.toFixed(10)} (${profitData.profitMarginPercentage.toFixed(2)}%) | ` +
-          `ROI: ${profitData.roi.toFixed(0)}% | Multiplier: ${PROFIT_CONFIG.MARKUP_MULTIPLIER}x`,
+        `[Vision] 💰 ${inputTokens}in/${outputTokens}out tokens | Cost: $${totalCostUsd.toFixed(10)} | Charge: $${profitData.userChargeUsd.toFixed(10)} | Profit: $${profitData.profitUsd.toFixed(10)} (${profitData.profitMarginPercentage.toFixed(2)}%) | ROI: ${profitData.roi.toFixed(0)}% | Multiplier: ${PROFIT_CONFIG.MARKUP_MULTIPLIER}x`,
       );
 
-      // ✅ Get subscription for credit tracking
       const subscription = await this.prisma.subscription.findUnique({
         where: { workspaceId },
         select: { id: true, isByokMode: true },
@@ -264,7 +252,6 @@ Respond in JSON format:
         throw new BadRequestException('No active subscription found for workspace');
       }
 
-      // ✅ FIX: Use UPSERT instead of CREATE to handle existing records
       const visionAnalysis = await this.prisma.documentVisionAnalysis.upsert({
         where: {
           documentId_provider: {
@@ -273,8 +260,7 @@ Respond in JSON format:
           },
         },
         update: {
-          // ✅ Update if exists
-          modelId: visionPricing.modelId,
+          modelId: modelId,
           modelVersion: 'latest',
           ocrText: analysisData.ocrText || null,
           ocrConfidence: analysisData.ocrConfidence || 0,
@@ -307,11 +293,10 @@ Respond in JSON format:
           updatedAt: new Date(),
         },
         create: {
-          // ✅ Create if doesn't exist
           documentId,
           workspaceId,
           provider: LLMProvider.GOOGLE_GEMINI,
-          modelId: visionPricing.modelId,
+          modelId: modelId,
           modelVersion: 'latest',
           ocrText: analysisData.ocrText || null,
           ocrConfidence: analysisData.ocrConfidence || 0,
@@ -352,7 +337,6 @@ Respond in JSON format:
         analysisData.ocrConfidence || 0,
       );
 
-      // ✅ Log with profit tracking
       await this.logGeminiApiCall(
         workspaceId,
         documentId,
@@ -368,8 +352,7 @@ Respond in JSON format:
       );
 
       this.logger.log(
-        `[Vision] ✅ Completed: ${documentId} (${processingTimeMs}ms, ${totalTokens} tokens) | ` +
-          `Profit: $${profitData.profitUsd.toFixed(6)} 💰`,
+        `[Vision] ✅ Completed: ${documentId} (${processingTimeMs}ms, ${totalTokens} tokens) | Profit: $${profitData.profitUsd.toFixed(6)} 💰`,
       );
 
       return visionAnalysis;
@@ -387,7 +370,6 @@ Respond in JSON format:
         );
       }
 
-      // ✅ GET subscription FIRST before attempting DB writes
       let subscription = null;
       try {
         subscription = await this.prisma.subscription.findUnique({
@@ -398,7 +380,6 @@ Respond in JSON format:
         this.logger.error(`[Vision] Failed to fetch subscription: ${subError}`);
       }
 
-      // ✅ Try to save error record (non-blocking)
       try {
         await this.prisma.documentVisionAnalysis.upsert({
           where: {
@@ -431,7 +412,6 @@ Respond in JSON format:
         this.logger.warn(`[Vision] Failed to save error record: ${dbError}`);
       }
 
-      // ✅ Log error only if subscription exists
       if (subscription) {
         try {
           await this.logGeminiApiCall(
@@ -480,7 +460,6 @@ Respond in JSON format:
     });
   }
 
-  // ✅ FIXED: profitUsd is now a number (not Decimal)
   private async logGeminiApiCall(
     workspaceId: string,
     documentId: string | null,
@@ -495,7 +474,6 @@ Respond in JSON format:
     success: boolean,
     errorMessage?: string,
   ): Promise<void> {
-    // ✅ FIXED: profitUsd is already a number
     const profitMargin =
       profitUsd > 0 && Number(estimatedCost) > 0
         ? ((profitUsd / (Number(estimatedCost) * PROFIT_CONFIG.MARKUP_MULTIPLIER)) * 100).toFixed(2)

@@ -105,7 +105,7 @@ export class V1DocumentsService {
       throw new NotFoundException('Document not found');
     }
 
-    return document;
+    return document as any;
   }
 
   async listDocuments(

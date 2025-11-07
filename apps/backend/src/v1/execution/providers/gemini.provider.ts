@@ -1,11 +1,19 @@
-// src/modules/v1/llm/providers/gemini.provider.ts
-
+// apps/backend/src/v1/execution/providers/gemini.provider.ts
 import { Injectable } from '@nestjs/common';
 import axios, { AxiosError } from 'axios';
 import { BaseLLMProvider } from './base-llm.provider';
 import { LLMProvider } from '@flopods/schema';
 import { LLMRequest, LLMResponse, LLMStreamChunk } from '../types/llm-provider.types';
 import { PrismaService } from '../../../prisma/prisma.service';
+
+import { PROFIT_CONFIG } from '../../../common/config/profit.config';
+import {
+  calculateTokenCosts as calculateLLMExecutionCost,
+  formatCostBreakdown,
+  formatProfitBreakdown,
+  applyMarkup,
+  settleCreditsCharge,
+} from '../../../common/utils/profit-and-credits';
 
 @Injectable()
 export class GeminiProvider extends BaseLLMProvider {
@@ -32,7 +40,9 @@ export class GeminiProvider extends BaseLLMProvider {
 
       const requestBody = this.buildRequestBody(request, contents);
 
-      this.logger.debug(`Executing Gemini: model=${request.model}`);
+      this.logger.debug(
+        `[Gemini] Executing: model=${request.model}, messages=${request.messages.length}`,
+      );
 
       const response = await this.retryWithBackoff(() =>
         axios.post(
@@ -47,47 +57,110 @@ export class GeminiProvider extends BaseLLMProvider {
       );
 
       if (response.status === 429) {
+        this.logger.warn('[Gemini] Rate limit hit - retry after delay');
         throw new Error('Rate limit exceeded. Please try again later.');
       }
 
       if (response.status === 401 || response.status === 403) {
+        this.logger.error('[Gemini] Invalid API key');
         throw new Error('Invalid or unauthorized API key');
       }
 
       if (response.status >= 400) {
         const errorMessage = response.data?.error?.message || 'Unknown API error';
+        this.logger.error(`[Gemini] HTTP ${response.status}: ${errorMessage}`);
         throw new Error(`Gemini API error (${response.status}): ${errorMessage}`);
       }
 
       const data = this.validateResponse(response.data);
       const llmResponse = this.parseResponse(data, request.model);
 
-      // ✅ Calculate and record profit from DB pricing
+      // Cost & profit tracking
       if (request.workspaceId) {
-        const modelPricing = await this.getModelPricing(LLMProvider.GOOGLE_GEMINI, request.model);
-        if (modelPricing) {
-          const profitData = this.calculateProfit(modelPricing, {
-            promptTokens: llmResponse.usage.promptTokens,
-            completionTokens: llmResponse.usage.completionTokens,
-          });
+        try {
+          const modelPricing = await this.getModelPricing(LLMProvider.GOOGLE_GEMINI, request.model);
 
-          await this.recordExecutionCost(
-            request.workspaceId,
-            `gemini_${data.modelVersion || request.model}_${Date.now()}`,
-            request.model,
-            LLMProvider.GOOGLE_GEMINI,
-            {
-              promptTokens: llmResponse.usage.promptTokens,
-              completionTokens: llmResponse.usage.completionTokens,
-            },
-            profitData,
+          if (!modelPricing) {
+            this.logger.warn(
+              `[Gemini] No pricing found for ${request.model} - skipping cost calculation`,
+            );
+          } else {
+            const costBreakdown = calculateLLMExecutionCost(
+              {
+                promptTokens: llmResponse.usage.promptTokens,
+                completionTokens: llmResponse.usage.completionTokens,
+                reasoningTokens: llmResponse.usage.reasoningTokens,
+              },
+              {
+                inputTokenCost: modelPricing.inputTokenCost,
+                outputTokenCost: modelPricing.outputTokenCost,
+                reasoningTokenCost: modelPricing.reasoningTokenCost ?? 0,
+              },
+            );
+
+            // Apply global markup (8x by default)
+            const { actual, userCharge } = applyMarkup(costBreakdown.totalCost);
+
+            // Compute credits to subtract (≥ 1 and ≥ any prior suggestion if you have one)
+            const creditsCharged = settleCreditsCharge({
+              userChargeUsd: userCharge,
+            });
+
+            // Persist execution cost record
+            await this.recordExecutionCost(
+              request.workspaceId,
+              `gemini_${data.modelVersion || request.model}_${Date.now()}`,
+              request.model,
+              LLMProvider.GOOGLE_GEMINI,
+              {
+                promptTokens: llmResponse.usage.promptTokens,
+                completionTokens: llmResponse.usage.completionTokens,
+                reasoningTokens: llmResponse.usage.reasoningTokens,
+              },
+              {
+                actualCostUsd: actual,
+                userChargeUsd: userCharge,
+                profitUsd: userCharge - actual,
+              },
+            );
+
+            // Log nicely (compat accepts both styles)
+            this.logger.log(
+              `✅ Gemini: ${llmResponse.usage.totalTokens} tokens\n` +
+                `${formatCostBreakdown(costBreakdown, {
+                  promptTokens: llmResponse.usage.promptTokens,
+                  completionTokens: llmResponse.usage.completionTokens,
+                  reasoningTokens: llmResponse.usage.reasoningTokens,
+                })}\n` +
+                formatProfitBreakdown({
+                  actual,
+                  userCharge,
+                  profit: userCharge - actual,
+                  marginPct: userCharge > 0 ? ((userCharge - actual) / userCharge) * 100 : 0,
+                  roiPct: actual > 0 ? ((userCharge - actual) / actual) * 100 : 0,
+                  credits: creditsCharged,
+                }),
+            );
+
+            // Attach to response
+            llmResponse.profit = {
+              actualCostUsd: actual,
+              userChargeUsd: userCharge,
+              profitUsd: userCharge - actual,
+              profitMarginPercentage:
+                userCharge > 0 ? ((userCharge - actual) / userCharge) * 100 : 0,
+              roi: actual > 0 ? ((userCharge - actual) / actual) * 100 : 0,
+              markupMultiplier: PROFIT_CONFIG.MARKUP_MULTIPLIER,
+              creditsCharged,
+            };
+          }
+        } catch (costError) {
+          this.logger.error(
+            `[Gemini] Cost calculation failed: ${
+              costError instanceof Error ? costError.message : String(costError)
+            }`,
           );
-
-          llmResponse.profit = profitData;
-
-          this.logger.log(
-            `✅ Gemini: ${llmResponse.usage.totalTokens} tokens | Profit: $${profitData.profitUsd.toFixed(6)}`,
-          );
+          // continue without blocking the main response
         }
       }
 
@@ -119,7 +192,7 @@ export class GeminiProvider extends BaseLLMProvider {
 
       const requestBody = this.buildRequestBody(request, contents);
 
-      this.logger.debug(`Streaming Gemini: model=${request.model}`);
+      this.logger.debug(`[Gemini Stream] Starting: model=${request.model}`);
 
       const response = await axios.post(
         `${baseUrl}/models/${request.model}:streamGenerateContent?key=${request.apiKey}&alt=sse`,
@@ -142,63 +215,23 @@ export class GeminiProvider extends BaseLLMProvider {
       let hasContent = false;
       let finishReason = 'STOP';
       let fullContent = '';
+      let chunkCount = 0;
 
       for await (const chunk of response.data) {
-        const chunkStr = chunk.toString();
-        buffer += chunkStr;
+        try {
+          const chunkStr = chunk.toString();
+          buffer += chunkStr;
 
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
 
-        for (const line of lines) {
-          const trimmedLine = line.trim();
+          for (const line of lines) {
+            const trimmedLine = line.trim();
+            if (!trimmedLine || !trimmedLine.startsWith('data: ')) continue;
 
-          if (!trimmedLine) continue;
-          if (!trimmedLine.startsWith('data: ')) continue;
+            const jsonStr = trimmedLine.substring(6);
+            if (!jsonStr || jsonStr === '{}') continue;
 
-          const jsonStr = trimmedLine.substring(6);
-          if (!jsonStr || jsonStr === '{}') continue;
-
-          try {
-            const data = JSON.parse(jsonStr);
-
-            if (data.candidates && Array.isArray(data.candidates)) {
-              for (const candidate of data.candidates) {
-                if (candidate.content?.parts && Array.isArray(candidate.content.parts)) {
-                  for (const part of candidate.content.parts) {
-                    if (part.text && typeof part.text === 'string' && part.text.length > 0) {
-                      hasContent = true;
-                      fullContent += part.text;
-                      yield { type: 'token', content: part.text };
-                    }
-                  }
-                }
-
-                if (candidate.finishReason) {
-                  finishReason = candidate.finishReason;
-                }
-              }
-            }
-
-            if (data.usageMetadata) {
-              totalUsage = {
-                promptTokens: data.usageMetadata.promptTokenCount || 0,
-                completionTokens: data.usageMetadata.candidatesTokenCount || 0,
-                totalTokens: data.usageMetadata.totalTokenCount || 0,
-              };
-            }
-          } catch (parseError) {
-            this.logger.warn(`Failed to parse SSE line`);
-          }
-        }
-      }
-
-      // Process remaining buffer
-      if (buffer.trim()) {
-        const trimmedBuffer = buffer.trim();
-        if (trimmedBuffer.startsWith('data: ')) {
-          const jsonStr = trimmedBuffer.substring(6);
-          if (jsonStr && jsonStr !== '{}') {
             try {
               const data = JSON.parse(jsonStr);
 
@@ -209,10 +242,12 @@ export class GeminiProvider extends BaseLLMProvider {
                       if (part.text && typeof part.text === 'string' && part.text.length > 0) {
                         hasContent = true;
                         fullContent += part.text;
+                        chunkCount++;
                         yield { type: 'token', content: part.text };
                       }
                     }
                   }
+                  if (candidate.finishReason) finishReason = candidate.finishReason;
                 }
               }
 
@@ -224,31 +259,109 @@ export class GeminiProvider extends BaseLLMProvider {
                 };
               }
             } catch {
-              this.logger.warn(`Failed to parse final buffer`);
+              // skip malformed chunk
             }
+          }
+        } catch {
+          // continue on chunk errors
+        }
+      }
+
+      // Process trailing buffer (best-effort)
+      const b = buffer.trim();
+      if (b.startsWith('data: ')) {
+        const jsonStr = b.substring(6);
+        if (jsonStr && jsonStr !== '{}') {
+          try {
+            const data = JSON.parse(jsonStr);
+
+            if (data.candidates && Array.isArray(data.candidates)) {
+              for (const candidate of data.candidates) {
+                if (candidate.content?.parts && Array.isArray(candidate.content.parts)) {
+                  for (const part of candidate.content.parts) {
+                    if (part.text && typeof part.text === 'string' && part.text.length > 0) {
+                      hasContent = true;
+                      fullContent += part.text;
+                      chunkCount++;
+                      yield { type: 'token', content: part.text };
+                    }
+                  }
+                }
+              }
+            }
+
+            if (data.usageMetadata) {
+              totalUsage = {
+                promptTokens: data.usageMetadata.promptTokenCount || 0,
+                completionTokens: data.usageMetadata.candidatesTokenCount || 0,
+                totalTokens: data.usageMetadata.totalTokenCount || 0,
+              };
+            }
+          } catch {
+            // ignore
           }
         }
       }
 
-      // ✅ Calculate and record profit from DB pricing
+      // Cost logging (stream)
       if (request.workspaceId) {
-        const modelPricing = await this.getModelPricing(LLMProvider.GOOGLE_GEMINI, request.model);
-        if (modelPricing) {
-          const profitData = this.calculateProfit(modelPricing, {
-            promptTokens: totalUsage.promptTokens,
-            completionTokens: totalUsage.completionTokens,
-          });
+        try {
+          const modelPricing = await this.getModelPricing(LLMProvider.GOOGLE_GEMINI, request.model);
+          if (!modelPricing) {
+            this.logger.warn(`[Gemini Stream] No pricing found for ${request.model}`);
+          } else {
+            const costBreakdown = calculateLLMExecutionCost(
+              {
+                promptTokens: totalUsage.promptTokens,
+                completionTokens: totalUsage.completionTokens,
+                reasoningTokens: 0,
+              },
+              {
+                inputTokenCost: modelPricing.inputTokenCost,
+                outputTokenCost: modelPricing.outputTokenCost,
+                reasoningTokenCost: modelPricing.reasoningTokenCost ?? 0,
+              },
+            );
 
-          await this.recordExecutionCost(
-            request.workspaceId,
-            `gemini_stream_${Date.now()}`,
-            request.model,
-            LLMProvider.GOOGLE_GEMINI,
-            {
-              promptTokens: totalUsage.promptTokens,
-              completionTokens: totalUsage.completionTokens,
-            },
-            profitData,
+            const { actual, userCharge } = applyMarkup(costBreakdown.totalCost);
+            const creditsCharged = settleCreditsCharge({ userChargeUsd: userCharge });
+
+            await this.recordExecutionCost(
+              request.workspaceId,
+              `gemini_stream_${Date.now()}`,
+              request.model,
+              LLMProvider.GOOGLE_GEMINI,
+              {
+                promptTokens: totalUsage.promptTokens,
+                completionTokens: totalUsage.completionTokens,
+              },
+              {
+                actualCostUsd: actual,
+                userChargeUsd: userCharge,
+                profitUsd: userCharge - actual,
+              },
+            );
+
+            this.logger.log(
+              `[Gemini Stream] Cost: ${formatCostBreakdown(costBreakdown, {
+                promptTokens: totalUsage.promptTokens,
+                completionTokens: totalUsage.completionTokens,
+              })}\n` +
+                formatProfitBreakdown({
+                  actual,
+                  userCharge,
+                  profit: userCharge - actual,
+                  marginPct: userCharge > 0 ? ((userCharge - actual) / userCharge) * 100 : 0,
+                  roiPct: actual > 0 ? ((userCharge - actual) / actual) * 100 : 0,
+                  credits: creditsCharged,
+                }),
+            );
+          }
+        } catch (costError) {
+          this.logger.error(
+            `[Gemini Stream] Cost calculation failed: ${
+              costError instanceof Error ? costError.message : String(costError)
+            }`,
           );
         }
       }
@@ -260,15 +373,14 @@ export class GeminiProvider extends BaseLLMProvider {
       };
 
       if (!hasContent) {
-        this.logger.warn(`⚠️ Gemini stream completed with NO content`);
+        this.logger.warn(`[Gemini Stream] ⚠️ Completed with NO content`);
       } else {
         this.logger.log(
-          `✅ Gemini stream completed (${totalUsage.totalTokens} tokens, ${fullContent.length} chars)`,
+          `✅ Gemini stream: ${totalUsage.totalTokens} tokens, ${chunkCount} chunks, ${fullContent.length} chars`,
         );
       }
     } catch (error) {
       this.logger.error(`❌ Gemini stream failed: ${this.getErrorMessage(error)}`);
-
       yield {
         type: 'error',
         error: error instanceof Error ? error.message : 'Unknown streaming error',
@@ -284,23 +396,18 @@ export class GeminiProvider extends BaseLLMProvider {
     ) {
       throw new Error('Invalid API key');
     }
-
     if (!request.model || typeof request.model !== 'string') {
       throw new Error('Invalid model');
     }
-
     if (!Array.isArray(request.messages) || request.messages.length === 0) {
       throw new Error('Invalid messages');
     }
-
     if (request.temperature !== undefined && (request.temperature < 0 || request.temperature > 2)) {
       throw new Error('Temperature must be between 0 and 2');
     }
-
     if (request.maxTokens !== undefined && (request.maxTokens < 1 || request.maxTokens > 65536)) {
       throw new Error('maxTokens must be between 1 and 65536');
     }
-
     if (request.topP !== undefined && (request.topP < 0 || request.topP > 1)) {
       throw new Error('topP must be between 0 and 1');
     }
@@ -323,7 +430,7 @@ export class GeminiProvider extends BaseLLMProvider {
       .filter((m) => m.role !== 'system')
       .map((m) => {
         if (!m.role || !m.content) {
-          this.logger.warn(`Skipping invalid message`);
+          this.logger.warn(`[Gemini] Skipping invalid message`);
           return null;
         }
 
@@ -334,9 +441,7 @@ export class GeminiProvider extends BaseLLMProvider {
               ? JSON.stringify(m.content)
               : String(m.content);
 
-        if (text.length === 0) {
-          return null;
-        }
+        if (text.length === 0) return null;
 
         return {
           role: m.role === 'assistant' ? 'model' : 'user',
@@ -353,25 +458,18 @@ export class GeminiProvider extends BaseLLMProvider {
     if (request.temperature !== undefined) {
       generationConfig.temperature = request.temperature;
     }
-
     if (request.maxTokens !== undefined && request.maxTokens > 0) {
       generationConfig.maxOutputTokens = request.maxTokens;
     }
-
     if (request.topP !== undefined) {
       generationConfig.topP = request.topP;
     }
-
     if (request.responseFormat === 'json_object') {
       generationConfig.response_mime_type = 'application/json';
     }
-
     if (request.thinkingBudget && request.model.includes('2.5')) {
-      generationConfig.thinking_config = {
-        budget_tokens: request.thinkingBudget,
-      };
+      generationConfig.thinking_config = { budget_tokens: request.thinkingBudget };
     }
-
     if (Object.keys(generationConfig).length > 0) {
       requestBody.generationConfig = generationConfig;
     }
@@ -382,7 +480,6 @@ export class GeminiProvider extends BaseLLMProvider {
         typeof systemMessage.content === 'string'
           ? systemMessage.content
           : JSON.stringify(systemMessage.content);
-
       if (systemText.length > 0) {
         requestBody.systemInstruction = { parts: [{ text: systemText }] };
       }
@@ -400,23 +497,19 @@ export class GeminiProvider extends BaseLLMProvider {
 
   private validateResponse(data: any): any {
     if (!data || typeof data !== 'object') {
-      throw new Error('Invalid response');
+      throw new Error('Invalid response: not an object');
     }
-
     if (data.promptFeedback?.blockReason) {
       throw new Error(`Content blocked: ${data.promptFeedback.blockReason}`);
     }
-
     if (!data.candidates || !Array.isArray(data.candidates) || data.candidates.length === 0) {
-      throw new Error('No candidates returned');
+      throw new Error('No candidates returned from Gemini');
     }
 
     const candidate = data.candidates[0];
-
     if (candidate.finishReason === 'SAFETY') {
       throw new Error('Content blocked due to safety concerns');
     }
-
     if (!candidate.content || !Array.isArray(candidate.content.parts)) {
       throw new Error('Invalid candidate structure');
     }
@@ -442,6 +535,7 @@ export class GeminiProvider extends BaseLLMProvider {
         promptTokens: data.usageMetadata?.promptTokenCount || 0,
         completionTokens: data.usageMetadata?.candidatesTokenCount || 0,
         totalTokens: data.usageMetadata?.totalTokenCount || 0,
+        reasoningTokens: data.usageMetadata?.reasoningTokenCount || 0,
         cachedTokens: data.usageMetadata?.cachedContentTokenCount || 0,
       },
       rawResponse: data,
@@ -450,9 +544,8 @@ export class GeminiProvider extends BaseLLMProvider {
   }
 
   private getErrorMessage(error: unknown): string {
-    if (error instanceof Error) {
-      return error.message;
-    }
+    if (error instanceof Error) return error.message;
+
     if (axios.isAxiosError(error)) {
       const axiosError = error as AxiosError;
       if (axiosError.response?.data) {
@@ -466,9 +559,7 @@ export class GeminiProvider extends BaseLLMProvider {
 
   async testApiKey(apiKey: string, customEndpoint?: string): Promise<boolean> {
     try {
-      if (!apiKey || apiKey.trim().length === 0) {
-        return false;
-      }
+      if (!apiKey || apiKey.trim().length === 0) return false;
 
       const baseUrl = this.sanitizeUrl(customEndpoint || this.defaultBaseUrl);
       const response = await axios.get(`${baseUrl}/models?key=${apiKey}`, {
@@ -481,8 +572,10 @@ export class GeminiProvider extends BaseLLMProvider {
         return true;
       }
 
+      this.logger.warn(`❌ Gemini API key validation failed with status ${response.status}`);
       return false;
-    } catch {
+    } catch (error) {
+      this.logger.error(`❌ Gemini API key test failed: ${this.getErrorMessage(error)}`);
       return false;
     }
   }
@@ -490,19 +583,17 @@ export class GeminiProvider extends BaseLLMProvider {
   async getAvailableModels(): Promise<string[]> {
     try {
       const dbModels = await this.getModelsFromDb(LLMProvider.GOOGLE_GEMINI);
-      if (dbModels.length > 0) {
-        return dbModels;
+      if (dbModels.length === 0) {
+        this.logger.warn('⚠️ No Gemini models in database - please seed ModelPricingTier');
+        return [];
       }
-
-      return [
-        'gemini-2.5-pro',
-        'gemini-2.5-flash',
-        'gemini-2.5-flash-lite',
-        'gemini-2.0-flash',
-        'gemini-1.5-pro',
-      ];
-    } catch {
-      return ['gemini-2.5-flash', 'gemini-1.5-pro'];
+      this.logger.debug(`✅ Loaded ${dbModels.length} Gemini models from database`);
+      return dbModels;
+    } catch (error) {
+      this.logger.error(
+        `❌ Failed to fetch Gemini models: ${error instanceof Error ? error.message : String(error)}`,
+      );
+      return [];
     }
   }
 }
