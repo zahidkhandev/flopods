@@ -1,5 +1,5 @@
 param(
-    [string]$SpecificPath = "apps/frontend/src/pages/dashboard/documents"
+    [string]$SpecificPath = "apps/backend/src/v1/documents"
 )
 
 # RootPath is always where the script is run from

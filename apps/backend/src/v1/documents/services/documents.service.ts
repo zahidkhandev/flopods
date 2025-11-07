@@ -1,5 +1,3 @@
-// /src/modules/v1/documents/services/documents.service.ts
-
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../prisma/prisma.service';
@@ -39,10 +37,6 @@ export class V1DocumentsService {
       contentType: validation.mimeType,
     });
 
-    const documentId = `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const dynamoPartitionKey = `workspace#${workspaceId}`;
-    const dynamoSortKey = `document#${documentId}`;
-
     const document = await this.prisma.document.create({
       data: {
         workspaceId,
@@ -55,11 +49,20 @@ export class V1DocumentsService {
         storageKey: s3Key,
         s3Bucket,
         folderId: folderId || null,
-        dynamoPartitionKey,
-        dynamoSortKey,
+        dynamoPartitionKey: `workspace#${workspaceId}`,
+        dynamoSortKey: `document#${Date.now()}`,
+        uploadedBy: userId,
         metadata: {
           uploadedAt: new Date().toISOString(),
         },
+      },
+    });
+
+    await this.prisma.document.update({
+      where: { id: document.id },
+      data: {
+        dynamoPartitionKey: `workspace#${workspaceId}`,
+        dynamoSortKey: `document#${document.id}`,
       },
     });
 
@@ -229,42 +232,51 @@ export class V1DocumentsService {
     userId: string,
     externalUrl: string,
     sourceType: DocumentSourceType,
-    customName?: string,
-    folderId?: string,
-  ): Promise<{ documentId: string; status: string; sourceType: DocumentSourceType }> {
-    this.logger.log(`[Documents] Linking external source: ${externalUrl} (${sourceType})`);
+    name?: string,
+    folderId?: string | null,
+  ): Promise<any> {
+    if (folderId) {
+      const folder = await this.prisma.documentFolder.findUnique({
+        where: { id: folderId },
+      });
 
-    if (!['YOUTUBE', 'VIMEO', 'LOOM', 'URL'].includes(sourceType)) {
-      throw new BadRequestException(
-        `Unsupported source type: ${sourceType}. Supported: YOUTUBE, VIMEO, LOOM, URL`,
-      );
+      if (!folder) {
+        throw new BadRequestException(`Folder not found: ${folderId}`);
+      }
+
+      if (folder.workspaceId !== workspaceId) {
+        throw new BadRequestException('Folder does not belong to this workspace');
+      }
     }
 
-    const metadata = this.extractExternalMetadata(externalUrl, sourceType);
-    const documentName = customName || this.generateDocumentName(externalUrl, sourceType);
-
-    const documentId = `doc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const dynamoPartitionKey = `workspace#${workspaceId}`;
-    const dynamoSortKey = `document#${documentId}`;
+    const documentName = name || this.generateDocumentName(externalUrl, sourceType);
 
     const document = await this.prisma.document.create({
       data: {
         workspaceId,
+        folderId: folderId || null,
         name: documentName,
         sourceType,
-        fileType: sourceType === DocumentSourceType.URL ? 'WEB_PAGE' : 'VIDEO',
-        mimeType: null,
-        sizeInBytes: null,
-        status: DocumentStatus.UPLOADING,
+        fileType: 'external',
         externalUrl,
         externalProvider: this.getProvider(sourceType),
-        externalFileId: metadata.externalId,
-        storageKey: null,
-        s3Bucket: null,
-        folderId: folderId || null,
-        dynamoPartitionKey,
-        dynamoSortKey,
-        metadata,
+        status: DocumentStatus.UPLOADING,
+        uploadedBy: userId,
+        dynamoPartitionKey: `workspace#${workspaceId}`,
+        dynamoSortKey: `document#${Date.now()}`,
+        metadata: {
+          sourceUrl: externalUrl,
+          createdAt: new Date().toISOString(),
+          ...this.extractExternalMetadata(externalUrl, sourceType),
+        },
+      },
+    });
+
+    await this.prisma.document.update({
+      where: { id: document.id },
+      data: {
+        dynamoPartitionKey: `workspace#${workspaceId}`,
+        dynamoSortKey: `document#${document.id}`,
       },
     });
 
@@ -272,18 +284,13 @@ export class V1DocumentsService {
       documentId: document.id,
       workspaceId,
       userId,
-      fileType: sourceType,
-      sourceType: sourceType as any,
-      externalUrl,
+      fileType: 'external',
+      sourceType,
     });
 
-    this.logger.log(`[Documents] Created external document: ${document.id}`);
+    this.logger.log(`[Documents] Linking external source: ${externalUrl} (${sourceType})`);
 
-    return {
-      documentId: document.id,
-      status: 'queued',
-      sourceType,
-    };
+    return { documentId: document.id, status: 'queued', sourceType };
   }
 
   private extractExternalMetadata(

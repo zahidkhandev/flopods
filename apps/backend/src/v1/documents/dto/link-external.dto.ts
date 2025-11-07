@@ -1,7 +1,3 @@
-/**
- * Link External Document DTO
- */
-
 import { IsNotEmpty, IsString, IsUrl, IsEnum, IsOptional, MaxLength } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DocumentSourceType } from '@flopods/schema';
@@ -28,7 +24,7 @@ export class LinkExternalDocumentDto {
 
   @ApiPropertyOptional({
     description: 'Custom document name (optional, auto-generated if not provided)',
-    example: 'ML Tutorial Video',
+    example: 'Rick Astley - Never Gonna Give You Up',
     maxLength: 255,
   })
   @IsOptional()
@@ -37,11 +33,11 @@ export class LinkExternalDocumentDto {
   name?: string;
 
   @ApiPropertyOptional({
-    description: 'Folder ID to organize document',
-    example: 'folder_123',
+    description: 'Folder ID to organize document (optional - leave null for root)',
+    example: null,
   })
   @IsOptional()
   @IsString()
   @MaxLength(255)
-  folderId?: string;
+  folderId?: string | null;
 }

@@ -29,7 +29,7 @@ export class V1BullMQDocumentQueueService implements IDocumentQueueService, OnMo
         password: redisPassword || undefined,
       },
       defaultJobOptions: {
-        attempts: 3,
+        attempts: 1,
         backoff: {
           type: 'exponential',
           delay: 2000,

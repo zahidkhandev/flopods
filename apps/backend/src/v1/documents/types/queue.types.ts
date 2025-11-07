@@ -15,7 +15,7 @@ export interface DocumentQueueMessage {
     sourceType: DocumentSourceType;
     externalUrl?: string;
     estimatedTokens?: number;
-    visionProvider?: LLMProvider; // ✅ Changed from VisionProvider to LLMProvider
+    visionProvider?: LLMProvider;
     retryCount: number;
   };
   timestamp: string;

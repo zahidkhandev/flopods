@@ -1,5 +1,3 @@
-// src/modules/v1/documents/types/index.ts
-
 /**
  * Document Types Barrel Export
  *
@@ -16,6 +14,8 @@
  *   DocumentQueueMessage,
  *   DocumentTextChunk,
  *   DocumentEmbeddingProvider,
+ *   YouTubeTranscriptResult,
+ *   YouTubeExtractionOptions,
  * } from '../types';
  * ```
  */
@@ -31,3 +31,6 @@ export * from './processor.types';
 
 // Embedding types
 export * from './embedding.types';
+
+// YouTube types
+export * from './youtube.types';

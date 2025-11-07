@@ -2,8 +2,6 @@
 
 import { DocumentSourceType, DocumentStatus, DocumentProcessingType } from '@flopods/schema';
 
-// ✅ REMOVE: export { VisionProvider };
-
 export { DocumentSourceType, DocumentStatus, DocumentProcessingType };
 
 export enum DocumentProcessingAction {

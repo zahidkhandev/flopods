@@ -1,10 +1,9 @@
-// /src/modules/v1/documents/services/document-orchestrator.service.ts
-
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { S3Service } from '../../../common/aws/s3/s3.service';
 import { V1DocumentEmbeddingsService } from './embeddings.service';
 import { V1GeminiVisionService } from './gemini-vision.service';
+import { V1YouTubeProcessorService } from './youtube-processor.service';
 import { DocumentStatus, DocumentSourceType } from '@flopods/schema';
 import type { DocumentQueueMessage } from '../types';
 import { PDFParse } from 'pdf-parse';
@@ -18,6 +17,7 @@ export class V1DocumentOrchestratorService {
     private readonly s3Service: S3Service,
     private readonly embeddingsService: V1DocumentEmbeddingsService,
     private readonly visionService: V1GeminiVisionService,
+    private readonly youtubeProcessor: V1YouTubeProcessorService,
   ) {}
 
   async processDocument(message: DocumentQueueMessage): Promise<void> {
@@ -47,6 +47,7 @@ export class V1DocumentOrchestratorService {
         this.logger.warn(`[Orchestrator] ⚠️ Document not found (likely deleted): ${documentId}`);
         return;
       }
+
       await this.prisma.document.update({
         where: { id: documentId },
         data: { status: DocumentStatus.PROCESSING },
@@ -126,7 +127,6 @@ export class V1DocumentOrchestratorService {
           },
         });
       } catch (updateError) {
-        // Silently handle if document was already deleted
         if (updateError instanceof Error && updateError.message.includes('No record was found')) {
           this.logger.debug(`[Orchestrator] Document already deleted, skipping error update`);
           return;
@@ -166,6 +166,25 @@ export class V1DocumentOrchestratorService {
         return this.extractTextFromWebPage(externalUrl);
 
       case DocumentSourceType.YOUTUBE:
+        try {
+          const result = await this.youtubeProcessor.processYouTubeURL(externalUrl);
+
+          if (!result.transcript || result.transcript.length < 50) {
+            this.logger.log(`[Orchestrator] 📝 No transcript available, using video metadata`);
+
+            return `YouTube Video: ${result.videoTitle}\n\nNo transcript available for this video. Please check YouTube directly for subtitles or captions.`;
+          }
+
+          this.logger.log(
+            `[Orchestrator] ✅ YouTube transcript extracted: ${result.characterCount} chars`,
+          );
+          return result.transcript;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Unknown error';
+          this.logger.error(`[Orchestrator] ❌ YouTube processing failed: ${message}`);
+          throw error;
+        }
+
       case DocumentSourceType.VIMEO:
       case DocumentSourceType.LOOM:
         throw new Error(`Video transcript extraction not implemented for ${sourceType}`);

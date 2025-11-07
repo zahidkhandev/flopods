@@ -51,31 +51,37 @@ function flattenValidationErrors(
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
+
+  const httpProxy = process.env.HTTP_PROXY || process.env.http_proxy;
+  const httpsProxy = process.env.HTTPS_PROXY || process.env.https_proxy;
+
+  if (httpProxy || httpsProxy) {
+    logger.log(`🔌 Proxy configured: ${httpProxy || httpsProxy}`);
+  } else {
+    logger.log('🔌 No proxy configured (direct connection)');
+  }
+
   const app = await NestFactory.create(AppModule, {
     rawBody: true,
   });
 
-  // Global API prefix
   app.setGlobalPrefix('api');
 
-  // CORS configuration (applies to both HTTP and WebSocket)
   app.enableCors({
     origin: [
       process.env.FRONTEND_URL || 'http://localhost:5173',
-      /^http:\/\/localhost:\d+$/, // Allow all localhost ports
-      /^https?:\/\/.*\.flopods\.dev/, // Production subdomains
+      /^http:\/\/localhost:\d+$/,
+      /^https?:\/\/.*\.flopods\.dev/,
     ],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
 
-  // API Versioning
   app.enableVersioning({
     type: VersioningType.URI,
     defaultVersion: '1',
   });
 
-  // Connect to Prisma database
   const prisma = app.get(PrismaService);
   try {
     await prisma.$connect();
@@ -89,7 +95,6 @@ async function bootstrap() {
     );
   }
 
-  // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,
@@ -111,13 +116,11 @@ async function bootstrap() {
     }),
   );
 
-  // Global interceptors and filters
   const reflector = app.get(Reflector);
   app.useGlobalInterceptors(new ResponseInterceptor(reflector));
   app.useGlobalInterceptors(new ClassSerializerInterceptor(reflector));
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  // Swagger documentation
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Flopods API v1')
     .setDescription('AI Workflow Canvas - Multi-LLM Node-Based Platform')
@@ -140,12 +143,11 @@ async function bootstrap() {
     },
   });
 
-  // Start server
-
   (BigInt.prototype as any).toJSON = function () {
     return this.toString();
   };
-  const port = parseInt(process.env.BACKEND_PORT || '3000', 10);
+
+  const port = parseInt(process.env.BACKEND_PORT || '8000', 10);
   await app.listen(port, '0.0.0.0');
 
   logger.log(`🚀 Flopods Backend running on: http://localhost:${port}`);

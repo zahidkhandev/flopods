@@ -1,5 +1,3 @@
-// /src/modules/v1/documents/controllers/documents.controller.ts
-
 import {
   Controller,
   Post,
@@ -142,7 +140,7 @@ export class V1DocumentsController {
       dto.externalUrl,
       dto.sourceType,
       dto.name,
-      dto.folderId,
+      dto.folderId ?? null,
     );
   }
 
