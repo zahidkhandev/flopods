@@ -14,6 +14,8 @@ export class OpenAIProvider extends BaseLLMProvider {
   }
 
   async execute(request: LLMRequest): Promise<LLMResponse> {
+    const startTime = Date.now();
+
     try {
       const baseUrl = request.customEndpoint || this.defaultBaseUrl;
 
@@ -53,7 +55,7 @@ export class OpenAIProvider extends BaseLLMProvider {
       }
 
       this.logger.debug(
-        `Executing OpenAI request: model=${request.model}, isReasoning=${isReasoningModel}, temperature=${request.temperature ?? 'default'}, maxTokens=${request.maxTokens ?? 'default'}`,
+        `Executing OpenAI: model=${request.model}, reasoning=${isReasoningModel}, temp=${request.temperature ?? 'default'}`,
       );
 
       const response = await this.retryWithBackoff(() =>
@@ -68,6 +70,30 @@ export class OpenAIProvider extends BaseLLMProvider {
 
       const data = response.data;
       const choice = data.choices[0];
+
+      let profitData: any = null;
+      if (modelPricing) {
+        profitData = this.calculateProfit(modelPricing, {
+          promptTokens: data.usage.prompt_tokens,
+          completionTokens: data.usage.completion_tokens,
+          reasoningTokens: data.usage.completion_tokens_details?.reasoning_tokens,
+        });
+
+        if (request.workspaceId) {
+          await this.recordExecutionCost(
+            request.workspaceId,
+            `openai_${data.id}`,
+            request.model,
+            LLMProvider.OPENAI,
+            {
+              promptTokens: data.usage.prompt_tokens,
+              completionTokens: data.usage.completion_tokens,
+              reasoningTokens: data.usage.completion_tokens_details?.reasoning_tokens,
+            },
+            profitData,
+          );
+        }
+      }
 
       const result: LLMResponse = {
         id: data.id,
@@ -86,14 +112,24 @@ export class OpenAIProvider extends BaseLLMProvider {
         timestamp: new Date(),
       };
 
+      const profitMsg = profitData
+        ? ` | Cost: $${profitData.actualCostUsd.toFixed(6)} | Charge: $${profitData.userChargeUsd.toFixed(6)} | Profit: $${profitData.profitUsd.toFixed(6)} (${profitData.profitMarginPercentage.toFixed(2)}%)`
+        : '';
+      const reasoningMsg = result.usage.reasoningTokens
+        ? ` + ${result.usage.reasoningTokens} reasoning`
+        : '';
       this.logger.log(
-        `✅ OpenAI execution completed: ${result.usage.totalTokens} tokens (${result.usage.promptTokens} input + ${result.usage.completionTokens} output${result.usage.reasoningTokens ? ` + ${result.usage.reasoningTokens} reasoning` : ''})`,
+        `✅ OpenAI: ${result.usage.totalTokens} tokens (${result.usage.promptTokens} in + ${result.usage.completionTokens} out${reasoningMsg})${profitMsg}`,
       );
+
+      const executionTime = Date.now() - startTime;
+      this.logger.log(`✅ OpenAI completed in ${executionTime}ms`);
 
       return result;
     } catch (error) {
+      const executionTime = Date.now() - startTime;
       this.logger.error(
-        `❌ OpenAI execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `❌ OpenAI execution failed after ${executionTime}ms: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
       this.handleError(error, 'OpenAI');
     }
@@ -139,7 +175,7 @@ export class OpenAIProvider extends BaseLLMProvider {
         }
       }
 
-      this.logger.debug(`Streaming OpenAI request: model=${request.model}`);
+      this.logger.debug(`Streaming OpenAI: model=${request.model}`);
 
       const response = await axios.post(`${baseUrl}/chat/completions`, requestBody, {
         headers: {
@@ -153,6 +189,7 @@ export class OpenAIProvider extends BaseLLMProvider {
       yield { type: 'start' };
 
       let buffer = '';
+      let finalUsage: any = null;
 
       for await (const chunk of response.data) {
         buffer += chunk.toString();
@@ -172,28 +209,48 @@ export class OpenAIProvider extends BaseLLMProvider {
             }
 
             if (data.choices?.[0]?.finish_reason) {
-              const usage = data.usage;
-              if (usage) {
-                yield {
-                  type: 'done',
-                  finishReason: data.choices[0].finish_reason,
-                  usage: {
-                    promptTokens: usage.prompt_tokens,
-                    completionTokens: usage.completion_tokens,
-                    totalTokens: usage.total_tokens,
-                    reasoningTokens: usage.completion_tokens_details?.reasoning_tokens,
-                    cachedTokens: usage.prompt_tokens_details?.cached_tokens,
-                  },
-                };
-              } else {
-                yield {
-                  type: 'done',
-                  finishReason: data.choices[0].finish_reason,
-                };
+              finalUsage = data.usage;
+
+              let profitData: any = null;
+              if (modelPricing && finalUsage) {
+                profitData = this.calculateProfit(modelPricing, {
+                  promptTokens: finalUsage.prompt_tokens,
+                  completionTokens: finalUsage.completion_tokens,
+                  reasoningTokens: finalUsage.completion_tokens_details?.reasoning_tokens,
+                });
+
+                if (request.workspaceId) {
+                  await this.recordExecutionCost(
+                    request.workspaceId,
+                    `openai_stream_${Date.now()}`,
+                    request.model,
+                    LLMProvider.OPENAI,
+                    {
+                      promptTokens: finalUsage.prompt_tokens,
+                      completionTokens: finalUsage.completion_tokens,
+                      reasoningTokens: finalUsage.completion_tokens_details?.reasoning_tokens,
+                    },
+                    profitData,
+                  );
+                }
               }
+
+              yield {
+                type: 'done',
+                finishReason: data.choices[0].finish_reason,
+                usage: finalUsage
+                  ? {
+                      promptTokens: finalUsage.prompt_tokens,
+                      completionTokens: finalUsage.completion_tokens,
+                      totalTokens: finalUsage.total_tokens,
+                      reasoningTokens: finalUsage.completion_tokens_details?.reasoning_tokens,
+                      cachedTokens: finalUsage.prompt_tokens_details?.cached_tokens,
+                    }
+                  : undefined,
+              };
             }
           } catch {
-            this.logger.warn(`Failed to parse SSE line: ${line}`);
+            this.logger.warn(`Failed to parse SSE line`);
           }
         }
       }
@@ -217,7 +274,7 @@ export class OpenAIProvider extends BaseLLMProvider {
         headers: { Authorization: `Bearer ${apiKey}` },
         timeout: 10000,
       });
-      this.logger.log('✅ OpenAI API key validation successful');
+      this.logger.log('✅ OpenAI API key valid');
       return true;
     } catch {
       this.logger.warn('OpenAI API key validation failed');
@@ -226,28 +283,19 @@ export class OpenAIProvider extends BaseLLMProvider {
   }
 
   async getAvailableModels(): Promise<string[]> {
-    const dbModels = await this.getModelsFromDb(LLMProvider.OPENAI);
-    if (dbModels.length > 0) {
-      this.logger.debug(`Loaded ${dbModels.length} OpenAI models from database`);
+    try {
+      const dbModels = await this.getModelsFromDb(LLMProvider.OPENAI);
+
+      if (dbModels.length === 0) {
+        this.logger.warn('No OpenAI models found in database - please seed ModelPricingTier');
+      } else {
+        this.logger.debug(`Loaded ${dbModels.length} OpenAI models from database`);
+      }
+
       return dbModels;
+    } catch (error) {
+      this.logger.error('Failed to fetch OpenAI models:', error);
+      return [];
     }
-
-    const fallbackModels = [
-      'gpt-5',
-      'gpt-5-mini',
-      'gpt-5-nano',
-      'gpt-5-pro',
-      'gpt-4.1',
-      'gpt-4.1-mini',
-      'gpt-4.1-nano',
-      'o3',
-      'o3-pro',
-      'o4-mini',
-      'gpt-4o',
-      'gpt-4o-mini',
-    ];
-
-    this.logger.debug(`Using ${fallbackModels.length} fallback OpenAI models`);
-    return fallbackModels;
   }
 }

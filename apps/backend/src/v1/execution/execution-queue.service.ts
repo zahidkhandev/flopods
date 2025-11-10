@@ -1,242 +1,641 @@
-// execution-queue.service.ts
-
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { V1ExecutionService } from './execution.service';
-import { V1FlowGateway } from '../flow/flow.gateway';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { DynamoDbService } from '../../common/aws/dynamodb/dynamodb.service';
+import { ProviderFactory } from './providers/provider.factory';
+import { V1ContextResolutionService } from './context-resolution.service';
 import { LLMProvider, PodExecutionStatus } from '@flopods/schema';
-import { QueueFactory } from '../../common/queue/queue.factory';
-import { QueueAdapter } from '../../common/queue/queue-adapter.interface';
+import { ExecutionHistoryItemDto, ExecutionDetailDto } from './dto/execution-response.dto';
+import { LLMPromptPodContent, PodContextMapping } from '../pods/types/pod-content.types';
+import { LLMStreamChunk } from './types/llm-provider.types';
+import { nanoid } from 'nanoid';
+import { V1FlowGateway } from '../flow/flow.gateway';
+import {
+  calculateLLMExecutionCost,
+  formatCostBreakdown,
+  formatProfitBreakdown,
+} from './utils/execution-cost-calculator.util';
+import { PROFIT_CONFIG } from '../../common/config/profit.config';
 
-export type ExecutionJobData = {
-  executionId: string;
-  podId: string;
-  workspaceId: string;
-  userId: string;
-  flowId: string;
-  messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
-  provider?: LLMProvider;
-  model?: string;
-  systemPrompt?: string; // ADD THIS
-  temperature?: number;
-  maxTokens?: number;
-  topP?: number; // ADD THIS
-  presencePenalty?: number; // ADD THIS
-  frequencyPenalty?: number; // ADD THIS
-  thinkingBudget?: number;
-  responseFormat?: 'text' | 'json_object' | 'json'; // ADD THIS
+type LLMMessage = {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
 };
 
 @Injectable()
-export class V1ExecutionQueueService implements OnModuleDestroy {
-  private readonly logger = new Logger(V1ExecutionQueueService.name);
-  private executionQueue: QueueAdapter;
+export class V1ExecutionService {
+  private readonly logger = new Logger(V1ExecutionService.name);
+
+  private readonly DEFAULT_SYSTEM_PROMPTS = {
+    general: 'You are a helpful AI assistant. Provide clear, accurate, and concise responses.',
+    analyst: 'You are a data analyst. Analyze information objectively and provide insights.',
+    coder: 'You are a coding assistant. Write clean, efficient, and well-documented code.',
+    creative: 'You are a creative writing assistant. Be imaginative and engaging.',
+  };
 
   constructor(
-    private readonly config: ConfigService,
-    private readonly queueFactory: QueueFactory,
-    private readonly executionService: V1ExecutionService,
-    private readonly flowGateway: V1FlowGateway,
     private readonly prisma: PrismaService,
-  ) {
-    this.executionQueue = this.queueFactory.createQueue('pod-executions', 10);
+    private readonly dynamoDb: DynamoDbService,
+    private readonly providerFactory: ProviderFactory,
+    private readonly contextResolution: V1ContextResolutionService,
+    private readonly flowGateway: V1FlowGateway,
+  ) {}
 
-    this.executionQueue.process(async (job: any) => {
-      return this.processExecution(job);
-    });
+  /**
+   * INSTANT STREAMING with CONVERSATION HISTORY
+   * Each pod maintains its own conversation thread (last 20 turns)
+   */
+  async *executePod(params: {
+    podId: string;
+    workspaceId: string;
+    userId: string;
+    messages: LLMMessage[];
+    provider?: LLMProvider;
+    model?: string;
+    systemPrompt?: string;
+    temperature?: number;
+    maxTokens?: number;
+    topP?: number;
+    presencePenalty?: number;
+    frequencyPenalty?: number;
+    thinkingBudget?: number;
+    responseFormat?: 'text' | 'json_object' | 'json';
+    contextMappings?: PodContextMapping[];
+  }): AsyncGenerator<LLMStreamChunk, void, unknown> {
+    const { podId, workspaceId, messages } = params;
+    const executionId = `exec_${nanoid(16)}`;
+    const startTime = Date.now();
+    let podFlowId: string | null = null;
 
-    this.logger.log('✅ Execution queue service initialized with streaming support');
-  }
-
-  async queueExecution(data: ExecutionJobData): Promise<string> {
     try {
-      const jobId = await this.executionQueue.add('execute-pod', data, {
-        jobId: data.executionId,
-        attempts: 3,
-        backoff: {
-          type: 'exponential',
-          delay: 2000,
+      // Get pod info
+      const pod = await this.prisma.pod.findFirst({
+        where: { id: podId, flow: { workspaceId } },
+        select: {
+          flowId: true,
+          id: true,
+          type: true,
+          dynamoPartitionKey: true,
+          dynamoSortKey: true,
         },
       });
 
+      if (!pod) {
+        yield { type: 'error', error: `Pod ${podId} not found` };
+        return;
+      }
+      podFlowId = pod.flowId;
+
+      if (pod.type !== 'LLM_PROMPT') {
+        yield { type: 'error', error: 'Only LLM_PROMPT pods can be executed' };
+        return;
+      }
+
+      const podConfig = await this.getPodConfig(pod.dynamoPartitionKey, pod.dynamoSortKey);
+      if (!podConfig) {
+        yield { type: 'error', error: 'Pod configuration not found' };
+        return;
+      }
+
+      const llmConfig = podConfig.config;
+
+      // Resolve all parameters
+      const finalProvider = params.provider ?? llmConfig.provider;
+      const finalModel = params.model ?? llmConfig.model;
+      const finalSystemPrompt = params.systemPrompt ?? llmConfig.systemPrompt;
+      const finalTemperature = params.temperature ?? llmConfig.temperature;
+      const finalMaxTokens = params.maxTokens ?? llmConfig.maxTokens;
+      const finalTopP = params.topP ?? llmConfig.topP;
+      const finalPresencePenalty = params.presencePenalty ?? llmConfig.presencePenalty;
+      const finalFrequencyPenalty = params.frequencyPenalty ?? llmConfig.frequencyPenalty;
+      const finalThinkingBudget = params.thinkingBudget ?? llmConfig.thinkingBudget;
+      const finalResponseFormat = params.responseFormat ?? llmConfig.responseFormat;
+
+      // Extract user input for history
+      const userMessage = messages.find((m) => m.role === 'user');
+      const userInput = userMessage?.content || '';
+
+      // Create execution record
+      await this.prisma.podExecution.create({
+        data: {
+          id: executionId,
+          podId,
+          flowId: pod.flowId,
+          workspaceId,
+          status: PodExecutionStatus.RUNNING,
+          provider: finalProvider,
+          modelId: finalModel,
+          startedAt: new Date(),
+          requestMetadata: {
+            userInput,
+            messages: messages.map((m) => ({
+              role: m.role,
+              content: m.content,
+            })),
+            temperature: finalTemperature,
+            maxTokens: finalMaxTokens,
+            provider: finalProvider,
+            model: finalModel,
+          },
+        },
+      });
+
+      // Broadcast execution start
+      this.flowGateway.broadcastExecutionStart(pod.flowId, executionId, podId);
+
       this.logger.log(
-        `📋 Queued execution ${data.executionId} for pod ${data.podId} (provider: ${data.provider || 'default'})`,
+        `[Execution] 🚀 Starting execution ${executionId} for pod ${podId} (${finalProvider}/${finalModel})`,
       );
 
-      this.flowGateway.broadcastToFlow(data.flowId, 'execution:queued', {
-        executionId: data.executionId,
-        podId: data.podId,
-        status: PodExecutionStatus.QUEUED,
-        timestamp: new Date(),
-      });
-
-      return jobId;
-    } catch (error) {
-      this.logger.error(
-        `Failed to queue execution ${data.executionId}:`,
-        error instanceof Error ? error.message : 'Unknown error',
+      // ✅ Get conversation history from THIS pod (last 20 turns)
+      const conversationHistory = await this.getPodConversationHistory(podId, 20);
+      this.logger.debug(
+        `[Execution] 📋 Including ${conversationHistory.length} messages from conversation history`,
       );
-      throw error;
-    }
-  }
 
-  private async processExecution(job: any) {
-    const { executionId, podId, workspaceId, userId, flowId, ...params } = job.data;
+      // Resolve upstream context
+      const contextChain = await this.contextResolution.resolveFullContext(podId, pod.flowId);
 
-    this.logger.log(
-      `🚀 Processing execution ${executionId} (attempt ${job.attemptsMade || 1}/${job.opts?.attempts || 3})`,
-    );
+      this.logger.debug(
+        `[Execution] 🔗 Resolved context from ${Object.keys(contextChain.variables).length} upstream pods (${Object.values(contextChain.variables).reduce((sum, v) => sum + (typeof v === 'string' ? v.split('\n').length : 0), 0)} messages)`,
+      );
 
-    try {
-      await this.updateExecutionStatus(executionId, PodExecutionStatus.RUNNING);
+      // Build system prompt with variable interpolation
+      let systemPrompt = finalSystemPrompt ?? this.DEFAULT_SYSTEM_PROMPTS.general;
+      systemPrompt = this.contextResolution.interpolateVariables(
+        systemPrompt,
+        contextChain.variables,
+      );
 
-      this.flowGateway.broadcastToFlow(flowId, 'execution:running', {
-        executionId,
-        podId,
-        status: PodExecutionStatus.RUNNING,
-        timestamp: new Date(),
+      // ✅ ADD UPSTREAM CONTEXT TO SYSTEM PROMPT
+      if (Object.keys(contextChain.variables).length > 0) {
+        const contextSection = '\n\n## Context from Connected Pods:\n\n';
+        const contextDetails = Object.entries(contextChain.variables)
+          .map(([podId, content]) => `**Pod ${podId} History:**\n${content}`)
+          .join('\n\n');
+
+        systemPrompt = systemPrompt + contextSection + contextDetails;
+      }
+
+      // Interpolate messages
+      const interpolatedMessages = messages.map((msg) => {
+        if (msg.role === 'user' && typeof msg.content === 'string') {
+          return {
+            ...msg,
+            content: this.contextResolution.interpolateVariables(
+              msg.content,
+              contextChain.variables,
+            ),
+          };
+        }
+        return msg;
       });
 
-      // Execute with ALL parameters passed through
-      const result = await this.executionService.executePod({
-        podId,
+      // ✅ Combine conversation history + new messages
+      const allMessages = [...conversationHistory, ...interpolatedMessages];
+
+      const finalMessages = this.buildMessagesWithSystemPrompt(
+        allMessages,
+        systemPrompt,
+        params.systemPrompt !== undefined,
+      );
+
+      this.logger.debug(
+        `[Execution] 📨 Final message count: ${finalMessages.length} (${conversationHistory.length} history + ${interpolatedMessages.length} new)`,
+      );
+
+      // Get API key
+      const workspaceKey = await this.providerFactory.getWorkspaceApiKey(
         workspaceId,
-        userId,
-        messages: params.messages,
-        provider: params.provider,
-        model: params.model,
-        systemPrompt: params.systemPrompt, // PASS THIS
-        temperature: params.temperature,
-        maxTokens: params.maxTokens,
-        topP: params.topP, // PASS THIS
-        presencePenalty: params.presencePenalty, // PASS THIS
-        frequencyPenalty: params.frequencyPenalty, // PASS THIS
-        thinkingBudget: params.thinkingBudget,
-        responseFormat: params.responseFormat, // PASS THIS
-      });
+        finalProvider,
+      );
+      if (!workspaceKey) {
+        const errorMsg = `No ${finalProvider} API key configured for this workspace`;
+        yield {
+          type: 'error',
+          error: errorMsg,
+        };
+        await this.prisma.podExecution.update({
+          where: { id: executionId },
+          data: {
+            status: PodExecutionStatus.ERROR,
+            errorMessage: errorMsg,
+            finishedAt: new Date(),
+          },
+        });
+        this.flowGateway.broadcastExecutionError(pod.flowId, executionId, podId, errorMsg);
+        return;
+      }
 
-      this.logger.log(`✅ Execution ${executionId} completed successfully`);
+      const { apiKey, keyId, customEndpoint } = workspaceKey;
 
-      this.flowGateway.broadcastToFlow(flowId, 'execution:completed', {
-        executionId,
-        podId,
-        status: PodExecutionStatus.COMPLETED,
-        result,
-        timestamp: new Date(),
-      });
+      // Get provider
+      const llmProvider = this.providerFactory.getProvider(finalProvider);
 
-      return result;
-    } catch (error) {
-      this.logger.error(
-        `❌ Execution ${executionId} failed (attempt ${job.attemptsMade || 1}):`,
-        error instanceof Error ? error.message : 'Unknown error',
+      if (!llmProvider.executeStream) {
+        yield {
+          type: 'error',
+          error: `Provider ${finalProvider} does not support streaming yet`,
+        };
+        return;
+      }
+
+      // Build request
+      const llmRequest: any = {
+        provider: finalProvider,
+        model: finalModel,
+        messages: finalMessages,
+        apiKey,
+        customEndpoint,
+        apiKeyId: keyId,
+        workspaceId,
+        stream: true,
+      };
+
+      if (finalTemperature !== undefined) llmRequest.temperature = finalTemperature;
+      if (finalMaxTokens !== undefined) llmRequest.maxTokens = finalMaxTokens;
+      if (finalTopP !== undefined) llmRequest.topP = finalTopP;
+      if (finalPresencePenalty !== undefined) llmRequest.presencePenalty = finalPresencePenalty;
+      if (finalFrequencyPenalty !== undefined) llmRequest.frequencyPenalty = finalFrequencyPenalty;
+      if (finalThinkingBudget !== undefined) llmRequest.thinkingBudget = finalThinkingBudget;
+      if (finalResponseFormat !== undefined) llmRequest.responseFormat = finalResponseFormat;
+
+      this.logger.debug(
+        `[Execution] 📡 Streaming request: ${finalProvider}/${finalModel} | Temp=${finalTemperature} | MaxTokens=${finalMaxTokens}`,
       );
 
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      const errorCode = error instanceof Error ? error.name : 'UNKNOWN_ERROR';
+      // Send start event with executionId
+      yield { type: 'start', executionId };
 
-      await this.updateExecutionStatus(executionId, PodExecutionStatus.ERROR, errorMessage);
+      // Stream response
+      let fullContent = '';
+      let finalUsage: any = null;
+      let finishReason = 'stop';
+      let result: any = null;
 
-      this.flowGateway.broadcastToFlow(flowId, 'execution:error', {
-        executionId,
-        podId,
-        status: PodExecutionStatus.ERROR,
-        error: errorMessage,
-        errorCode,
-        timestamp: new Date(),
+      for await (const chunk of llmProvider.executeStream(llmRequest)) {
+        yield chunk;
+
+        if (chunk.type === 'token' && chunk.content) {
+          fullContent += chunk.content;
+        }
+
+        if (chunk.type === 'done') {
+          finalUsage = chunk.usage;
+          finishReason = chunk.finishReason || 'stop';
+        }
+      }
+
+      // ✅ Save execution results with PROPER COST CALCULATION
+      if (finalUsage) {
+        try {
+          const pricing = await this.prisma.modelPricingTier.findFirst({
+            where: {
+              provider: finalProvider,
+              modelId: finalModel,
+              isActive: true,
+            },
+            orderBy: { effectiveFrom: 'desc' },
+          });
+
+          if (!pricing) {
+            this.logger.warn(`[Execution] ⚠️ No pricing found for ${finalProvider}/${finalModel}`);
+          } else {
+            // ✅ Use proper cost calculator (handles scientific notation)
+            const costBreakdown = calculateLLMExecutionCost(
+              {
+                promptTokens: finalUsage.promptTokens,
+                completionTokens: finalUsage.completionTokens,
+                reasoningTokens: finalUsage.reasoningTokens,
+              },
+              {
+                inputTokenCost: pricing.inputTokenCost,
+                outputTokenCost: pricing.outputTokenCost,
+                reasoningTokenCost: pricing.reasoningTokenCost,
+              },
+            );
+
+            const multiplier = PROFIT_CONFIG.MARKUP_MULTIPLIER;
+            const userChargeUsd = costBreakdown.totalCost * multiplier;
+            const profitUsd = userChargeUsd - costBreakdown.totalCost;
+            const profitMarginPercentage =
+              costBreakdown.totalCost > 0 ? (profitUsd / userChargeUsd) * 100 : 0;
+            const roi =
+              costBreakdown.totalCost > 0 ? (profitUsd / costBreakdown.totalCost) * 100 : 0;
+
+            result = {
+              content: fullContent,
+              usage: finalUsage,
+              cost: costBreakdown.totalCost,
+              runtime: Date.now() - startTime,
+            };
+
+            await this.prisma.podExecution.update({
+              where: { id: executionId },
+              data: {
+                status: PodExecutionStatus.COMPLETED,
+                finishedAt: new Date(),
+                runtimeInMs: Date.now() - startTime,
+                apiKeyId: keyId,
+                inputTokens: finalUsage.promptTokens,
+                outputTokens: finalUsage.completionTokens,
+                reasoningTokens: finalUsage.reasoningTokens || 0,
+                costInUsd: costBreakdown.totalCost,
+                modelName: finalModel,
+                responseMetadata: {
+                  content: fullContent,
+                  finishReason,
+                  candidates: [
+                    {
+                      content: {
+                        parts: [{ text: fullContent }],
+                      },
+                    },
+                  ],
+                },
+              },
+            });
+
+            await this.providerFactory.trackApiKeyUsage(
+              keyId,
+              {
+                input: finalUsage.promptTokens,
+                output: finalUsage.completionTokens,
+                reasoning: finalUsage.reasoningTokens,
+              },
+              costBreakdown.totalCost,
+              true,
+            );
+
+            // ✅ DETAILED LOGGING
+            this.logger.log(
+              `[Execution] 💰 Cost Breakdown:\n${formatCostBreakdown(costBreakdown, {
+                promptTokens: finalUsage.promptTokens,
+                completionTokens: finalUsage.completionTokens,
+                reasoningTokens: finalUsage.reasoningTokens,
+              })}\n${formatProfitBreakdown(
+                costBreakdown.totalCost,
+                userChargeUsd,
+                profitUsd,
+                profitMarginPercentage,
+                roi,
+                costBreakdown.creditsCharged,
+              )}`,
+            );
+
+            this.logger.log(
+              `[Execution] ✅ Completed ${executionId}: ${finalUsage.totalTokens} tokens in ${Date.now() - startTime}ms | Profit: $${profitUsd.toFixed(6)} 💰`,
+            );
+          }
+        } catch (costError) {
+          this.logger.error(
+            `[Execution] ❌ Cost calculation failed: ${costError instanceof Error ? costError.message : String(costError)}`,
+          );
+
+          // Still save execution with fallback
+          await this.prisma.podExecution.update({
+            where: { id: executionId },
+            data: {
+              status: PodExecutionStatus.COMPLETED,
+              finishedAt: new Date(),
+              runtimeInMs: Date.now() - startTime,
+              apiKeyId: keyId,
+              inputTokens: finalUsage.promptTokens,
+              outputTokens: finalUsage.completionTokens,
+              reasoningTokens: finalUsage.reasoningTokens || 0,
+              modelName: finalModel,
+              responseMetadata: {
+                content: fullContent,
+                finishReason,
+              },
+            },
+          });
+        }
+      } else {
+        this.logger.warn(
+          `[Execution] ⚠️ No usage data for execution ${executionId}, marking as completed with partial data`,
+        );
+
+        await this.prisma.podExecution.update({
+          where: { id: executionId },
+          data: {
+            status: PodExecutionStatus.COMPLETED,
+            finishedAt: new Date(),
+            runtimeInMs: Date.now() - startTime,
+            modelName: finalModel,
+            responseMetadata: {
+              content: fullContent || 'Empty response',
+              finishReason: 'unknown',
+            },
+          },
+        });
+      }
+
+      await this.prisma.pod.update({
+        where: { id: podId },
+        data: {
+          executionStatus: PodExecutionStatus.COMPLETED,
+          lastExecutionId: executionId,
+        },
       });
 
-      throw error;
-    }
-  }
-
-  private async updateExecutionStatus(
-    executionId: string,
-    status: PodExecutionStatus,
-    errorMessage?: string,
-  ): Promise<void> {
-    try {
+      this.flowGateway.broadcastExecutionComplete(pod.flowId, executionId, podId, result);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown streaming error';
       await this.prisma.podExecution.update({
         where: { id: executionId },
         data: {
-          status,
-          ...(status === PodExecutionStatus.RUNNING && { startedAt: new Date() }),
-          ...(errorMessage && {
-            errorMessage,
-            errorCode: 'EXECUTION_ERROR',
-            finishedAt: new Date(),
-          }),
+          status: PodExecutionStatus.ERROR,
+          finishedAt: new Date(),
+          runtimeInMs: Date.now() - startTime,
+          errorMessage: errorMessage,
         },
       });
-    } catch (error) {
-      this.logger.error(
-        `Failed to update execution status for ${executionId}:`,
-        error instanceof Error ? error.message : 'Unknown error',
-      );
-    }
-  }
 
-  async getQueueMetrics() {
-    try {
-      const metrics = await this.executionQueue.getMetrics();
+      this.logger.error(`[Execution] ❌ Execution ${executionId} failed:`, error);
 
-      this.logger.debug(
-        `Queue metrics: waiting=${metrics.waiting}, active=${metrics.active}, completed=${metrics.completed}, failed=${metrics.failed}`,
-      );
+      if (podFlowId) {
+        this.flowGateway.broadcastExecutionError(podFlowId, executionId, podId, errorMessage);
+      }
 
-      return metrics;
-    } catch (error) {
-      this.logger.error('Failed to get queue metrics:', error);
-      return {
-        waiting: 0,
-        active: 0,
-        completed: 0,
-        failed: 0,
+      yield {
+        type: 'error',
+        error: errorMessage,
       };
     }
   }
 
-  async cancelExecution(executionId: string): Promise<boolean> {
-    try {
-      const cancelled = await this.executionQueue.cancel(executionId);
+  /**
+   * ✅ Get conversation history for current pod (last 20 turns)
+   */
+  private async getPodConversationHistory(
+    podId: string,
+    limit: number = 20,
+  ): Promise<LLMMessage[]> {
+    const previousExecutions = await this.prisma.podExecution.findMany({
+      where: {
+        podId,
+        status: 'COMPLETED',
+      },
+      orderBy: { finishedAt: 'desc' },
+      take: limit,
+      select: {
+        requestMetadata: true,
+        responseMetadata: true,
+      },
+    });
 
-      if (cancelled) {
-        await this.updateExecutionStatus(executionId, PodExecutionStatus.CANCELLED);
-        this.logger.log(`🛑 Cancelled execution ${executionId}`);
-        return true;
+    const conversationHistory: LLMMessage[] = [];
+
+    // Reverse to chronological order
+    for (const exec of previousExecutions.reverse()) {
+      const userInput = (exec.requestMetadata as any)?.userInput;
+      const assistantOutput = this.extractOutputFromResponse(exec.responseMetadata);
+
+      if (userInput) {
+        conversationHistory.push({ role: 'user', content: userInput });
       }
-
-      this.logger.warn(`Failed to cancel execution ${executionId} - job not found in queue`);
-      return false;
-    } catch (error) {
-      this.logger.error(
-        `Error cancelling execution ${executionId}:`,
-        error instanceof Error ? error.message : 'Unknown error',
-      );
-      return false;
+      if (assistantOutput) {
+        conversationHistory.push({
+          role: 'assistant',
+          content: assistantOutput,
+        });
+      }
     }
+
+    return conversationHistory;
   }
 
-  async getExecutionQueueStatus(executionId: string) {
+  /**
+   * Extract output from response metadata
+   */
+  private extractOutputFromResponse(responseMetadata: any): string | null {
     try {
-      return await this.executionQueue.getJobStatus(executionId);
+      // Streaming content format
+      if (responseMetadata?.content && typeof responseMetadata.content === 'string') {
+        return responseMetadata.content;
+      }
+
+      // Gemini format
+      if (responseMetadata?.candidates?.[0]?.content?.parts) {
+        const parts = responseMetadata.candidates[0].content.parts;
+        return parts.map((p: any) => p.text || '').join('\n');
+      }
+
+      // OpenAI format
+      if (responseMetadata?.choices?.[0]?.message?.content) {
+        return responseMetadata.choices[0].message.content;
+      }
+
+      // Anthropic format
+      if (Array.isArray(responseMetadata?.content)) {
+        const textBlocks = responseMetadata.content.filter((block: any) => block.type === 'text');
+        return textBlocks.map((block: any) => block.text).join('\n');
+      }
+
+      return null;
     } catch (error) {
-      this.logger.error(
-        `Failed to get queue status for ${executionId}:`,
-        error instanceof Error ? error.message : 'Unknown error',
-      );
+      this.logger.error('Failed to extract output from response', error);
       return null;
     }
   }
 
-  async onModuleDestroy() {
+  private async getPodConfig(pk: string, sk: string): Promise<LLMPromptPodContent | null> {
     try {
-      this.logger.log('🛑 Shutting down execution queue...');
-      await this.executionQueue.close();
-      this.logger.log('✅ Execution queue closed successfully');
+      const tableName = this.dynamoDb.getTableNames().pods;
+      const item = (await this.dynamoDb.getItem(tableName, {
+        pk,
+        sk,
+      })) as any | null;
+      return item?.content?.type === 'LLM_PROMPT' ? (item.content as LLMPromptPodContent) : null;
     } catch (error) {
-      this.logger.error('Error closing execution queue:', error);
+      this.logger.error('Failed to fetch pod config from DynamoDB', error);
+      return null;
     }
+  }
+
+  private buildMessagesWithSystemPrompt(
+    messages: LLMMessage[],
+    systemPrompt: string,
+    userProvidedSystemPrompt: boolean = false,
+  ): LLMMessage[] {
+    const hasSystemMessage = messages.some((m) => m.role === 'system');
+
+    if (hasSystemMessage) {
+      this.logger.debug('Using system message from messages array');
+      return messages;
+    }
+
+    this.logger.debug(
+      `Using ${userProvidedSystemPrompt ? 'user-provided' : 'configured'} system prompt: "${systemPrompt.substring(0, 50)}..."`,
+    );
+
+    return [{ role: 'system', content: systemPrompt }, ...messages];
+  }
+
+  async getPodExecutions(podId: string, limit: number = 10): Promise<ExecutionHistoryItemDto[]> {
+    const executions = await this.prisma.podExecution.findMany({
+      where: { podId },
+      orderBy: { startedAt: 'desc' },
+      take: Math.min(limit, 100),
+      select: {
+        id: true,
+        podId: true,
+        status: true,
+        provider: true,
+        modelId: true,
+        modelName: true,
+        inputTokens: true,
+        outputTokens: true,
+        reasoningTokens: true,
+        costInUsd: true,
+        startedAt: true,
+        finishedAt: true,
+        runtimeInMs: true,
+        errorMessage: true,
+        errorCode: true,
+      },
+    });
+
+    return executions.map((exec) => ({
+      id: exec.id,
+      podId: exec.podId,
+      status: exec.status,
+      provider: exec.provider,
+      modelId: exec.modelId,
+      modelName: exec.modelName,
+      inputTokens: exec.inputTokens,
+      outputTokens: exec.outputTokens,
+      reasoningTokens: exec.reasoningTokens,
+      costInUsd: exec.costInUsd ? exec.costInUsd.toString() : null,
+      startedAt: exec.startedAt,
+      finishedAt: exec.finishedAt,
+      runtimeInMs: exec.runtimeInMs,
+      errorMessage: exec.errorMessage,
+      errorCode: exec.errorCode,
+    }));
+  }
+
+  async getExecution(executionId: string): Promise<ExecutionDetailDto> {
+    const execution = await this.prisma.podExecution.findUnique({
+      where: { id: executionId },
+      include: {
+        pod: {
+          select: {
+            id: true,
+            type: true,
+            flowId: true,
+          },
+        },
+      },
+    });
+
+    if (!execution) {
+      throw new NotFoundException(`Execution ${executionId} not found`);
+    }
+
+    return {
+      ...execution,
+      costInUsd: execution.costInUsd ? execution.costInUsd.toString() : null,
+    } as ExecutionDetailDto;
   }
 }

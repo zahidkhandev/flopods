@@ -1,5 +1,17 @@
+// src/modules/v1/documents/interceptors/file-size-limit.interceptor.ts
+
 /**
  * File Size Limit Interceptor
+ *
+ * @description Validates uploaded file size against subscription tier limits.
+ * Prevents oversized uploads based on user's subscription plan.
+ *
+ * **Size Limits:**
+ * - HOBBYIST (Free): 10 MB
+ * - PRO: 100 MB
+ * - TEAM: 100 MB
+ *
+ * @module v1/documents/interceptors/file-size-limit
  */
 
 import {
@@ -15,16 +27,19 @@ import { SubscriptionTier } from '@flopods/schema';
 import { PrismaService } from '../../../prisma/prisma.service';
 
 /**
- * Subscription tier file size limits (in bytes)
+ * ✅ Subscription tier file size limits (in bytes)
  */
 const FILE_SIZE_LIMITS: Record<SubscriptionTier, number> = {
-  [SubscriptionTier.HOBBYIST]: 10 * 1024 * 1024, // 10 MB ✅ (FREE PLAN)
-  [SubscriptionTier.PRO]: 100 * 1024 * 1024, // 100 MB ✅ (PRO PLAN)
-  [SubscriptionTier.TEAM]: 100 * 1024 * 1024, // 100 MB ✅ (TEAM PLAN - same as PRO)
+  [SubscriptionTier.HOBBYIST]: 10 * 1024 * 1024, // 10 MB (FREE)
+  [SubscriptionTier.PRO]: 100 * 1024 * 1024, // 100 MB (PRO)
+  [SubscriptionTier.TEAM]: 100 * 1024 * 1024, // 100 MB (TEAM)
 };
 
 /**
  * File size limit interceptor
+ * ✅ Checks file size against subscription tier
+ * ✅ Prevents uploads exceeding plan limits
+ * ✅ Provides upgrade suggestions
  */
 @Injectable()
 export class V1FileSizeLimitInterceptor implements NestInterceptor {
@@ -43,7 +58,7 @@ export class V1FileSizeLimitInterceptor implements NestInterceptor {
       throw new BadRequestException('Workspace ID required for file upload');
     }
 
-    // Fetch workspace subscription tier
+    // ✅ Fetch workspace subscription tier
     const subscription = await this.prisma.subscription.findUnique({
       where: { workspaceId },
       select: { tier: true },
@@ -53,17 +68,16 @@ export class V1FileSizeLimitInterceptor implements NestInterceptor {
       throw new BadRequestException('Workspace subscription not found');
     }
 
-    // Get size limit for subscription tier
+    // ✅ Get size limit for subscription tier
     const sizeLimit = FILE_SIZE_LIMITS[subscription.tier];
+    const limitMB = (sizeLimit / (1024 * 1024)).toFixed(0);
+    const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
 
-    // Check file size
+    // ✅ Check file size
     if (file.size > sizeLimit) {
-      const limitMB = (sizeLimit / (1024 * 1024)).toFixed(0);
-      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
-
       throw new PayloadTooLargeException(
         `File size (${fileSizeMB} MB) exceeds ${subscription.tier} plan limit of ${limitMB} MB. ` +
-          `Upgrade to PRO plan for 100 MB limit.`,
+          `Upgrade your subscription for higher limits.`,
       );
     }
 

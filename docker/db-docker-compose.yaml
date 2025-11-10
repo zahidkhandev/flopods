@@ -1,8 +1,10 @@
+version: '3.8'
 name: flopods
 
 services:
   flopods-db:
-    image: pgvector/pgvector:pg16
+    image: ${IMAGE_REGISTRY:-docker.io/}pgvector/pgvector:pg16
+    pull_policy: ${PULL_POLICY:-missing}
     container_name: flopods-db
     ports:
       - '5434:5432'

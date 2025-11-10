@@ -1,24 +1,10 @@
-/**
- * Document Queue Producer
- *
- * @description Service for sending document processing jobs to the queue.
- * Provides unified interface for both BullMQ and SQS implementations.
- *
- * @module v1/documents/queues/document-queue-producer
- */
-
 import { Injectable, Logger } from '@nestjs/common';
+import { LLMProvider } from '@flopods/schema';
 import type { IDocumentQueueService } from './queue.interface';
 import type { DocumentQueueMessage } from '../types';
 import { DocumentProcessingAction, DocumentMessagePriority } from '../types';
 import { V1DocumentQueueFactory } from './queue.factory';
 
-/**
- * Producer service for document processing queue
- *
- * @description Sends document processing jobs to the queue.
- * Handles message creation, batching, and priority assignment.
- */
 @Injectable()
 export class V1DocumentQueueProducer {
   private readonly logger = new Logger(V1DocumentQueueProducer.name);
@@ -28,37 +14,15 @@ export class V1DocumentQueueProducer {
     this.queueService = this.queueFactory.createDocumentQueue();
   }
 
-  /**
-   * Send document processing job to queue
-   *
-   * @description Creates and sends a processing job for a newly uploaded document.
-   * Sets priority to HIGH for immediate processing.
-   *
-   * @param params - Document processing parameters
-   * @returns Message ID from queue
-   *
-   * @example
-   * ```
-   * const messageId = await producer.sendDocumentProcessingJob({
-   *   documentId: 'doc_123',
-   *   workspaceId: 'ws_456',
-   *   userId: 'user_789',
-   *   fileType: 'application/pdf',
-   *   sourceType: DocumentSourceType.INTERNAL,
-   * });
-   * ```
-   */
-  /**
-   * Send document processing job to queue
-   */
   async sendDocumentProcessingJob(params: {
     documentId: string;
     workspaceId: string;
     userId: string;
     fileType: string;
     sourceType: string;
-    externalUrl?: string; // ✅ ADD THIS
+    externalUrl?: string;
     estimatedTokens?: number;
+    visionProvider?: LLMProvider;
   }): Promise<string> {
     const message: DocumentQueueMessage = {
       messageId: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -70,44 +34,117 @@ export class V1DocumentQueueProducer {
       metadata: {
         fileType: params.fileType,
         sourceType: params.sourceType as any,
-        externalUrl: params.externalUrl,
+        externalUrl: params.externalUrl, // ✅ NOW DEFINED IN DocumentMetadata
         estimatedTokens: params.estimatedTokens,
-        retryCount: 0,
       },
       timestamp: new Date().toISOString(),
     };
 
     try {
       const messageId = await this.queueService.sendDocumentMessage(message);
-      this.logger.log(`Document processing job queued: ${params.documentId} (${messageId})`);
+      this.logger.log(`[Producer] Document processing job queued: ${params.documentId}`);
+      return messageId;
+    } catch (error) {
+      const _errorMessage = error instanceof Error ? error.message : 'Unknown error'; // ✅ FIXED: Prefixed with _ for unused variable
+      this.logger.error(`[Producer] Failed to queue: ${params.documentId} - ${_errorMessage}`);
+      throw error;
+    }
+  }
+
+  async queueEmbeddingsNow(payload: {
+    documentId: string;
+    workspaceId: string;
+    userId: string;
+    extractedText: string; // pass text so we don't re-fetch
+  }): Promise<string> {
+    const { documentId, workspaceId, userId, extractedText } = payload;
+
+    const message: DocumentQueueMessage = {
+      messageId: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      documentId,
+      workspaceId,
+      userId,
+      action: DocumentProcessingAction.GENERATE_EMBEDDINGS,
+      priority: DocumentMessagePriority.HIGH, // run ASAP
+      metadata: {
+        fileType: '',
+        sourceType: '' as any,
+        retryCount: 0, // first attempt
+        extractedText, // supply text for embeddings
+      },
+      timestamp: new Date().toISOString(),
+    };
+
+    try {
+      this.logger.log(`[Producer] ▶️ Queueing embeddings NOW for ${documentId}`);
+      const messageId = await this.queueService.sendDocumentMessage(message);
+      this.logger.log(`[Producer] ✅ Embeddings queued now: ${documentId}`);
       return messageId;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error(
-        `Failed to queue document processing job: ${params.documentId} - ${errorMessage}`,
-      );
+      this.logger.error(`[Producer] ❌ Failed to queue embeddings now: ${errorMessage}`);
       throw error;
     }
   }
 
   /**
-   * Send document reprocessing job to queue
-   *
-   * @description Creates a job to regenerate embeddings for an existing document.
-   * Sets priority to NORMAL as it's not time-sensitive.
-   *
-   * @param params - Document reprocessing parameters
-   * @returns Message ID from queue
-   *
-   * @example
-   * ```
-   * const messageId = await producer.sendDocumentReprocessingJob({
-   *   documentId: 'doc_123',
-   *   workspaceId: 'ws_456',
-   *   userId: 'user_789',
-   * });
-   * ```
+   * ✅ Queue embeddings with exponential backoff
    */
+  async queueEmbeddingGenerationWithBackoff(payload: {
+    documentId: string;
+    workspaceId: string;
+    userId: string;
+    extractedText: string;
+    retryCount: number;
+  }): Promise<string> {
+    const { documentId, workspaceId, userId, extractedText, retryCount } = payload;
+
+    // ✅ Exponential backoff delays in milliseconds
+    const backoffDelays = [
+      5 * 60 * 1000, // 5 minutes
+      15 * 60 * 1000, // 15 minutes
+      30 * 60 * 1000, // 30 minutes
+      60 * 60 * 1000, // 1 hour
+      2 * 60 * 60 * 1000, // 2 hours
+      4 * 60 * 60 * 1000, // 4 hours
+      8 * 60 * 60 * 1000, // 8 hours
+    ];
+
+    const delayMs = backoffDelays[Math.min(retryCount, 6)];
+    const delaySeconds = Math.ceil(delayMs / 1000);
+
+    const message: DocumentQueueMessage = {
+      messageId: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      documentId,
+      workspaceId,
+      userId,
+      action: DocumentProcessingAction.GENERATE_EMBEDDINGS,
+      priority: DocumentMessagePriority.LOW,
+      metadata: {
+        fileType: '',
+        sourceType: '' as any,
+        retryCount,
+        extractedText, // ✅ Include text for embeddings
+      },
+      timestamp: new Date().toISOString(),
+    };
+
+    try {
+      this.logger.log(
+        `[Producer] ⏰ Queueing embeddings for ${documentId} in ${delaySeconds}s (attempt ${retryCount + 1})`,
+      );
+
+      const messageId = await this.queueService.sendDocumentMessageWithDelay(message, delayMs);
+
+      this.logger.log(`[Producer] ✅ Embeddings queued with backoff: ${documentId}`);
+      return messageId;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`[Producer] ❌ Failed to queue embeddings with backoff: ${errorMessage}`);
+      throw error;
+    }
+  }
+
   async sendDocumentReprocessingJob(params: {
     documentId: string;
     workspaceId: string;
@@ -123,41 +160,21 @@ export class V1DocumentQueueProducer {
       metadata: {
         fileType: '',
         sourceType: '' as any,
-        retryCount: 0,
       },
       timestamp: new Date().toISOString(),
     };
 
     try {
       const messageId = await this.queueService.sendDocumentMessage(message);
-      this.logger.log(`Document reprocessing job queued: ${params.documentId} (${messageId})`);
+      this.logger.log(`[Producer] Document reprocessing job queued: ${params.documentId}`);
       return messageId;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error(
-        `Failed to queue document reprocessing job: ${params.documentId} - ${errorMessage}`,
-      );
+      this.logger.error(`[Producer] ❌ Failed to queue reprocessing: ${errorMessage}`);
       throw error;
     }
   }
 
-  /**
-   * Send bulk document processing jobs to queue
-   *
-   * @description Sends multiple documents for processing in batch.
-   * Optimized for bulk uploads. Sets priority to NORMAL.
-   *
-   * @param documents - Array of documents to process
-   * @returns Array of message IDs
-   *
-   * @example
-   * ```
-   * const messageIds = await producer.sendDocumentBulkProcessingJobs([
-   *   { documentId: 'doc_1', workspaceId: 'ws_1', userId: 'user_1', ... },
-   *   { documentId: 'doc_2', workspaceId: 'ws_1', userId: 'user_1', ... },
-   * ]);
-   * ```
-   */
   async sendDocumentBulkProcessingJobs(
     documents: Array<{
       documentId: string;
@@ -166,6 +183,7 @@ export class V1DocumentQueueProducer {
       fileType: string;
       sourceType: string;
       estimatedTokens?: number;
+      visionProvider?: LLMProvider;
     }>,
   ): Promise<string[]> {
     const messages: DocumentQueueMessage[] = documents.map((doc) => ({
@@ -179,29 +197,21 @@ export class V1DocumentQueueProducer {
         fileType: doc.fileType,
         sourceType: doc.sourceType as any,
         estimatedTokens: doc.estimatedTokens,
-        retryCount: 0,
       },
       timestamp: new Date().toISOString(),
     }));
 
     try {
       const messageIds = await this.queueService.sendDocumentMessageBatch(messages);
-      this.logger.log(`Bulk document processing jobs queued: ${documents.length} documents`);
+      this.logger.log(`[Producer] Bulk jobs queued: ${documents.length}`);
       return messageIds;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error(`Failed to queue bulk document processing jobs: ${errorMessage}`);
+      this.logger.error(`[Producer] ❌ Failed bulk queue: ${errorMessage}`);
       throw error;
     }
   }
 
-  /**
-   * Get document queue metrics
-   *
-   * @description Returns current queue metrics for monitoring.
-   *
-   * @returns Queue metrics object
-   */
   async getDocumentQueueMetrics() {
     return this.queueService.getDocumentQueueMetrics();
   }

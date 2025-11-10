@@ -15,6 +15,8 @@ export class AnthropicProvider extends BaseLLMProvider {
   }
 
   async execute(request: LLMRequest): Promise<LLMResponse> {
+    const startTime = Date.now();
+
     try {
       const baseUrl = request.customEndpoint || this.defaultBaseUrl;
 
@@ -56,7 +58,7 @@ export class AnthropicProvider extends BaseLLMProvider {
       }
 
       this.logger.debug(
-        `Executing Anthropic request: model=${request.model}, max_tokens=${requestBody.max_tokens}`,
+        `Executing Anthropic: model=${request.model}, max_tokens=${requestBody.max_tokens}`,
       );
 
       const response = await this.retryWithBackoff(() =>
@@ -92,12 +94,40 @@ export class AnthropicProvider extends BaseLLMProvider {
         timestamp: new Date(),
       };
 
-      this.logger.log(`✅ Anthropic execution completed: ${result.usage.totalTokens} tokens`);
+      // ✅ Calculate profit if pricing exists
+      if (request.workspaceId && modelPricing) {
+        const profitData = this.calculateProfit(modelPricing, {
+          promptTokens: result.usage.promptTokens,
+          completionTokens: result.usage.completionTokens,
+        });
+
+        await this.recordExecutionCost(
+          request.workspaceId,
+          `anthropic_${data.id}`,
+          request.model,
+          LLMProvider.ANTHROPIC,
+          {
+            promptTokens: result.usage.promptTokens,
+            completionTokens: result.usage.completionTokens,
+          },
+          profitData,
+        );
+
+        this.logger.log(
+          `✅ Anthropic: ${result.usage.totalTokens} tokens | Cost: $${profitData.actualCostUsd.toFixed(6)} | Charge: $${profitData.userChargeUsd.toFixed(6)} | Profit: $${profitData.profitUsd.toFixed(6)} (${profitData.profitMarginPercentage.toFixed(2)}%)`,
+        );
+      }
+
+      const executionTime = Date.now() - startTime;
+      this.logger.log(
+        `✅ Anthropic completed: ${result.usage.totalTokens} tokens in ${executionTime}ms`,
+      );
 
       return result;
     } catch (error) {
+      const executionTime = Date.now() - startTime;
       this.logger.error(
-        `❌ Anthropic execution failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `❌ Anthropic execution failed after ${executionTime}ms: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
       this.handleError(error, 'Anthropic');
     }
@@ -146,7 +176,7 @@ export class AnthropicProvider extends BaseLLMProvider {
       }
 
       this.logger.debug(
-        `Streaming Anthropic request: model=${request.model}, max_tokens=${requestBody.max_tokens}`,
+        `Streaming Anthropic: model=${request.model}, max_tokens=${requestBody.max_tokens}`,
       );
 
       const response = await axios.post(`${baseUrl}/messages`, requestBody, {
@@ -159,6 +189,7 @@ export class AnthropicProvider extends BaseLLMProvider {
 
       let buffer = '';
       let finalUsage: any = null;
+      let messageId = '';
 
       for await (const chunk of response.data) {
         buffer += chunk.toString();
@@ -170,6 +201,10 @@ export class AnthropicProvider extends BaseLLMProvider {
 
           try {
             const data = JSON.parse(line.substring(6));
+
+            if (data.type === 'message_start' && data.message?.id) {
+              messageId = data.message.id;
+            }
 
             if (data.type === 'content_block_delta') {
               if (data.delta?.type === 'text_delta' && data.delta?.text) {
@@ -185,9 +220,31 @@ export class AnthropicProvider extends BaseLLMProvider {
 
             if (data.type === 'message_stop') {
               if (finalUsage) {
+                let profitData: any = null;
+                if (modelPricing) {
+                  profitData = this.calculateProfit(modelPricing, {
+                    promptTokens: finalUsage.input_tokens || 0,
+                    completionTokens: finalUsage.output_tokens || 0,
+                  });
+
+                  if (request.workspaceId) {
+                    await this.recordExecutionCost(
+                      request.workspaceId,
+                      `anthropic_stream_${messageId}`,
+                      request.model,
+                      LLMProvider.ANTHROPIC,
+                      {
+                        promptTokens: finalUsage.input_tokens || 0,
+                        completionTokens: finalUsage.output_tokens || 0,
+                      },
+                      profitData,
+                    );
+                  }
+                }
+
                 yield {
                   type: 'done',
-                  finishReason: data.delta?.stop_reason || 'end_turn',
+                  finishReason: data.message?.stop_reason || 'end_turn',
                   usage: {
                     promptTokens: finalUsage.input_tokens || 0,
                     completionTokens: finalUsage.output_tokens || 0,
@@ -199,7 +256,7 @@ export class AnthropicProvider extends BaseLLMProvider {
               }
             }
           } catch {
-            this.logger.warn(`Failed to parse SSE line: ${line}`);
+            this.logger.warn(`Failed to parse SSE line`);
           }
         }
       }
@@ -217,32 +274,26 @@ export class AnthropicProvider extends BaseLLMProvider {
   }
 
   private getDefaultMaxTokens(model: string): number {
-    // Claude 3.7 Sonnet - 128K output
     if (model.includes('claude-3-7')) {
       return 128000;
     }
 
-    // Claude Sonnet 4 - 64K output
     if (model.includes('claude-sonnet-4') || model.includes('sonnet-4-5')) {
       return 64000;
     }
 
-    // Claude Opus 4 - 32K output
     if (model.includes('claude-opus-4') || model.includes('opus-4-1')) {
       return 32000;
     }
 
-    // Claude 3.5 Sonnet - 8K output (with special header)
     if (model.includes('claude-3-5-sonnet') || model.includes('3-5-sonnet')) {
       return 8192;
     }
 
-    // Claude Haiku - 10K output
     if (model.includes('haiku')) {
       return 10000;
     }
 
-    // Default for older models
     return 4096;
   }
 
@@ -253,7 +304,6 @@ export class AnthropicProvider extends BaseLLMProvider {
       'anthropic-version': this.apiVersion,
     };
 
-    // Enable extended output for Claude 3.5 Sonnet
     if (model.includes('claude-3-5-sonnet')) {
       headers['anthropic-beta'] = 'max-tokens-3-5-sonnet-2024-07-15';
     }
@@ -279,7 +329,7 @@ export class AnthropicProvider extends BaseLLMProvider {
           timeout: 10000,
         },
       );
-      this.logger.log('✅ Anthropic API key validation successful');
+      this.logger.log('✅ Anthropic API key valid');
       return true;
     } catch {
       this.logger.warn('Anthropic API key validation failed');
@@ -288,21 +338,19 @@ export class AnthropicProvider extends BaseLLMProvider {
   }
 
   async getAvailableModels(): Promise<string[]> {
-    const dbModels = await this.getModelsFromDb(LLMProvider.ANTHROPIC);
-    if (dbModels.length > 0) {
-      this.logger.debug(`Loaded ${dbModels.length} Anthropic models from database`);
+    try {
+      const dbModels = await this.getModelsFromDb(LLMProvider.ANTHROPIC);
+
+      if (dbModels.length === 0) {
+        this.logger.warn('No Anthropic models found in database - please seed ModelPricingTier');
+      } else {
+        this.logger.debug(`Loaded ${dbModels.length} Anthropic models from database`);
+      }
+
       return dbModels;
+    } catch (error) {
+      this.logger.error('Failed to fetch Anthropic models:', error);
+      return [];
     }
-
-    const fallbackModels = [
-      'claude-sonnet-4-5-20250929',
-      'claude-haiku-4-5-20250929',
-      'claude-opus-4-1-20250808',
-      'claude-3-5-sonnet-20241022',
-      'claude-3-5-haiku-20241022',
-    ];
-
-    this.logger.debug(`Using ${fallbackModels.length} fallback Anthropic models`);
-    return fallbackModels;
   }
 }

@@ -16,8 +16,6 @@
 
 ---
 
----
-
 ## 🎯 The Vision
 
 Flopods empowers AI power users, developers, and researchers by providing an **infinite, node-based canvas** for building, managing, and executing complex AI workflows. It eliminates **subscription overload**, **context fragmentation**, and **workflow inefficiencies** by unifying multiple Large Language Models (LLMs) into a single, visual interface.
@@ -57,7 +55,7 @@ This project is built with a cutting-edge, production-ready stack:
 ### Infrastructure
 
 - **Monorepo**: Turborepo with intelligent caching and parallel execution
-- **Docker**: PostgreSQL, Redis, LocalStack for local AWS emulation
+- **Container Runtime**: Docker or Podman (configurable per OS)
 - **Code Quality**: ESLint, Prettier, Husky pre-commit hooks
 
 ---
@@ -93,6 +91,8 @@ flopods/
 │   ├── redis-docker-compose.yaml        # Redis for queues
 │   └── localstack-docker-compose.yaml   # Local AWS emulation
 │
+├── setup.sh              # Linux/macOS setup script
+├── setup.bat             # Windows setup script
 ├── .env.example          # Environment template for contributors
 └── turbo.json            # Turborepo configuration
 ```
@@ -105,26 +105,52 @@ flopods/
 
 - **Node.js**: >= 20.0.0
 - **Yarn**: >= 4.0.0 (automatically installed via Corepack)
-- **Docker**: For running PostgreSQL, Redis, and LocalStack
+- **Docker** or **Podman**: For running PostgreSQL, Redis, and LocalStack
 
-### 1. Clone the Repository
+### Option 1: Automated Setup (Recommended)
+
+#### Windows
+
+```powershell
+.\setup.bat                 # Uses Docker (default)
+.\setup.bat podman          # Uses Podman
+```
+
+#### Linux / macOS
+
+```bash
+chmod +x setup.sh
+./setup.sh                  # Uses Docker (default)
+./setup.sh podman           # Uses Podman
+```
+
+**The setup script will automatically:**
+
+1. ✅ Validate Node.js & Docker/Podman installation
+2. ✅ Install dependencies (`yarn install`)
+3. ✅ Create `.env` file from `.env.example`
+4. ✅ Start containerized services (PostgreSQL, Redis, LocalStack)
+5. ✅ Generate Prisma client
+6. ✅ Run database migrations
+7. ✅ Prompt to seed pricing models (optional)
+8. ✅ Start development servers
+
+### Option 2: Manual Setup
+
+#### 1. Clone the Repository
 
 ```bash
 git clone https://github.com/yourusername/flopods.git
 cd flopods
 ```
 
-### 2. Install Dependencies
+#### 2. Install Dependencies
 
 ```bash
 yarn install
 ```
 
-This automatically runs `prisma generate` via the `postinstall` hook.
-
-### 3. Set Up Environment Variables
-
-Copy the example environment file:
+#### 3. Set Up Environment Variables
 
 ```bash
 cp .env.example .env
@@ -132,36 +158,14 @@ cp .env.example .env
 
 **Default configuration works out-of-the-box for local development!**
 
-Key variables (customize if needed):
-
-```env
-# Database (PostgreSQL)
-DATABASE_URL="postgresql://postgres:123@localhost:5434/flopods?schema=public"
-
-# JWT Secrets (⚠️ Generate new ones for production!)
-JWT_ACCESS_TOKEN_SECRET=your-secret-here
-JWT_REFRESH_TOKEN_SECRET=your-secret-here
-
-# LocalStack (Local AWS)
-AWS_DYNAMODB_ENDPOINT=http://localhost:4566
-AWS_S3_ENDPOINT=http://localhost:4566
-AWS_SES_ACCESS_KEY_ID=test
-AWS_SES_SECRET_ACCESS_KEY=test
-
-# Redis
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_PASSWORD=yourpassword
-```
-
-📖 See [Environment Configuration Guide](./README-ENV.md) for detailed setup instructions.
-
-### 4. Start Infrastructure Services
-
-Start **all** Docker services (PostgreSQL, Redis, LocalStack):
+#### 4. Start Infrastructure Services
 
 ```bash
+# Using Docker (default)
 yarn docker:dev
+
+# Using Podman
+yarn podman:dev
 ```
 
 This starts:
@@ -170,13 +174,22 @@ This starts:
 - **Redis** on port `6379`
 - **LocalStack** (AWS emulation) on port `4566`
 
-### 5. Run Database Migrations
+#### 5. Run Database Migrations
 
 ```bash
-yarn db:migrate
+yarn db:migrate:deploy
 ```
 
-### 6. Start Development Servers
+#### 6. (Optional) Seed Pricing Models
+
+```bash
+cd packages/schema
+yarn add -D tsx
+cd ../..
+yarn db:seed:pricing
+```
+
+#### 7. Start Development Servers
 
 ```bash
 yarn dev
@@ -186,9 +199,8 @@ This starts both frontend and backend concurrently:
 
 - **Frontend**: http://localhost:5173
 - **Backend**: http://localhost:8000
-- **API Docs**: http://localhost:8000/api/docs (if enabled)
 
-### 7. Access the Application
+### Access the Application
 
 Open your browser and navigate to **http://localhost:5173** 🎉
 
@@ -218,7 +230,7 @@ Open your browser and navigate to **http://localhost:5173** 🎉
 | `yarn db:migrate`      | Create and apply database migrations        |
 | `yarn db:push`         | Push schema changes to database (dev)       |
 | `yarn db:studio`       | Open Prisma Studio (database GUI)           |
-| `yarn db:seed:pricing` | Seed pricing plans                          |
+| `yarn db:seed:pricing` | Seed LLM pricing models (21 models)         |
 | `yarn db:reset`        | Reset database (⚠️ deletes all data)        |
 
 ### Docker Services
@@ -233,9 +245,13 @@ Open your browser and navigate to **http://localhost:5173** 🎉
 | `yarn docker:localstack:up`   | Start LocalStack only                         |
 | `yarn docker:localstack:logs` | View LocalStack logs                          |
 
-# Install podman-compose
+### Podman Services
 
+First, install podman-compose:
+
+```bash
 pip3 install podman-compose
+```
 
 | Command                       | Description                                   |
 | ----------------------------- | --------------------------------------------- |
@@ -272,14 +288,15 @@ pip3 install podman-compose
 - ✅ **Local AWS Emulation**: LocalStack for S3, DynamoDB, SES
 - ✅ **OAuth Integration**: Google and GitHub authentication
 - ✅ **Magic Link Auth**: Passwordless email authentication
+- ✅ **21 LLM Models Pre-configured**: OpenAI, Claude, Gemini pricing & capabilities
 
 ### Infrastructure
 
 - ✅ **Production-Ready**: ESLint, Prettier, Husky configured
 - ✅ **Database Migrations**: Prisma for schema management
 - ✅ **Hot Reload**: Fast development with Vite and NestJS watch mode
-- ✅ **Docker Compose**: One-command local environment setup
-- ✅ **Environment Management**: Secure `.env` configuration
+- ✅ **One-Command Setup**: Automated setup script for all OS
+- ✅ **Environment Management**: Secure `.env` configuration with proxy support
 
 ---
 
@@ -319,6 +336,7 @@ Core Entities:
 - Workspaces → Documents (1:N with RAG)
 - Documents → DocumentChunks (1:N with embeddings)
 - Documents → DocumentCosts (1:N for billing)
+- ModelPricingTier (21 LLM models with real October 2025 pricing)
 ```
 
 ### Technology Stack
@@ -390,14 +408,13 @@ Deploy `apps/backend/dist/` to Node.js runtime:
 ### Database Migrations (Production)
 
 ```bash
-yarn workspace @flopods/schema db:migrate:deploy
+yarn db:migrate:deploy
 ```
 
 ---
 
 ## 📚 Documentation
 
-- [Environment Setup Guide](./README-ENV.md)
 - [Turborepo Documentation](https://turbo.build/repo/docs)
 - [NestJS Documentation](https://docs.nestjs.com/)
 - [React Flow Documentation](https://reactflow.dev/)

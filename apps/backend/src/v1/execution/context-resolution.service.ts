@@ -34,7 +34,10 @@ export class V1ContextResolutionService {
   async resolveFullContext(
     podId: string,
     flowId: string,
-    contextMappings?: Array<{ sourcePodId: string; pinnedExecutionId: string | null }>,
+    contextMappings?: Array<{
+      sourcePodId: string;
+      pinnedExecutionId: string | null;
+    }>,
   ): Promise<ContextChain> {
     const pod = await this.prisma.pod.findUnique({
       where: { id: podId },
@@ -179,7 +182,10 @@ export class V1ContextResolutionService {
   async resolveContextWithPins(
     podId: string,
     flowId: string,
-    contextMappings?: Array<{ sourcePodId: string; pinnedExecutionId: string | null }>,
+    contextMappings?: Array<{
+      sourcePodId: string;
+      pinnedExecutionId: string | null;
+    }>,
   ): Promise<ContextChain> {
     const pod = await this.prisma.pod.findUnique({
       where: { id: podId },
@@ -438,7 +444,8 @@ export class V1ContextResolutionService {
       );
       return null;
     } catch (error) {
-      this.logger.error('Failed to extract output from response', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Failed to extract output from response: ${errorMessage}`);
       return null;
     }
   }

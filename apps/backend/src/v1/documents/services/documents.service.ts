@@ -1,7 +1,3 @@
-/**
- * Documents Service
- */
-
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../../prisma/prisma.service';
@@ -48,12 +44,25 @@ export class V1DocumentsService {
         sourceType: DocumentSourceType.INTERNAL,
         fileType: validation.category,
         mimeType: validation.mimeType,
-        sizeInBytes: BigInt(file.size), // ✅ Convert to BigInt
+        sizeInBytes: BigInt(file.size),
         status: DocumentStatus.UPLOADING,
         storageKey: s3Key,
         s3Bucket,
         folderId: folderId || null,
-        metadata: {},
+        dynamoPartitionKey: `workspace#${workspaceId}`,
+        dynamoSortKey: `document#${Date.now()}`,
+        uploadedBy: userId,
+        metadata: {
+          uploadedAt: new Date().toISOString(),
+        },
+      },
+    });
+
+    await this.prisma.document.update({
+      where: { id: document.id },
+      data: {
+        dynamoPartitionKey: `workspace#${workspaceId}`,
+        dynamoSortKey: `document#${document.id}`,
       },
     });
 
@@ -67,7 +76,6 @@ export class V1DocumentsService {
 
     this.logger.log(`[Documents] Created document: ${document.id}`);
 
-    // ✅ Return only serializable data (no BigInt)
     return {
       documentId: document.id,
       status: 'queued',
@@ -97,7 +105,7 @@ export class V1DocumentsService {
       throw new NotFoundException('Document not found');
     }
 
-    return document;
+    return document as any;
   }
 
   async listDocuments(
@@ -175,9 +183,6 @@ export class V1DocumentsService {
     this.logger.log(`[Documents] Deleted document: ${documentId}`);
   }
 
-  /**
-   * Update document
-   */
   async updateDocument(
     documentId: string,
     workspaceId: string,
@@ -185,30 +190,7 @@ export class V1DocumentsService {
       name?: string;
       folderId?: string | null;
     },
-  ): Promise<{
-    id: string;
-    workspaceId: string;
-    folderId: string | null;
-    name: string;
-    sourceType: DocumentSourceType;
-    storageKey: string | null;
-    s3Bucket: string | null;
-    externalUrl: string | null;
-    externalProvider: string | null;
-    externalFileId: string | null;
-    fileType: string;
-    mimeType: string | null;
-    sizeInBytes: bigint | null;
-    status: DocumentStatus;
-    uploadedBy: string | null;
-    metadata: any;
-    createdAt: Date;
-    updatedAt: Date;
-    folder: {
-      id: string;
-      name: string;
-    } | null;
-  }> {
+  ): Promise<any> {
     await this.getDocument(documentId, workspaceId);
 
     if (updateData.folderId !== undefined && updateData.folderId !== null) {
@@ -245,102 +227,71 @@ export class V1DocumentsService {
     return updated;
   }
 
-  /**
-   * Link external document
-   *
-   * @description Links external document source (YouTube, Vimeo, Loom, URL) and queues for processing.
-   * Validates URL format, creates document record, and queues content fetching job.
-   *
-   * **Supported Sources:**
-   * - YouTube: Extracts video ID and queues transcript fetch
-   * - Vimeo: Extracts video ID and queues transcript fetch
-   * - Loom: Extracts video ID and queues transcript fetch
-   * - URL: Validates URL format and queues web scraping
-   *
-   * **Processing:**
-   * 1. Validate URL format and extract metadata
-   * 2. Check workspace credits (same as file upload)
-   * 3. Create document record with sourceType
-   * 4. Queue fetching job for background processing
-   * 5. Background worker fetches content and generates embeddings
-   *
-   * @param workspaceId - Target workspace ID
-   * @param userId - User ID initiating the link
-   * @param externalUrl - External source URL
-   * @param sourceType - Source type (YOUTUBE, VIMEO, LOOM, URL)
-   * @param customName - Optional custom document name
-   * @param folderId - Optional folder ID for organization
-   * @returns Document ID and queued status
-   *
-   * @throws {BadRequestException} Invalid URL format or unsupported source
-   */
   async linkExternalDocument(
     workspaceId: string,
     userId: string,
     externalUrl: string,
     sourceType: DocumentSourceType,
-    customName?: string,
-    folderId?: string,
-  ): Promise<{ documentId: string; status: string; sourceType: DocumentSourceType }> {
-    this.logger.log(`[Documents] Linking external source: ${externalUrl} (${sourceType})`);
+    name?: string,
+    folderId?: string | null,
+  ): Promise<any> {
+    if (folderId) {
+      const folder = await this.prisma.documentFolder.findUnique({
+        where: { id: folderId },
+      });
 
-    // Validate source type
-    if (!['YOUTUBE', 'VIMEO', 'LOOM', 'URL'].includes(sourceType)) {
-      throw new BadRequestException(
-        `Unsupported source type: ${sourceType}. Supported: YOUTUBE, VIMEO, LOOM, URL`,
-      );
+      if (!folder) {
+        throw new BadRequestException(`Folder not found: ${folderId}`);
+      }
+
+      if (folder.workspaceId !== workspaceId) {
+        throw new BadRequestException('Folder does not belong to this workspace');
+      }
     }
 
-    // Extract metadata based on source type
-    const metadata = this.extractExternalMetadata(externalUrl, sourceType);
+    const documentName = name || this.generateDocumentName(externalUrl, sourceType);
 
-    // Generate document name
-    const documentName = customName || this.generateDocumentName(externalUrl, sourceType);
-
-    // Create document record
     const document = await this.prisma.document.create({
       data: {
         workspaceId,
+        folderId: folderId || null,
         name: documentName,
         sourceType,
-        fileType: sourceType === DocumentSourceType.URL ? 'WEB_PAGE' : 'VIDEO',
-        mimeType: null, // Set after fetching
-        sizeInBytes: null, // Unknown until fetched
-        status: DocumentStatus.UPLOADING,
+        fileType: 'external',
         externalUrl,
         externalProvider: this.getProvider(sourceType),
-        externalFileId: metadata.externalId,
-        storageKey: null,
-        s3Bucket: null,
-        folderId: folderId || null,
-        metadata,
+        status: DocumentStatus.UPLOADING,
+        uploadedBy: userId,
+        dynamoPartitionKey: `workspace#${workspaceId}`,
+        dynamoSortKey: `document#${Date.now()}`,
+        metadata: {
+          sourceUrl: externalUrl,
+          createdAt: new Date().toISOString(),
+          ...this.extractExternalMetadata(externalUrl, sourceType),
+        },
       },
     });
 
-    // Queue fetching job
+    await this.prisma.document.update({
+      where: { id: document.id },
+      data: {
+        dynamoPartitionKey: `workspace#${workspaceId}`,
+        dynamoSortKey: `document#${document.id}`,
+      },
+    });
+
     await this.queueProducer.sendDocumentProcessingJob({
       documentId: document.id,
       workspaceId,
       userId,
-      fileType: sourceType,
+      fileType: 'external',
       sourceType,
-      externalUrl,
     });
 
-    this.logger.log(`[Documents] Created external document: ${document.id}`);
+    this.logger.log(`[Documents] Linking external source: ${externalUrl} (${sourceType})`);
 
-    return {
-      documentId: document.id,
-      status: 'queued',
-      sourceType,
-    };
+    return { documentId: document.id, status: 'queued', sourceType };
   }
-
-  /**
-   * Extract metadata from external URL
-   *
-   * @private
-   */
 
   private extractExternalMetadata(
     url: string,
@@ -351,28 +302,24 @@ export class V1DocumentsService {
     try {
       switch (sourceType) {
         case DocumentSourceType.YOUTUBE: {
-          // ✅ ADD BRACES
           metadata.externalId = this.extractYouTubeId(url);
           metadata.platform = 'YouTube';
           break;
         }
 
         case DocumentSourceType.VIMEO: {
-          // ✅ ADD BRACES
           metadata.externalId = this.extractVimeoId(url);
           metadata.platform = 'Vimeo';
           break;
         }
 
         case DocumentSourceType.LOOM: {
-          // ✅ ADD BRACES
           metadata.externalId = this.extractLoomId(url);
           metadata.platform = 'Loom';
           break;
         }
 
         case DocumentSourceType.URL: {
-          // ✅ ADD BRACES (fixes "const urlObj" error)
           const urlObj = new URL(url);
           metadata.externalId = Buffer.from(url).toString('base64').substring(0, 50);
           metadata.domain = urlObj.hostname;
@@ -390,14 +337,6 @@ export class V1DocumentsService {
     return metadata;
   }
 
-  /**
-   * Extract YouTube video ID from URL
-   *
-   * @private
-   * @example
-   * - https://www.youtube.com/watch?v=dQw4w9WgXcQ → dQw4w9WgXcQ
-   * - https://youtu.be/dQw4w9WgXcQ → dQw4w9WgXcQ
-   */
   private extractYouTubeId(url: string): string {
     const patterns = [
       /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
@@ -412,13 +351,6 @@ export class V1DocumentsService {
     throw new BadRequestException('Invalid YouTube URL format');
   }
 
-  /**
-   * Extract Vimeo video ID from URL
-   *
-   * @private
-   * @example
-   * - https://vimeo.com/123456789 → 123456789
-   */
   private extractVimeoId(url: string): string {
     const pattern = /vimeo\.com\/(\d+)/;
     const match = url.match(pattern);
@@ -430,13 +362,6 @@ export class V1DocumentsService {
     return match[1];
   }
 
-  /**
-   * Extract Loom video ID from URL
-   *
-   * @private
-   * @example
-   * - https://www.loom.com/share/abc123def456 → abc123def456
-   */
   private extractLoomId(url: string): string {
     const pattern = /loom\.com\/share\/([a-zA-Z0-9]+)/;
     const match = url.match(pattern);
@@ -448,11 +373,6 @@ export class V1DocumentsService {
     return match[1];
   }
 
-  /**
-   * Generate document name from URL
-   *
-   * @private
-   */
   private generateDocumentName(url: string, sourceType: DocumentSourceType): string {
     switch (sourceType) {
       case DocumentSourceType.YOUTUBE:
@@ -477,11 +397,6 @@ export class V1DocumentsService {
     }
   }
 
-  /**
-   * Get provider name from source type
-   *
-   * @private
-   */
   private getProvider(sourceType: DocumentSourceType): string {
     const providers: Record<string, string> = {
       YOUTUBE: 'youtube',

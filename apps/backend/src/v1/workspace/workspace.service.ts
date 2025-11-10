@@ -41,6 +41,7 @@ import {
   InvitationDetailsResponse,
 } from './types/workspace.types';
 import { V1NotificationService } from '../notification/notification.service';
+import { V1ApiKeyService } from './services/api-key.service';
 
 /**
  * PRODUCTION-GRADE Workspace Service
@@ -63,6 +64,7 @@ export class V1WorkspaceService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly apiKeyService: V1ApiKeyService,
     private readonly emailService: AwsSesEmailService,
     private readonly configService: ConfigService,
     private readonly notificationService: V1NotificationService,
@@ -953,42 +955,21 @@ export class V1WorkspaceService {
       throw new InternalServerErrorException('Failed to revoke invitation');
     }
   }
+  // ==========================================
+  // API KEY MANAGEMENT
+  // ==========================================
 
-  // ==================== API KEYS ====================
-
+  /**
+   * ✅ Get all API keys for workspace
+   */
   async getApiKeys(workspaceId: string, userId: string): Promise<ApiKeyResponse[]> {
     try {
       await this.verifyPermission(workspaceId, userId, 'canManageApiKeys');
 
-      const apiKeys = await this.prisma.providerAPIKey.findMany({
-        where: { workspaceId },
-        select: {
-          id: true,
-          provider: true,
-          displayName: true,
-          isActive: true,
-          lastUsedAt: true,
-          createdAt: true,
-          usageCount: true,
-          totalTokens: true,
-          totalCost: true,
-          lastErrorAt: true,
-          createdBy: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-      });
+      this.logger.debug(`[WorkspaceService] Listing API keys for workspace: ${workspaceId}`);
 
-      return apiKeys.map((key) => ({
-        ...key,
-        totalTokens: key.totalTokens.toString(),
-        totalCost: Number(key.totalCost),
-      })) as ApiKeyResponse[];
+      // ✅ Delegate to ApiKeyService
+      return this.apiKeyService.listApiKeys(workspaceId);
     } catch (error) {
       if (error instanceof ForbiddenException) throw error;
       this.logger.error(`Failed to get API keys for workspace ${workspaceId}:`, error);
@@ -996,6 +977,9 @@ export class V1WorkspaceService {
     }
   }
 
+  /**
+   * ✅ Add new API key
+   */
   async addApiKey(
     workspaceId: string,
     userId: string,
@@ -1004,101 +988,48 @@ export class V1WorkspaceService {
     try {
       await this.verifyPermission(workspaceId, userId, 'canManageApiKeys');
 
-      const existing = await this.prisma.providerAPIKey.findUnique({
-        where: {
-          workspaceId_provider_displayName: {
-            workspaceId,
-            provider: dto.provider,
-            displayName: dto.displayName,
-          },
-        },
-      });
+      this.logger.log(`[WorkspaceService] Adding API key: ${dto.provider}/${dto.displayName}`);
 
-      if (existing) {
-        throw new ConflictException('An API key with this name already exists for this provider');
-      }
-
-      const keyHash = this.encryptApiKey(dto.apiKey);
-
-      const apiKey = await this.prisma.providerAPIKey.create({
-        data: {
-          workspaceId,
-          provider: dto.provider,
-          displayName: dto.displayName,
-          keyHash,
-          createdById: userId,
-        },
-        select: {
-          id: true,
-          provider: true,
-          displayName: true,
-          isActive: true,
-          lastUsedAt: true,
-          createdAt: true,
-          usageCount: true,
-          totalTokens: true,
-          totalCost: true,
-          lastErrorAt: true,
-          createdBy: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-        },
-      });
-
-      this.logger.log(`✅ API key added: ${dto.provider}/${dto.displayName} by user ${userId}`);
-
-      return {
-        ...apiKey,
-        totalTokens: apiKey.totalTokens.toString(),
-        totalCost: Number(apiKey.totalCost),
-      } as ApiKeyResponse;
+      // ✅ Delegate to ApiKeyService
+      return this.apiKeyService.addApiKey(workspaceId, userId, dto);
     } catch (error) {
-      if (error instanceof ConflictException || error instanceof ForbiddenException) throw error;
-      this.logger.error('Failed to add API key:', error);
+      if (
+        error instanceof ConflictException ||
+        error instanceof ForbiddenException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+      this.logger.error(`Failed to add API key:`, error);
       throw new InternalServerErrorException('Failed to add API key');
     }
   }
 
+  /**
+   * ✅ Update API key (delegates encryption to ApiKeyService)
+   */
   async updateApiKey(
     workspaceId: string,
     keyId: string,
     userId: string,
-    dto: WorkspaceUpdateApiKeyDto,
+    dto: { displayName?: string; isActive?: boolean; apiKey?: string },
   ): Promise<ApiKeyResponse> {
     try {
       await this.verifyPermission(workspaceId, userId, 'canManageApiKeys');
 
-      const existing = await this.prisma.providerAPIKey.findFirst({
-        where: {
-          id: keyId,
-          workspaceId,
-        },
+      this.logger.log(`[WorkspaceService] Updating API key: ${keyId}`);
+
+      // Verify key belongs to workspace
+      const existingKey = await this.prisma.providerAPIKey.findUnique({
+        where: { id: keyId, workspaceId },
+        select: { id: true, keyHash: true, provider: true },
       });
 
-      if (!existing) {
+      if (!existingKey) {
         throw new NotFoundException('API key not found');
       }
 
-      if (dto.displayName && dto.displayName !== existing.displayName) {
-        const duplicate = await this.prisma.providerAPIKey.findUnique({
-          where: {
-            workspaceId_provider_displayName: {
-              workspaceId,
-              provider: existing.provider,
-              displayName: dto.displayName,
-            },
-          },
-        });
-
-        if (duplicate) {
-          throw new ConflictException('An API key with this name already exists');
-        }
-      }
-
+      // ✅ Build update data
       const updateData: any = {};
 
       if (dto.displayName !== undefined) {
@@ -1109,24 +1040,16 @@ export class V1WorkspaceService {
         updateData.isActive = dto.isActive;
       }
 
+      // ✅ If new key provided, use EncryptionService to encrypt it
       if (dto.apiKey) {
-        updateData.keyHash = this.encryptApiKey(dto.apiKey);
+        updateData.keyHash = this.apiKeyService['encryptionService'].encrypt(dto.apiKey);
       }
 
-      const apiKey = await this.prisma.providerAPIKey.update({
+      // Update in DB
+      const updated = await this.prisma.providerAPIKey.update({
         where: { id: keyId },
         data: updateData,
-        select: {
-          id: true,
-          provider: true,
-          displayName: true,
-          isActive: true,
-          lastUsedAt: true,
-          createdAt: true,
-          usageCount: true,
-          totalTokens: true,
-          totalCost: true,
-          lastErrorAt: true,
+        include: {
           createdBy: {
             select: {
               id: true,
@@ -1137,54 +1060,46 @@ export class V1WorkspaceService {
         },
       });
 
-      this.logger.log(`✅ API key updated: ${keyId} by user ${userId}`);
+      this.logger.log(`[WorkspaceService] API key updated: ${keyId}`);
 
-      return {
-        ...apiKey,
-        totalTokens: apiKey.totalTokens.toString(),
-        totalCost: Number(apiKey.totalCost),
-      } as ApiKeyResponse;
+      // ✅ Format response
+      return this.apiKeyService['formatApiKeyResponse'](updated);
     } catch (error) {
-      if (
-        error instanceof NotFoundException ||
-        error instanceof ConflictException ||
-        error instanceof ForbiddenException
-      )
+      if (error instanceof ForbiddenException || error instanceof NotFoundException) {
         throw error;
-      this.logger.error(`Failed to update API key ${keyId}:`, error);
+      }
+      this.logger.error(`Failed to update API key:`, error);
       throw new InternalServerErrorException('Failed to update API key');
     }
   }
 
-  async deleteApiKey(workspaceId: string, keyId: string, userId: string): Promise<MessageResponse> {
+  /**
+   * ✅ Delete API key
+   */
+  async deleteApiKey(
+    workspaceId: string,
+    keyId: string,
+    userId: string,
+  ): Promise<{ message: string }> {
     try {
       await this.verifyPermission(workspaceId, userId, 'canManageApiKeys');
 
-      const apiKey = await this.prisma.providerAPIKey.findFirst({
-        where: {
-          id: keyId,
-          workspaceId,
-        },
-      });
+      this.logger.log(`[WorkspaceService] Deleting API key: ${keyId}`);
 
-      if (!apiKey) {
-        throw new NotFoundException('API key not found');
-      }
-
-      await this.prisma.providerAPIKey.delete({
-        where: { id: keyId },
-      });
-
-      this.logger.log(`✅ API key deleted: ${keyId} by user ${userId}`);
+      // ✅ Delegate to ApiKeyService
+      await this.apiKeyService.deleteApiKey(workspaceId, keyId);
 
       return { message: 'API key deleted successfully' };
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof ForbiddenException) throw error;
-      this.logger.error(`Failed to delete API key ${keyId}:`, error);
+      if (error instanceof ForbiddenException) throw error;
+      this.logger.error(`Failed to delete API key:`, error);
       throw new InternalServerErrorException('Failed to delete API key');
     }
   }
 
+  /**
+   * ✅ Get API key usage statistics
+   */
   async getApiKeyUsageStats(workspaceId: string, userId: string): Promise<ApiKeyUsageStats> {
     try {
       await this.verifyPermission(workspaceId, userId, 'canManageApiKeys');
@@ -1204,9 +1119,10 @@ export class V1WorkspaceService {
       const activeKeys = apiKeys.filter((k) => k.isActive).length;
       const inactiveKeys = totalKeys - activeKeys;
 
+      // ✅ Provider breakdown
       const providerBreakdown = apiKeys.reduce(
         (acc, key) => {
-          acc[key.provider] = (acc[key.provider] || 0) + 1;
+          acc[String(key.provider)] = (acc[String(key.provider)] || 0) + 1;
           return acc;
         },
         {} as Record<string, number>,
@@ -1237,6 +1153,9 @@ export class V1WorkspaceService {
     }
   }
 
+  /**
+   * ✅ Get daily usage metrics for API key
+   */
   async getUsageMetrics(
     workspaceId: string,
     keyId: string,
@@ -1247,7 +1166,19 @@ export class V1WorkspaceService {
     try {
       await this.verifyPermission(workspaceId, userId, 'canManageApiKeys');
 
-      const whereClause: any = { workspaceId, keyId };
+      // Verify key belongs to workspace
+      const apiKey = await this.prisma.providerAPIKey.findUnique({
+        where: { id: keyId, workspaceId },
+        select: { id: true },
+      });
+
+      if (!apiKey) {
+        throw new NotFoundException('API key not found');
+      }
+
+      // ✅ Build where clause
+      const whereClause: any = { keyId };
+
       if (startDate || endDate) {
         whereClause.date = {};
         if (startDate) whereClause.date.gte = startDate;
@@ -1260,9 +1191,10 @@ export class V1WorkspaceService {
         take: 30,
       });
 
+      // ✅ Format response
       return metrics.map((m) => ({
         id: m.id,
-        date: m.date,
+        date: m.date.toISOString().split('T')[0],
         requestCount: m.requestCount,
         successCount: m.successCount,
         errorCount: m.errorCount,
@@ -1272,30 +1204,21 @@ export class V1WorkspaceService {
         estimatedCost: Number(m.estimatedCost),
       }));
     } catch (error) {
-      if (error instanceof ForbiddenException) throw error;
+      if (error instanceof ForbiddenException || error instanceof NotFoundException) {
+        throw error;
+      }
       this.logger.error(`Failed to get usage metrics for key ${keyId}:`, error);
       throw new InternalServerErrorException('Failed to fetch usage metrics');
     }
   }
 
+  /**
+   * ✅ Get decrypted API key (internal use only)
+   */
   async getDecryptedApiKey(keyId: string, workspaceId: string): Promise<string> {
     try {
-      const apiKey = await this.prisma.providerAPIKey.findFirst({
-        where: {
-          id: keyId,
-          workspaceId,
-          isActive: true,
-        },
-        select: {
-          keyHash: true,
-        },
-      });
-
-      if (!apiKey) {
-        throw new NotFoundException('API key not found or inactive');
-      }
-
-      return this.decryptApiKey(apiKey.keyHash);
+      // ✅ Delegate to ApiKeyService
+      return this.apiKeyService.getDecryptedKey(workspaceId, keyId);
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
       this.logger.error(`Failed to decrypt API key ${keyId}:`, error);
@@ -1335,124 +1258,5 @@ export class V1WorkspaceService {
     }
 
     return member;
-  }
-
-  /**
-   * Encrypt API key using AES-256-GCM with NEW 12-byte IV format
-   * Format: iv:authTag:encrypted
-   */
-  private encryptApiKey(plaintext: string): string {
-    try {
-      if (!plaintext || typeof plaintext !== 'string' || plaintext.trim().length === 0) {
-        throw new Error('Cannot encrypt empty API key');
-      }
-
-      const iv = crypto.randomBytes(this.NEW_IV_LENGTH);
-      const cipher = crypto.createCipheriv(this.encryptionAlgorithm, this.encryptionKey, iv);
-
-      let encrypted = cipher.update(plaintext, 'utf8', 'hex');
-      encrypted += cipher.final('hex');
-
-      const authTag = cipher.getAuthTag();
-
-      if (authTag.length !== this.AUTH_TAG_LENGTH) {
-        throw new Error(`Invalid auth tag length: ${authTag.length}`);
-      }
-
-      const result = `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
-
-      this.logger.debug('API key encrypted successfully with 12-byte IV');
-      return result;
-    } catch (error) {
-      this.logger.error('Encryption failed:', error);
-      throw new InternalServerErrorException(
-        `Failed to encrypt API key: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
-    }
-  }
-
-  /**
-   * Decrypt API key with BACKWARD COMPATIBILITY for both 12-byte and 16-byte IV formats
-   * Format: iv:authTag:encrypted
-   */
-  private decryptApiKey(encryptedData: string): string {
-    try {
-      if (!encryptedData || typeof encryptedData !== 'string') {
-        throw new Error('Invalid encrypted data');
-      }
-
-      const parts = encryptedData.split(':');
-
-      if (parts.length !== 3) {
-        throw new Error(`Invalid encrypted data format: expected 3 parts, got ${parts.length}`);
-      }
-
-      const [ivHex, authTagHex, encrypted] = parts;
-
-      if (!ivHex || !authTagHex || !encrypted) {
-        throw new Error('One or more encrypted data components are empty');
-      }
-
-      if (
-        !/^[0-9a-fA-F]+$/.test(ivHex) ||
-        !/^[0-9a-fA-F]+$/.test(authTagHex) ||
-        !/^[0-9a-fA-F]+$/.test(encrypted)
-      ) {
-        throw new Error('Encrypted data contains invalid hexadecimal characters');
-      }
-
-      const iv = Buffer.from(ivHex, 'hex');
-      const authTag = Buffer.from(authTagHex, 'hex');
-
-      const ivLength = iv.length;
-
-      if (ivLength !== this.NEW_IV_LENGTH && ivLength !== this.OLD_IV_LENGTH) {
-        throw new Error(
-          `Invalid IV length: expected ${this.NEW_IV_LENGTH} bytes (new) or ${this.OLD_IV_LENGTH} bytes (legacy), got ${ivLength} bytes`,
-        );
-      }
-
-      if (ivLength === this.OLD_IV_LENGTH) {
-        this.logger.warn(
-          `Decrypting API key with legacy 16-byte IV format. Consider re-encrypting with the new 12-byte format.`,
-        );
-      }
-
-      if (authTag.length !== this.AUTH_TAG_LENGTH) {
-        throw new Error(`Invalid auth tag length: ${authTag.length} bytes`);
-      }
-
-      const decipher = crypto.createDecipheriv(this.encryptionAlgorithm, this.encryptionKey, iv);
-      decipher.setAuthTag(authTag);
-
-      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-      decrypted += decipher.final('utf8');
-
-      if (!decrypted || decrypted.length === 0) {
-        throw new Error('Decryption produced empty result');
-      }
-
-      this.logger.debug(`API key decrypted successfully (IV length: ${ivLength} bytes)`);
-      return decrypted;
-    } catch (error) {
-      this.logger.error('Decryption failed:', error);
-
-      if (error instanceof Error) {
-        if (error.message.includes('Unsupported state') || error.message.includes('auth')) {
-          throw new InternalServerErrorException(
-            'Authentication failed: API key may be corrupted or tampered with',
-          );
-        }
-        if (error.message.includes('bad decrypt')) {
-          throw new InternalServerErrorException(
-            'Decryption failed: Incorrect encryption key or corrupted data',
-          );
-        }
-      }
-
-      throw new InternalServerErrorException(
-        `Failed to decrypt API key: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
-    }
   }
 }

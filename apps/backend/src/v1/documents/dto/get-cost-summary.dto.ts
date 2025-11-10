@@ -1,8 +1,6 @@
-/**
- * Get Cost Summary DTO
- */
+// /src/modules/v1/documents/dto/get-cost-summary.dto.ts
 
-import { IsOptional, IsDateString } from 'class-validator';
+import { IsOptional, IsISO8601 } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class GetCostSummaryDto {
@@ -11,7 +9,7 @@ export class GetCostSummaryDto {
     example: '2025-10-01T00:00:00.000Z',
   })
   @IsOptional()
-  @IsDateString()
+  @IsISO8601()
   startDate?: string;
 
   @ApiPropertyOptional({
@@ -19,6 +17,6 @@ export class GetCostSummaryDto {
     example: '2025-10-31T23:59:59.999Z',
   })
   @IsOptional()
-  @IsDateString()
+  @IsISO8601()
   endDate?: string;
 }

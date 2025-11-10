@@ -1,17 +1,23 @@
 {
   "cSpell.words": [
     "awslocal",
+    "bullmq",
     "BYOK",
     "chunker",
     "connectionline",
     "contenteditable",
+    "cooldown",
     "cuid",
     "doctag",
+    "exif",
+    "exponentials",
     "flopods",
     "Flopods",
     "hostable",
     "ILLM",
     "localstack",
+    "mult",
+    "MULTIMODAL",
     "nodrag",
     "Passwordless",
     "pgvector",
@@ -22,6 +28,7 @@
     "Turborepo",
     "VITE",
     "yourpassword",
+    "youtu",
     "zahidkhandev"
   ]
 }

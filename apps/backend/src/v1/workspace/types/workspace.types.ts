@@ -109,21 +109,15 @@ export interface WorkspaceMemberResponse {
  */
 export interface ApiKeyResponse {
   id: string;
-  provider: LLMProvider;
+  provider: string;
   displayName: string;
   isActive: boolean;
-  lastUsedAt: Date | null;
-  createdAt: Date;
-
-  // Usage metrics
+  lastUsedAt: string | null;
+  createdAt: string;
   usageCount: number;
-  totalTokens: string; // BigInt as string
+  totalTokens: string;
   totalCost: number;
-
-  // Error tracking
-  lastErrorAt: Date | null;
-
-  // Creator
+  lastErrorAt: string | null;
   createdBy: {
     id: string;
     name: string | null;
@@ -179,10 +173,8 @@ export interface ApiKeyUsageStats {
   activeKeys: number;
   inactiveKeys: number;
   providerBreakdown: Record<string, number>;
-
-  // Cumulative metrics
   totalUsageCount: number;
-  totalTokensConsumed: string; // BigInt as string
+  totalTokensConsumed: string;
   totalCostIncurred: number;
 }
 
@@ -191,12 +183,12 @@ export interface ApiKeyUsageStats {
  */
 export interface UsageMetricResponse {
   id: string;
-  date: Date;
+  date: string;
   requestCount: number;
   successCount: number;
   errorCount: number;
-  promptTokens: string; // BigInt as string
-  completionTokens: string; // BigInt as string
-  totalTokens: string; // BigInt as string
+  promptTokens: string;
+  completionTokens: string;
+  totalTokens: string;
   estimatedCost: number;
 }
