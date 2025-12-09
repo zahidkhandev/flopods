@@ -20,10 +20,10 @@ export class WorkspaceCreateDto {
   @ApiProperty({
     description: 'Workspace type (PERSONAL workspaces are auto-created)',
     enum: WorkspaceType,
-    default: WorkspaceType.TEAM,
+    default: WorkspaceType.PERSONAL,
     required: false,
   })
   @IsEnum(WorkspaceType)
   @IsOptional()
-  type?: WorkspaceType = WorkspaceType.TEAM;
+  type?: WorkspaceType = WorkspaceType.PERSONAL;
 }

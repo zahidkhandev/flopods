@@ -1,48 +1,107 @@
-/**
- * Document Cost Tracking Service
- *
- * @description Tracks and reports document processing costs and credit usage.
- * Provides analytics for workspace administrators and billing insights.
- * Integrates with subscription system for credit management.
- *
- * @module v1/documents/services/cost-tracking
- */
-
 import { Injectable, Logger } from '@nestjs/common';
 import type { DocumentProcessingType } from '@flopods/schema';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { DocumentCostSummary, DocumentDailyCost } from '../types';
+import {
+  DocumentCostSummary,
+  DocumentDailyCost,
+  DocumentCostDetail,
+  ROIMetrics,
+  ProfitableDocument,
+} from '../types';
+import {
+  calculateDocumentEmbeddingCost,
+  convertUsdToCredits,
+  estimateTokensFromBytes,
+  getEmbeddingProvider,
+} from '../utils/cost-calculator.util';
+import { PROFIT_CONFIG } from '../../../common/config/profit.config';
 
-/**
- * Document cost tracking service
- *
- * @description Provides cost analytics and reporting for document processing.
- * Tracks credits consumed, USD costs, and processing statistics.
- */
 @Injectable()
 export class V1DocumentCostTrackingService {
   private readonly logger = new Logger(V1DocumentCostTrackingService.name);
 
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * Get cost summary for workspace
-   *
-   * @description Aggregates all processing costs for a workspace within date range.
-   * Returns breakdown by processing type (embedding, OCR, extraction, etc.)
-   *
-   * @param workspaceId - Workspace ID
-   * @param startDate - Start date (optional, defaults to all time)
-   * @param endDate - End date (optional, defaults to now)
-   * @returns Comprehensive cost summary with breakdowns
-   *
-   * @example
-   * ```
-   * const summary = await costTracking.getWorkspaceCostSummary('ws_123');
-   * console.log(summary.totalCost); // 2.45
-   * console.log(summary.totalCredits); // 24500
-   * ```
-   */
+  // ✅ Profit summary derived from recorded costs + centralized revenue rule
+  async getWorkspaceProfitSummary(workspaceId: string, startDate?: Date, endDate?: Date) {
+    this.logger.log(`[Cost Tracking] Getting PROFIT summary for workspace: ${workspaceId}`);
+
+    const where: any = { workspaceId };
+    if (startDate || endDate) {
+      where.processedAt = {};
+      if (startDate) where.processedAt.gte = startDate;
+      if (endDate) where.processedAt.lte = endDate;
+    }
+
+    const costs = await this.prisma.documentProcessingCost.findMany({
+      where,
+      select: {
+        processingType: true,
+        totalCostInUsd: true,
+        creditsConsumed: true,
+        tokensProcessed: true,
+        chunkCount: true,
+        embeddingCost: true,
+      },
+    });
+
+    const totalCost = costs.reduce((sum, c) => sum + Number(c.totalCostInUsd), 0);
+    const totalCredits = costs.reduce((sum, c) => sum + c.creditsConsumed, 0);
+    const documentsProcessed = costs.length;
+    const tokensProcessed = costs.reduce((sum, c) => sum + c.tokensProcessed, 0);
+    const chunksCreated = costs.reduce((sum, c) => sum + (c.chunkCount || 0), 0);
+
+    const totalRevenue = totalCost * PROFIT_CONFIG.MARKUP_MULTIPLIER;
+    const totalProfit = totalRevenue - totalCost;
+
+    const typeMap = new Map<
+      DocumentProcessingType,
+      { cost: number; credits: number; count: number; profit: number; revenue: number }
+    >();
+
+    costs.forEach((c) => {
+      const existing = typeMap.get(c.processingType) || {
+        cost: 0,
+        credits: 0,
+        count: 0,
+        profit: 0,
+        revenue: 0,
+      };
+      const costAmount = Number(c.totalCostInUsd);
+      const revenueAmount = costAmount * PROFIT_CONFIG.MARKUP_MULTIPLIER;
+      typeMap.set(c.processingType, {
+        cost: existing.cost + costAmount,
+        credits: existing.credits + c.creditsConsumed,
+        count: existing.count + 1,
+        profit: existing.profit + (revenueAmount - costAmount),
+        revenue: existing.revenue + revenueAmount,
+      });
+    });
+
+    const byType = Array.from(typeMap.entries()).map(([type, data]) => ({
+      type,
+      cost: data.cost,
+      profit: data.profit,
+      revenue: data.revenue,
+      credits: data.credits,
+      count: data.count,
+    }));
+
+    return {
+      totalCost,
+      totalProfit,
+      totalRevenue,
+      totalCredits,
+      profitMarginPercentage: totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0,
+      documentsProcessed,
+      tokensProcessed,
+      chunksCreated,
+      avgCostPerDocument: documentsProcessed > 0 ? totalCost / documentsProcessed : 0,
+      avgProfitPerDocument: documentsProcessed > 0 ? totalProfit / documentsProcessed : 0,
+      byType,
+    };
+  }
+
   async getWorkspaceCostSummary(
     workspaceId: string,
     startDate?: Date,
@@ -68,61 +127,64 @@ export class V1DocumentCostTrackingService {
       },
     });
 
-    // Calculate totals with null handling
     const totalCost = costs.reduce((sum, c) => sum + Number(c.totalCostInUsd), 0);
     const totalCredits = costs.reduce((sum, c) => sum + c.creditsConsumed, 0);
     const documentsProcessed = costs.length;
     const tokensProcessed = costs.reduce((sum, c) => sum + c.tokensProcessed, 0);
     const chunksCreated = costs.reduce((sum, c) => sum + (c.chunkCount || 0), 0);
 
-    // Group by processing type
+    const totalRevenue = totalCost * PROFIT_CONFIG.MARKUP_MULTIPLIER;
+    const totalProfit = totalRevenue - totalCost;
+
     const typeMap = new Map<
       DocumentProcessingType,
-      { cost: number; credits: number; count: number }
+      { cost: number; credits: number; count: number; profit: number; revenue: number }
     >();
 
     costs.forEach((c) => {
-      const existing = typeMap.get(c.processingType) || { cost: 0, credits: 0, count: 0 };
+      const existing = typeMap.get(c.processingType) || {
+        cost: 0,
+        credits: 0,
+        count: 0,
+        profit: 0,
+        revenue: 0,
+      };
+      const costAmount = Number(c.totalCostInUsd);
+      const revenueAmount = costAmount * PROFIT_CONFIG.MARKUP_MULTIPLIER;
+
       typeMap.set(c.processingType, {
-        cost: existing.cost + Number(c.totalCostInUsd),
+        cost: existing.cost + costAmount,
         credits: existing.credits + c.creditsConsumed,
         count: existing.count + 1,
+        profit: existing.profit + (revenueAmount - costAmount),
+        revenue: existing.revenue + revenueAmount,
       });
     });
 
     const byType = Array.from(typeMap.entries()).map(([type, data]) => ({
       type,
-      ...data,
+      cost: data.cost,
+      profit: data.profit,
+      revenue: data.revenue,
+      credits: data.credits,
+      count: data.count,
     }));
 
     return {
       totalCost,
+      totalProfit,
+      totalRevenue,
       totalCredits,
       documentsProcessed,
       tokensProcessed,
       chunksCreated,
+      profitMarginPercentage: totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0,
+      avgCostPerDocument: documentsProcessed > 0 ? totalCost / documentsProcessed : 0,
+      avgProfitPerDocument: documentsProcessed > 0 ? totalProfit / documentsProcessed : 0,
       byType,
     };
   }
 
-  /**
-   * Get daily cost breakdown
-   *
-   * @description Returns daily aggregated costs for the last N days.
-   * Useful for generating cost trend charts.
-   *
-   * @param workspaceId - Workspace ID
-   * @param days - Number of days to retrieve (default 30)
-   * @returns Array of daily costs, sorted by date descending
-   *
-   * @example
-   * ```
-   * const dailyCosts = await costTracking.getDailyCostBreakdown('ws_123', 7);
-   * dailyCosts.forEach(day => {
-   *   console.log(`${day.date}: $${day.cost} (${day.credits} credits)`);
-   * });
-   * ```
-   */
   async getDailyCostBreakdown(
     workspaceId: string,
     days: number = 30,
@@ -132,14 +194,8 @@ export class V1DocumentCostTrackingService {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    // Use raw SQL for date grouping
     const results = await this.prisma.$queryRaw<
-      Array<{
-        date: Date;
-        total_cost: number;
-        total_credits: number;
-        doc_count: number;
-      }>
+      Array<{ date: Date; total_cost: number; total_credits: number; doc_count: number }>
     >`
       SELECT
         DATE("processedAt") as date,
@@ -153,52 +209,35 @@ export class V1DocumentCostTrackingService {
       ORDER BY date DESC
     `;
 
-    return results.map((r) => ({
-      date: r.date.toISOString().split('T')[0],
-      cost: Number(r.total_cost),
-      credits: Number(r.total_credits),
-      documentsProcessed: r.doc_count,
-    }));
+    return results.map((r) => {
+      const cost = Number(r.total_cost);
+      const revenue = cost * PROFIT_CONFIG.MARKUP_MULTIPLIER;
+      const profit = revenue - cost;
+
+      return {
+        date: r.date.toISOString().split('T')[0],
+        cost,
+        profit,
+        revenue,
+        credits: Number(r.total_credits),
+        documentsProcessed: r.doc_count,
+      };
+    });
   }
 
-  /**
-   * Get cost for specific document
-   *
-   * @description Retrieves detailed cost information for a single document.
-   * Includes breakdown of extraction vs embedding costs.
-   *
-   * @param documentId - Document ID
-   * @returns Cost details or null if not found
-   *
-   * @example
-   * ```
-   * const cost = await costTracking.getDocumentCost('doc_123');
-   * if (cost) {
-   *   console.log(`Embedding: $${cost.embeddingCost}`);
-   *   console.log(`Extraction: $${cost.extractionCost}`);
-   * }
-   * ```
-   */
-  async getDocumentCost(documentId: string): Promise<{
-    processingType: DocumentProcessingType;
-    totalCostInUsd: number;
-    creditsConsumed: number;
-    extractionCost: number;
-    embeddingCost: number;
-    tokensProcessed: number;
-    chunkCount: number;
-    embeddingModel: string | null;
-    processedAt: Date;
-  } | null> {
+  async getDocumentCostWithROI(documentId: string): Promise<ProfitableDocument | null> {
     const cost = await this.prisma.documentProcessingCost.findFirst({
       where: { documentId },
       select: {
+        document: { select: { id: true, name: true, sizeInBytes: true } },
         processingType: true,
         totalCostInUsd: true,
         creditsConsumed: true,
         extractionCost: true,
         embeddingCost: true,
+        visionCost: true,
         tokensProcessed: true,
+        visionTokens: true,
         chunkCount: true,
         embeddingModel: true,
         processedAt: true,
@@ -207,104 +246,199 @@ export class V1DocumentCostTrackingService {
 
     if (!cost) return null;
 
+    const costUsd = Number(cost.totalCostInUsd);
+    const revenueUsd = costUsd * PROFIT_CONFIG.MARKUP_MULTIPLIER;
+    const profitUsd = revenueUsd - costUsd;
+
     return {
-      processingType: cost.processingType,
-      totalCostInUsd: Number(cost.totalCostInUsd),
-      creditsConsumed: cost.creditsConsumed,
-      extractionCost: Number(cost.extractionCost),
-      embeddingCost: Number(cost.embeddingCost),
+      documentId: cost.document.id,
+      documentName: cost.document.name,
+      fileSize: Number(cost.document.sizeInBytes || 0),
+      costUsd,
+      profitUsd,
+      revenueUsd,
+      roi: costUsd > 0 ? (profitUsd / costUsd) * 100 : 0,
+      creditsCharged: cost.creditsConsumed,
       tokensProcessed: cost.tokensProcessed,
-      chunkCount: cost.chunkCount || 0,
-      embeddingModel: cost.embeddingModel,
+      visionTokens: cost.visionTokens,
+      chunksCreated: cost.chunkCount || 0,
       processedAt: cost.processedAt,
     };
   }
 
-  /**
-   * Get top costly documents
-   *
-   * @description Returns documents with highest processing costs.
-   * Useful for identifying expensive documents and optimization opportunities.
-   *
-   * @param workspaceId - Workspace ID
-   * @param limit - Number of documents to return (default 10)
-   * @returns Array of documents sorted by cost descending
-   *
-   * @example
-   * ```
-   * const topCostly = await costTracking.getTopCostlyDocuments('ws_123', 5);
-   * topCostly.forEach(doc => {
-   *   console.log(`${doc.documentName}: $${doc.cost}`);
-   * });
-   * ```
-   */
-  async getTopCostlyDocuments(workspaceId: string, limit: number = 10) {
+  async getDocumentCost(documentId: string): Promise<DocumentCostDetail | null> {
+    const cost = await this.prisma.documentProcessingCost.findFirst({
+      where: { documentId },
+      select: {
+        document: { select: { id: true, name: true, sizeInBytes: true } },
+        processingType: true,
+        totalCostInUsd: true,
+        creditsConsumed: true,
+        extractionCost: true,
+        embeddingCost: true,
+        visionCost: true,
+        tokensProcessed: true,
+        visionTokens: true,
+        chunkCount: true,
+        embeddingModel: true,
+        processedAt: true,
+      },
+    });
+
+    if (!cost) return null;
+
+    const costUsd = Number(cost.totalCostInUsd);
+    const revenueUsd = costUsd * PROFIT_CONFIG.MARKUP_MULTIPLIER;
+    const profitUsd = revenueUsd - costUsd;
+
+    return {
+      documentId: cost.document.id,
+      documentName: cost.document.name,
+      fileSize: cost.document.sizeInBytes ? Number(cost.document.sizeInBytes) : null,
+      processingType: cost.processingType,
+      totalCostUsd: costUsd,
+      profitUsd,
+      revenueUsd,
+      creditsConsumed: cost.creditsConsumed,
+      extractionCost: Number(cost.extractionCost),
+      embeddingCost: Number(cost.embeddingCost),
+      visionCost: Number(cost.visionCost),
+      tokensProcessed: cost.tokensProcessed,
+      visionTokens: cost.visionTokens,
+      chunkCount: cost.chunkCount || 0,
+      embeddingModel: cost.embeddingModel,
+      roi: costUsd > 0 ? (profitUsd / costUsd) * 100 : 0,
+      profitMarginPercentage: revenueUsd > 0 ? (profitUsd / revenueUsd) * 100 : 0,
+      processedAt: cost.processedAt,
+    };
+  }
+
+  async getTopProfitableDocuments(
+    workspaceId: string,
+    limit: number = 10,
+  ): Promise<ProfitableDocument[]> {
     const costs = await this.prisma.documentProcessingCost.findMany({
       where: { workspaceId },
       orderBy: { totalCostInUsd: 'desc' },
       take: limit,
       select: {
-        document: {
-          select: {
-            id: true,
-            name: true,
-            sizeInBytes: true,
-          },
-        },
+        document: { select: { id: true, name: true, sizeInBytes: true } },
         totalCostInUsd: true,
         creditsConsumed: true,
         tokensProcessed: true,
+        visionTokens: true,
         chunkCount: true,
         processedAt: true,
       },
     });
 
-    return costs.map((c) => ({
-      documentId: c.document.id,
-      documentName: c.document.name,
-      fileSize: c.document.sizeInBytes,
-      cost: Number(c.totalCostInUsd),
-      credits: c.creditsConsumed,
-      tokensProcessed: c.tokensProcessed,
-      chunksCreated: c.chunkCount || 0,
-      processedAt: c.processedAt,
-    }));
+    return costs.map((c) => {
+      const costUsd = Number(c.totalCostInUsd);
+      const revenueUsd = costUsd * PROFIT_CONFIG.MARKUP_MULTIPLIER;
+      const profitUsd = revenueUsd - costUsd;
+
+      return {
+        documentId: c.document.id,
+        documentName: c.document.name,
+        fileSize: c.document.sizeInBytes ? Number(c.document.sizeInBytes) : null,
+        costUsd,
+        profitUsd,
+        revenueUsd,
+        roi: costUsd > 0 ? (profitUsd / costUsd) * 100 : 0,
+        creditsCharged: c.creditsConsumed,
+        tokensProcessed: c.tokensProcessed,
+        visionTokens: c.visionTokens,
+        chunksCreated: c.chunkCount || 0,
+        processedAt: c.processedAt,
+      };
+    });
+  }
+
+  async getTopCostlyDocuments(
+    workspaceId: string,
+    limit: number = 10,
+  ): Promise<ProfitableDocument[]> {
+    const costs = await this.prisma.documentProcessingCost.findMany({
+      where: { workspaceId },
+      orderBy: { totalCostInUsd: 'desc' },
+      take: limit,
+      select: {
+        document: { select: { id: true, name: true, sizeInBytes: true } },
+        totalCostInUsd: true,
+        creditsConsumed: true,
+        tokensProcessed: true,
+        visionTokens: true,
+        chunkCount: true,
+        processedAt: true,
+      },
+    });
+
+    return costs.map((c) => {
+      const costUsd = Number(c.totalCostInUsd);
+      const revenueUsd = costUsd * PROFIT_CONFIG.MARKUP_MULTIPLIER;
+      const profitUsd = revenueUsd - costUsd;
+
+      return {
+        documentId: c.document.id,
+        documentName: c.document.name,
+        fileSize: c.document.sizeInBytes ? Number(c.document.sizeInBytes) : null,
+        costUsd,
+        profitUsd,
+        revenueUsd,
+        roi: costUsd > 0 ? (profitUsd / costUsd) * 100 : 0,
+        creditsCharged: c.creditsConsumed,
+        tokensProcessed: c.tokensProcessed,
+        visionTokens: c.visionTokens,
+        chunksCreated: c.chunkCount || 0,
+        processedAt: c.processedAt,
+      };
+    });
   }
 
   /**
-   * Estimate cost for document upload
-   *
-   * @description Provides upfront cost estimate based on file size.
-   * Uses rough heuristics: 1 MB ≈ 20 pages ≈ 10,000 tokens.
-   *
-   * @param fileSizeBytes - File size in bytes
-   * @returns Estimated tokens, USD cost, and credits
-   *
-   * @example
-   * ```
-   * const estimate = await costTracking.estimateDocumentCost(5 * 1024 * 1024); // 5 MB
-   * console.log(`Estimated: ${estimate.estimatedCredits} credits`);
-   * ```
+   * Centralized estimate using the utils (provider price from DB).
    */
-  async estimateDocumentCost(fileSizeBytes: number): Promise<{
-    estimatedTokens: number;
-    estimatedCost: number;
-    estimatedCredits: number;
-  }> {
-    // Estimation: 1 MB ≈ 20 pages, 1 page ≈ 500 tokens
-    const estimatedPages = (fileSizeBytes / (1024 * 1024)) * 20;
-    const estimatedTokens = Math.ceil(estimatedPages * 500);
-
-    // Gemini embedding cost: $0.01 per 1M tokens
-    const estimatedCost = (estimatedTokens / 1_000_000) * 0.01;
-
-    // Convert to credits (1 credit = $0.0001)
-    const estimatedCredits = Math.ceil(estimatedCost / 0.0001);
+  async estimateDocumentCost(fileSizeBytes: number) {
+    const estimatedTokens = estimateTokensFromBytes(fileSizeBytes);
+    const provider = await getEmbeddingProvider(this.prisma);
+    const estimatedCostUsd = calculateDocumentEmbeddingCost(
+      estimatedTokens,
+      provider.costPer1MTokens,
+    );
+    const estimatedCredits = convertUsdToCredits(estimatedCostUsd);
+    const estimatedRevenueUsd = estimatedCostUsd * PROFIT_CONFIG.MARKUP_MULTIPLIER;
+    const estimatedProfitUsd = estimatedRevenueUsd - estimatedCostUsd;
 
     return {
       estimatedTokens,
-      estimatedCost,
+      estimatedCostUsd,
+      estimatedProfitUsd,
+      estimatedRevenueUsd,
       estimatedCredits,
+    };
+  }
+
+  async getROIMetrics(workspaceId: string): Promise<ROIMetrics> {
+    const summary = await this.getWorkspaceProfitSummary(workspaceId);
+
+    return {
+      totalCostUsd: Number(summary.totalCost.toFixed(6)),
+      totalProfitUsd: Number(summary.totalProfit.toFixed(6)),
+      totalRevenueUsd: Number(summary.totalRevenue.toFixed(6)),
+      profitMarginPercentage: summary.profitMarginPercentage,
+      roi: summary.totalCost > 0 ? (summary.totalProfit / summary.totalCost) * 100 : 0,
+      documentsProcessed: summary.documentsProcessed,
+      tokensProcessed: summary.tokensProcessed,
+      avgCostPerDocument: Number(summary.avgCostPerDocument.toFixed(6)),
+      avgProfitPerDocument: Number(summary.avgProfitPerDocument.toFixed(6)),
+      byProcessingType: summary.byType.map((t) => ({
+        type: t.type,
+        costUsd: Number(t.cost.toFixed(6)),
+        profitUsd: Number(t.profit.toFixed(6)),
+        revenueUsd: Number(t.revenue.toFixed(6)),
+        documentsProcessed: t.count,
+        roi: t.cost > 0 ? ((t.revenue - t.cost) / t.cost) * 100 : 0,
+      })),
     };
   }
 }

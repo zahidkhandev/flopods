@@ -40,79 +40,12 @@ import {
 } from './types/workspace.types';
 import { Public } from '../../common/decorators/common';
 
-/**
- * V1 Workspace Controller
- *
- * @description Comprehensive workspace management controller handling:
- * - Workspace CRUD operations (create, read, update, delete)
- * - Team member management (add, update, remove)
- * - Email-based invitation system with secure tokens
- * - LLM provider API key management with AES-256-GCM encryption
- * - API key usage tracking and cost analytics
- * - Ownership transfer and workspace statistics
- *
- * @security Requires JWT Bearer token authentication for all endpoints
- * @version 1.0.0
- * @author Flopods Team
- * @see {@link V1WorkspaceService} for business logic implementation
- *
- * @remarks
- * All endpoints enforce workspace membership and permission checks.
- * OWNER role has all permissions by default.
- * PERSONAL workspaces cannot be created manually or deleted.
- */
 @ApiTags('Workspaces')
 @ApiBearerAuth()
 @Controller({ path: 'workspaces', version: '1' })
 export class V1WorkspaceController {
   constructor(private readonly workspaceService: V1WorkspaceService) {}
 
-  // ==========================================
-  // WORKSPACE CRUD OPERATIONS
-  // ==========================================
-
-  /**
-   * Get all workspaces for current user
-   *
-   * @description Retrieves all workspaces where the authenticated user is a member.
-   * Returns comprehensive information including role, granular permissions,
-   * member count, canvas count, and join date for each workspace.
-   *
-   * @returns {Promise<WorkspaceListItem[]>} Array of workspace summaries
-   *
-   * @throws {401} Unauthorized - Invalid or missing JWT token
-   *
-   * @example
-   * ```
-   * GET /api/v1/workspaces
-   * Authorization: Bearer <your_jwt_token>
-   * ```
-   *
-   * @example Response
-   * ```
-   * [
-   *   {
-   *     "id": "clx123abc",
-   *     "name": "My Team",
-   *     "type": "TEAM",
-   *     "role": "OWNER",
-   *     "permissions": {
-   *       "canCreateCanvas": true,
-   *       "canDeleteCanvas": true,
-   *       "canManageBilling": true,
-   *       "canInviteMembers": true,
-   *       "canManageMembers": true,
-   *       "canManageApiKeys": true
-   *     },
-   *     "memberCount": 5,
-   *     "canvasCount": 12,
-   *     "joinedAt": "2025-01-15T10:30:00Z",
-   *     "createdAt": "2025-01-15T10:30:00Z",
-   *     "updatedAt": "2025-10-10T14:22:00Z"
-   *   }
-   * ]
-   * ```
-   */
   @Get()
   @ApiOperation({
     summary: 'List all workspaces for current user',
@@ -156,43 +89,6 @@ export class V1WorkspaceController {
     return this.workspaceService.getAllWorkspaces(userId);
   }
 
-  /**
-   * Get workspace details by ID
-   *
-   * @description Retrieves complete workspace information including all members,
-   * their roles and permissions, aggregate counts, and the current user's
-   * access level.
-   *
-   * @param {string} id - Workspace unique identifier (CUID)
-   * @returns {Promise<WorkspaceDetails>} Complete workspace data
-   *
-   * @throws {401} Unauthorized - Invalid or missing JWT token
-   * @throws {403} Forbidden - User is not a member of this workspace
-   * @throws {404} Not Found - Workspace does not exist
-   *
-   * @example
-   * ```
-   * GET /api/v1/workspaces/clx123abc
-   * Authorization: Bearer <your_jwt_token>
-   * ```
-   *
-   * @example Response
-   * ```
-   * {
-   *   "id": "clx123abc",
-   *   "name": "My Team",
-   *   "type": "TEAM",
-   *   "members": [...],
-   *   "_count": {
-   *     "flows": 24,
-   *     "documents": 45,
-   *     "apiKeys": 3
-   *   },
-   *   "currentUserRole": "OWNER",
-   *   "currentUserPermissions": {...}
-   * }
-   * ```
-   */
   @Get(':id')
   @ApiOperation({
     summary: 'Get workspace details by ID',
@@ -211,40 +107,6 @@ export class V1WorkspaceController {
     return this.workspaceService.getWorkspaceById(id, userId);
   }
 
-  /**
-   * Get workspace statistics
-   *
-   * @description Retrieves aggregate statistics and analytics for a workspace,
-   * including total members, flows, documents, API keys, and role distribution.
-   *
-   * @param {string} id - Workspace unique identifier
-   * @returns {Promise<any>} Workspace statistics object
-   *
-   * @throws {401} Unauthorized - Invalid or missing JWT token
-   * @throws {403} Forbidden - User is not a workspace member
-   * @throws {404} Not Found - Workspace does not exist
-   *
-   * @example
-   * ```
-   * GET /api/v1/workspaces/clx123abc/stats
-   * Authorization: Bearer <your_jwt_token>
-   * ```
-   *
-   * @example Response
-   * ```
-   * {
-   *   "totalMembers": 8,
-   *   "totalFlows": 24,
-   *   "totalDocuments": 45,
-   *   "totalApiKeys": 3,
-   *   "roleDistribution": {
-   *     "owners": 1,
-   *     "admins": 2,
-   *     "members": 5
-   *   }
-   * }
-   * ```
-   */
   @Get(':id/stats')
   @ApiOperation({
     summary: 'Get workspace statistics and analytics',
@@ -259,31 +121,6 @@ export class V1WorkspaceController {
     return this.workspaceService.getWorkspaceStats(id, userId);
   }
 
-  /**
-   * Create a new workspace
-   *
-   * @description Creates a new TEAM workspace with the creator automatically
-   * assigned as OWNER with full permissions. PERSONAL workspaces cannot be
-   * created manually (they are auto-created during user registration).
-   *
-   * @param {WorkspaceCreateDto} dto - Workspace creation data (name and type)
-   * @returns {Promise<any>} Created workspace with initial member
-   *
-   * @throws {400} Bad Request - Attempting to create PERSONAL workspace or invalid input
-   * @throws {401} Unauthorized - Invalid or missing JWT token
-   *
-   * @example
-   * ```
-   * POST /api/v1/workspaces
-   * Content-Type: application/json
-   * Authorization: Bearer <your_jwt_token>
-   *
-   * {
-   *   "name": "My New Team",
-   *   "type": "TEAM"
-   * }
-   * ```
-   */
   @Post()
   @ApiOperation({
     summary: 'Create a new workspace',
@@ -303,32 +140,6 @@ export class V1WorkspaceController {
     return this.workspaceService.createWorkspace(userId, dto);
   }
 
-  /**
-   * Update workspace name
-   *
-   * @description Updates the workspace name. Requires `canManageMembers` permission.
-   * Only the workspace name can be modified; type cannot be changed after creation.
-   *
-   * @param {string} id - Workspace unique identifier
-   * @param {WorkspaceUpdateDto} dto - Update data (name)
-   * @returns {Promise<any>} Updated workspace object
-   *
-   * @throws {400} Bad Request - Invalid input
-   * @throws {401} Unauthorized - Invalid or missing JWT token
-   * @throws {403} Forbidden - Insufficient permissions (requires canManageMembers)
-   * @throws {404} Not Found - Workspace does not exist
-   *
-   * @example
-   * ```
-   * PATCH /api/v1/workspaces/clx123abc
-   * Content-Type: application/json
-   * Authorization: Bearer <your_jwt_token>
-   *
-   * {
-   *   "name": "Updated Team Name"
-   * }
-   * ```
-   */
   @Patch(':id')
   @ApiOperation({
     summary: 'Update workspace name',
@@ -348,34 +159,6 @@ export class V1WorkspaceController {
     return this.workspaceService.updateWorkspace(id, userId, dto);
   }
 
-  /**
-   * Delete workspace permanently
-   *
-   * @description Permanently deletes a workspace and all associated data.
-   * Only workspace OWNERs can delete workspaces. PERSONAL workspaces
-   * cannot be deleted (tied to user account lifecycle).
-   *
-   * @param {string} id - Workspace unique identifier
-   * @returns {Promise<MessageResponse>} Success confirmation message
-   *
-   * @throws {400} Bad Request - Attempting to delete PERSONAL workspace
-   * @throws {401} Unauthorized - Invalid or missing JWT token
-   * @throws {403} Forbidden - Only OWNER can delete workspaces
-   * @throws {404} Not Found - Workspace does not exist
-   *
-   * @example
-   * ```
-   * DELETE /api/v1/workspaces/clx123abc
-   * Authorization: Bearer <your_jwt_token>
-   * ```
-   *
-   * @example Response
-   * ```
-   * {
-   *   "message": "Workspace deleted successfully"
-   * }
-   * ```
-   */
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -395,27 +178,6 @@ export class V1WorkspaceController {
     return this.workspaceService.deleteWorkspace(id, userId);
   }
 
-  /**
-   * Transfer workspace ownership
-   *
-   * @description Transfers workspace ownership to another member. The current
-   * OWNER is demoted to ADMIN, and the target member is promoted to OWNER
-   * with all permissions. Only the current OWNER can initiate transfer.
-   *
-   * @param {string} id - Workspace unique identifier
-   * @param {string} newOwnerId - User ID of new owner (must be existing member)
-   * @returns {Promise<MessageResponse>} Success confirmation message
-   *
-   * @throws {401} Unauthorized - Invalid or missing JWT token
-   * @throws {403} Forbidden - Only current OWNER can transfer ownership
-   * @throws {404} Not Found - Workspace or target user not found
-   *
-   * @example
-   * ```
-   * POST /api/v1/workspaces/clx123abc/transfer-ownership/user_456
-   * Authorization: Bearer <your_jwt_token>
-   * ```
-   */
   @Post(':id/transfer-ownership/:userId')
   @ApiOperation({
     summary: 'Transfer workspace ownership',
@@ -439,26 +201,6 @@ export class V1WorkspaceController {
   // MEMBER MANAGEMENT
   // ==========================================
 
-  /**
-   * Get all workspace members
-   *
-   * @description Retrieves all members of a workspace with their roles,
-   * granular permissions, join dates, and user profile information.
-   * Results are ordered by join date (newest first).
-   *
-   * @param {string} id - Workspace unique identifier
-   * @returns {Promise<WorkspaceMemberResponse[]>} Array of workspace members
-   *
-   * @throws {401} Unauthorized - Invalid or missing JWT token
-   * @throws {403} Forbidden - User is not a workspace member
-   * @throws {404} Not Found - Workspace does not exist
-   *
-   * @example
-   * ```
-   * GET /api/v1/workspaces/clx123abc/members
-   * Authorization: Bearer <your_jwt_token>
-   * ```
-   */
   @Get(':id/members')
   @ApiOperation({
     summary: 'List all workspace members',
@@ -476,35 +218,6 @@ export class V1WorkspaceController {
     return this.workspaceService.getMembers(id, userId);
   }
 
-  /**
-   * Update workspace member
-   *
-   * @description Updates an existing member's role and granular permissions.
-   * Cannot modify workspace OWNER. Requires `canManageMembers` permission.
-   *
-   * @param {string} id - Workspace unique identifier
-   * @param {string} targetUserId - User ID of member to update
-   * @param {WorkspaceUpdateMemberDto} dto - Update data (role, permissions)
-   * @returns {Promise<WorkspaceMemberResponse>} Updated member record
-   *
-   * @throws {400} Bad Request - Invalid input
-   * @throws {401} Unauthorized - Invalid or missing JWT token
-   * @throws {403} Forbidden - Cannot modify OWNER or insufficient permissions
-   * @throws {404} Not Found - Member not found
-   *
-   * @example
-   * ```
-   * PATCH /api/v1/workspaces/clx123abc/members/user_456
-   * Content-Type: application/json
-   * Authorization: Bearer <your_jwt_token>
-   *
-   * {
-   *   "role": "ADMIN",
-   *   "canDeleteCanvas": true,
-   *   "canManageMembers": true
-   * }
-   * ```
-   */
   @Patch(':id/members/:userId')
   @ApiOperation({
     summary: 'Update member role and permissions',
@@ -573,43 +286,6 @@ export class V1WorkspaceController {
     return this.workspaceService.removeMember(id, targetUserId, currentUserId);
   }
 
-  // ==========================================
-  // INVITATION SYSTEM
-  // ==========================================
-
-  /**
-   * Send workspace invitation via email
-   *
-   * @description Sends an email invitation with a secure token to join the workspace.
-   * Token expires in 7 days. Invitation can be sent to both registered and
-   * unregistered users. Requires `canInviteMembers` permission.
-   *
-   * @param {string} id - Workspace unique identifier
-   * @param {WorkspaceSendInvitationDto} dto - Invitation data (email, role, permissions)
-   * @returns {Promise<InvitationResponse & MessageResponse>} Created invitation with token
-   *
-   * @throws {400} Bad Request - Invalid input
-   * @throws {401} Unauthorized - Invalid or missing JWT token
-   * @throws {403} Forbidden - Insufficient permissions (requires canInviteMembers)
-   * @throws {404} Not Found - Workspace does not exist
-   * @throws {409} Conflict - User already invited or is a member
-   *
-   * @example
-   * ```
-   * POST /api/v1/workspaces/clx123abc/invitations
-   * Content-Type: application/json
-   * Authorization: Bearer <your_jwt_token>
-   *
-   * {
-   *   "email": "newuser@example.com",
-   *   "role": "MEMBER",
-   *   "permissions": {
-   *     "canCreateCanvas": true,
-   *     "canDeleteCanvas": false
-   *   }
-   * }
-   * ```
-   */
   @Post(':id/invitations')
   @ApiOperation({
     summary: 'Send workspace invitation',
@@ -695,32 +371,6 @@ export class V1WorkspaceController {
     return this.workspaceService.getInvitationDetails(token);
   }
 
-  /**
-   * Accept workspace invitation
-   *
-   * @description Accepts an invitation via token and joins the workspace.
-   * Validates email match, token expiration, and prevents duplicate membership.
-   * Marks invitation as ACCEPTED upon success.
-   *
-   * @param {string} token - Invitation token from email (32-byte hex string)
-   * @returns {Promise<AcceptInvitationResponse>} Workspace and member info
-   *
-   * @throws {400} Bad Request - Invalid or expired invitation
-   * @throws {401} Unauthorized - Invalid or missing JWT token
-   * @throws {403} Forbidden - Email mismatch (invitation sent to different email)
-   * @throws {404} Not Found - Invitation not found
-   * @throws {409} Conflict - User is already a workspace member
-   *
-   * @example
-   * ```
-   * POST /api/v1/workspaces/invitations/abc123def456.../accept
-   * Authorization: Bearer <your_jwt_token>
-   * ```
-   */
-  /**
-   * ACCEPT INVITATION
-   * Requires authentication - user must be logged in
-   */
   @Post('invitations/:token/accept')
   @ApiOperation({
     summary: 'Accept workspace invitation',
@@ -746,26 +396,7 @@ export class V1WorkspaceController {
   async acceptInvitation(@Param('token') token: string, @GetCurrentUserId() userId: string) {
     return this.workspaceService.acceptInvitation(token, userId);
   }
-  /**
-   * Revoke pending invitation
-   *
-   * @description Revokes a pending invitation, preventing it from being accepted.
-   * Marks invitation status as REVOKED. Requires `canInviteMembers` permission.
-   *
-   * @param {string} id - Workspace unique identifier
-   * @param {string} invitationId - Invitation unique identifier
-   * @returns {Promise<MessageResponse>} Success confirmation message
-   *
-   * @throws {401} Unauthorized - Invalid or missing JWT token
-   * @throws {403} Forbidden - Insufficient permissions (requires canInviteMembers)
-   * @throws {404} Not Found - Invitation not found
-   *
-   * @example
-   * ```
-   * DELETE /api/v1/workspaces/clx123abc/invitations/inv_789
-   * Authorization: Bearer <your_jwt_token>
-   * ```
-   */
+
   @Delete(':id/invitations/:invitationId')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
@@ -790,43 +421,6 @@ export class V1WorkspaceController {
   // API KEY MANAGEMENT (LLM PROVIDERS)
   // ==========================================
 
-  /**
-   * Get API key usage statistics
-   *
-   * @description Retrieves aggregate statistics for all API keys in the workspace,
-   * including totals, provider breakdown, and usage metrics.
-   * Requires `canManageApiKeys` permission.
-   *
-   * @param {string} id - Workspace unique identifier
-   * @returns {Promise<ApiKeyUsageStats>} Aggregate statistics
-   *
-   * @throws {401} Unauthorized - Invalid or missing JWT token
-   * @throws {403} Forbidden - Insufficient permissions (requires canManageApiKeys)
-   * @throws {404} Not Found - Workspace does not exist
-   *
-   * @example
-   * ```
-   * GET /api/v1/workspaces/clx123abc/api-keys/stats
-   * Authorization: Bearer <your_jwt_token>
-   * ```
-   *
-   * @example Response
-   * ```
-   * {
-   *   "totalKeys": 5,
-   *   "activeKeys": 4,
-   *   "inactiveKeys": 1,
-   *   "providerBreakdown": {
-   *     "OPENAI": 2,
-   *     "ANTHROPIC": 2,
-   *     "PERPLEXITY": 1
-   *   },
-   *   "totalUsageCount": 1247,
-   *   "totalTokensConsumed": "5234812",
-   *   "totalCostIncurred": 127.45
-   * }
-   * ```
-   */
   @Get(':id/api-keys/stats')
   @ApiOperation({
     summary: 'Get API key usage statistics',
@@ -899,10 +493,6 @@ export class V1WorkspaceController {
    * @throws {404} Not Found - Workspace or API key does not exist
    *
    * @example
-   * ```
-   * GET /api/v1/workspaces/clx123abc/api-keys/key_789/metrics?startDate=2025-10-01&endDate=2025-10-15
-   * Authorization: Bearer <your_jwt_token>
-   * ```
    */
   @Get(':id/api-keys/:keyId/metrics')
   @ApiOperation({

@@ -1,7 +1,10 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PodType } from '@flopods/schema';
 import { PrismaService } from '../../prisma/prisma.service';
 import { DynamoDbService } from '../../common/aws/dynamodb/dynamodb.service';
+import axios from 'axios';
+import { ConfigService } from '@nestjs/config';
+import { ApiKeyEncryptionService } from '../../common/services/encryption.service';
 
 export interface ResolvedContext {
   podId: string;
@@ -19,13 +22,21 @@ export interface ContextChain {
   variables: Record<string, string>;
 }
 
+interface GeminiEmbeddingResponse {
+  embedding?: { values?: number[] };
+  error?: { message?: string; code?: string };
+}
+
 @Injectable()
 export class V1ContextResolutionService {
   private readonly logger = new Logger(V1ContextResolutionService.name);
-
+  private readonly GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
+  private readonly EMBEDDING_TIMEOUT = 60000;
   constructor(
     private readonly prisma: PrismaService,
     private readonly dynamoDb: DynamoDbService,
+    private readonly configService: ConfigService,
+    private readonly encryptionService: ApiKeyEncryptionService,
   ) {}
 
   /**
@@ -34,7 +45,10 @@ export class V1ContextResolutionService {
   async resolveFullContext(
     podId: string,
     flowId: string,
-    contextMappings?: Array<{ sourcePodId: string; pinnedExecutionId: string | null }>,
+    contextMappings?: Array<{
+      sourcePodId: string;
+      pinnedExecutionId: string | null;
+    }>,
   ): Promise<ContextChain> {
     const pod = await this.prisma.pod.findUnique({
       where: { id: podId },
@@ -179,7 +193,10 @@ export class V1ContextResolutionService {
   async resolveContextWithPins(
     podId: string,
     flowId: string,
-    contextMappings?: Array<{ sourcePodId: string; pinnedExecutionId: string | null }>,
+    contextMappings?: Array<{
+      sourcePodId: string;
+      pinnedExecutionId: string | null;
+    }>,
   ): Promise<ContextChain> {
     const pod = await this.prisma.pod.findUnique({
       where: { id: podId },
@@ -438,7 +455,8 @@ export class V1ContextResolutionService {
       );
       return null;
     } catch (error) {
-      this.logger.error('Failed to extract output from response', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Failed to extract output from response: ${errorMessage}`);
       return null;
     }
   }
@@ -519,5 +537,218 @@ export class V1ContextResolutionService {
     }
 
     return result;
+  }
+
+  /**
+   * Get Workspace BYOK key for Gemini embedding, fallback to env GEMINI_API_KEY
+   */
+  private async getByokKey(workspaceId?: string): Promise<string> {
+    if (workspaceId) {
+      const keyRecord = await this.prisma.providerAPIKey.findFirst({
+        where: {
+          workspaceId,
+          provider: 'GOOGLE_GEMINI',
+          isActive: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { keyHash: true },
+      });
+
+      if (keyRecord) {
+        try {
+          const decryptedKey = this.encryptionService.decrypt(keyRecord.keyHash);
+          this.logger.debug('[BYOK] Using decrypted workspace BYOK key');
+          return decryptedKey;
+        } catch (error) {
+          const errMsg = error instanceof Error ? error.message : 'Unknown decryption error';
+          this.logger.error(`[BYOK] Failed to decrypt BYOK key: ${errMsg}`);
+          throw new ForbiddenException('Failed to decrypt workspace API key');
+        }
+      }
+    }
+
+    const envKey = this.configService.get<string>('GEMINI_API_KEY');
+    if (!envKey || envKey.length < 20) {
+      this.logger.error('[BYOK] No valid Gemini API key configured in environment');
+      throw new ForbiddenException('No valid Gemini API key configured');
+    }
+    this.logger.warn('[BYOK] Falling back to platform GEMINI_API_KEY from environment');
+    return envKey;
+  }
+
+  /**
+   * Generate embedding vector for text using Gemini API and BYOK fallback
+   */
+  async generateTextEmbedding(text: string, workspaceId?: string): Promise<number[]> {
+    const sanitizedText = this.sanitizeText(text);
+    if (!sanitizedText || sanitizedText.length < 10) {
+      this.logger.warn('[generateTextEmbedding] Text too short for embedding');
+      return [];
+    }
+
+    // Try Gemini API first
+    try {
+      const apiKey = await this.getByokKey(workspaceId);
+
+      const url = `${this.GEMINI_BASE_URL}/models/embedding-001:embedContent?key=${apiKey}`;
+      const response = await axios.post<GeminiEmbeddingResponse>(
+        url,
+        {
+          model: 'models/embedding-001',
+          content: { parts: [{ text: sanitizedText }] },
+        },
+        {
+          timeout: this.EMBEDDING_TIMEOUT,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
+      const embedding = response.data.embedding?.values;
+      if (embedding && Array.isArray(embedding)) {
+        this.logger.debug(`[generateTextEmbedding] Gemini embedding length: ${embedding.length}`);
+        return embedding;
+      }
+      this.logger.error('[generateTextEmbedding] Invalid embedding response from Gemini');
+    } catch (geminiError) {
+      const errorMsg = geminiError instanceof Error ? geminiError.message : 'Unknown Gemini error';
+      this.logger.warn(`[generateTextEmbedding] Gemini API failed: ${errorMsg}`);
+    }
+
+    // Fallback to Hugging Face API
+    try {
+      const hfApiToken = this.configService.get<string>('HUGGING_FACE_API_TOKEN');
+      if (!hfApiToken) {
+        this.logger.error('[generateTextEmbedding] No Hugging Face API token configured');
+        return [];
+      }
+
+      const hfModel = 'BAAI/bge-base-en-v1.5';
+      const hfResponse = await axios.post(
+        `https://api-inference.huggingface.co/pipeline/feature-extraction/${hfModel}`,
+        [sanitizedText],
+        {
+          headers: {
+            Authorization: `Bearer ${hfApiToken}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: this.EMBEDDING_TIMEOUT,
+        },
+      );
+
+      if (hfResponse.data && Array.isArray(hfResponse.data) && hfResponse.data.length > 0) {
+        const embedding = hfResponse.data[0];
+        this.logger.debug(`[generateTextEmbedding] HF embedding length: ${embedding.length}`);
+        return embedding;
+      }
+      this.logger.error('[generateTextEmbedding] Invalid response from Hugging Face embedding API');
+    } catch (hfError) {
+      const errorMsg = hfError instanceof Error ? hfError.message : 'Unknown HF error';
+      this.logger.error(`[generateTextEmbedding] Hugging Face API failed: ${errorMsg}`);
+    }
+
+    // If all fail
+    this.logger.error('[generateTextEmbedding] All embedding providers failed');
+    return [];
+  }
+
+  /**
+   * Save chat embedding linked to workspace, user, pod, and execution
+   */
+  async saveChatEmbedding(
+    workspaceId: string,
+    userId: string,
+    podId: string,
+    executionId: string,
+    chunkText: string,
+    embedding: number[],
+  ): Promise<void> {
+    if (!embedding.length) {
+      this.logger.warn(
+        `[saveChatEmbedding] Empty embedding, skipping save for execution ${executionId}`,
+      );
+      return;
+    }
+
+    const vectorString = `[${embedding.join(',')}]`;
+    const vectorDimension = embedding.length;
+
+    try {
+      await this.prisma.$executeRaw`
+        INSERT INTO documents."ChatEmbedding"
+        (id, "workspaceId", "userId", "podId", "executionId", "chunkText",
+          vector, "vectorDimension", model, metadata, "createdAt")
+        VALUES (
+          gen_random_uuid()::text,
+          ${workspaceId},
+          ${userId},
+          ${podId},
+          ${executionId},
+          ${chunkText},
+          ${vectorString}::vector(${vectorDimension}),
+          ${vectorDimension},
+          'embedding-001',
+          '{}'::jsonb,
+          NOW()
+        )
+      `;
+      this.logger.debug(`[saveChatEmbedding] Saved embedding record for execution ${executionId}`);
+    } catch (error) {
+      const errorMsg =
+        error instanceof Error ? error.message : 'Unknown error saving chat embedding';
+      this.logger.error(`[saveChatEmbedding] Error saving embedding: ${errorMsg}`);
+      // Optionally handle error...
+    }
+  }
+
+  /**
+   * Sanitize text input - remove control and invalid chars
+   */
+  private sanitizeText(text: string): string {
+    return text
+      .split('')
+      .filter((char) => {
+        const code = char.charCodeAt(0);
+        if (code < 32 && code !== 9 && code !== 10 && code !== 13) return false;
+        if (code === 127 || code === 65533) return false;
+        return true;
+      })
+      .join('')
+      .trim();
+  }
+
+  async semanticSearchUserContext(
+    userId: string,
+    query: string,
+    threshold: number = 0.75,
+    maxResults: number = 10,
+  ): Promise<ResolvedContext[]> {
+    const queryEmbedding = await this.generateTextEmbedding(query);
+    if (!queryEmbedding.length) {
+      this.logger.warn('[semanticSearchUserContext] Empty query embedding');
+      return [];
+    }
+
+    const results = await this.prisma.$queryRaw<
+      {
+        id: string;
+        podId: string;
+        executionId: string;
+        chunkText: string;
+        createdAt: Date;
+        similarity: number;
+      }[]
+    >`
+    SELECT id, "podId", "executionId", "chunkText", "createdAt",
+    1 - (vector <=> ${queryEmbedding}::vector) AS similarity
+    FROM documents."ChatEmbedding"
+    WHERE "userId" = ${userId} AND 1 - (vector <=> ${queryEmbedding}::vector) > ${threshold}
+    ORDER BY similarity DESC
+    LIMIT ${maxResults}
+  `;
+    return results.map((r) => ({
+      podId: r.podId,
+      output: r.chunkText,
+      executionId: r.executionId,
+      timestamp: r.createdAt,
+    }));
   }
 }

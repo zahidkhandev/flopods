@@ -15,6 +15,9 @@ model Subscription {
   monthlyCreditQuota Int       @default(0)
   creditResetDate    DateTime? @db.Timestamptz(6)
 
+  storageQuotaBytes BigInt @default(104857600)
+  storageUsedBytes  BigInt @default(0)
+
   maxCanvases               Int @default(3)
   maxActionPodsPerCanvas    Int @default(50)
   maxDocumentSizeInMB       Int @default(10)
@@ -46,6 +49,7 @@ model Subscription {
   @@index([status, nextBillingDate])
   @@index([tier, status])
   @@index([creditResetDate])
+  @@index([storageUsedBytes])
   @@schema("billing")
 }
 
@@ -93,6 +97,7 @@ model CreditUsageLog {
   @@schema("billing")
 }
 
+// ✅ FIXED: Decimal(14, 10) handles tiny values like 0.00000015 perfectly
 model ModelPricingTier {
   id       String        @id @default(cuid())
   provider LLMProvider
@@ -102,9 +107,11 @@ model ModelPricingTier {
   displayName String  @db.VarChar(255)
   description String? @db.VarChar(500)
 
-  inputTokenCost     Decimal @db.Decimal(12, 8)
-  outputTokenCost    Decimal @db.Decimal(12, 8)
-  reasoningTokenCost Decimal @default(0) @db.Decimal(12, 8)
+  // ✅ CHANGED: Decimal(14, 10) can store 0.00000015 with full precision
+  // Format: (total_digits, decimal_places) = can store up to 9999.9999999999
+  inputTokenCost     Decimal @db.Decimal(14, 10)
+  outputTokenCost    Decimal @db.Decimal(14, 10)
+  reasoningTokenCost Decimal @default(0) @db.Decimal(14, 10)
 
   creditsPerMillionInputTokens     Int
   creditsPerMillionOutputTokens    Int

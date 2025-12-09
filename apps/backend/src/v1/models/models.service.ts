@@ -50,6 +50,10 @@ export class V1ModelsService {
       displayName: 'DeepSeek',
       capabilities: ['text', 'reasoning', 'cost-effective'],
     },
+    [LLMProvider.HUGGING_FACE]: {
+      displayName: 'Hugging Face',
+      capabilities: ['text', 'embedding', 'models', 'custom'],
+    },
     [LLMProvider.CUSTOM]: {
       displayName: 'Custom',
       capabilities: ['text'],

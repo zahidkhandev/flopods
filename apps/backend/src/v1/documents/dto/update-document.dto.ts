@@ -1,7 +1,3 @@
-/**
- * Update Document DTO
- */
-
 import { IsOptional, IsString, MaxLength } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 

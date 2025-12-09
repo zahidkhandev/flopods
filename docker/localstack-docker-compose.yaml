@@ -3,31 +3,24 @@ name: flopods
 
 services:
   localstack:
-    image: localstack/localstack:latest
-    container_name: flopods-localstack
+    image: ${IMAGE_REGISTRY:-docker.io/}localstack/localstack:latest
+    pull_policy: ${PULL_POLICY:-missing}
+    container_name: localstack
     ports:
-      - '4566:4566' # LocalStack Gateway
-      - '4510-4559:4510-4559' # External services port range
+      - '4566:4566'
+      - '4510-4559:4510-4559'
     environment:
-      # Services to emulate
       - SERVICES=s3,dynamodb,ses,sqs
       - DEFAULT_REGION=ap-south-1
-      # Debug settings
       - DEBUG=1
       - PERSISTENCE=1
-      # AWS credentials (dummy values for local)
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
-      # Gateway configuration
       - GATEWAY_LISTEN=0.0.0.0:4566
-      # Eager service loading
       - EAGER_SERVICE_LOADING=1
     volumes:
-      # Persist LocalStack data
       - localstack-data:/var/lib/localstack
-      # Mount initialization scripts
       - ./init-scripts:/etc/localstack/init/ready.d
-      # Docker socket for Lambda execution
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - flopods_network

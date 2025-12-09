@@ -12,3 +12,4 @@ export { UpdateFolderDto } from './update-folder.dto';
 export { MoveItemsDto } from './move-items.dto';
 export { GetCostSummaryDto } from './get-cost-summary.dto';
 export { GetDailyCostsDto } from './get-daily-costs.dto';
+export * from './folder.dto';

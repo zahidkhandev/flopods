@@ -23,6 +23,7 @@ model User {
   sentFlowInvites          FlowInvitation[]      @relation("FlowInvitedBy")
   receivedFlowInvites      FlowInvitation[]      @relation("FlowInvitedUser")
   createdApiKeys           ProviderAPIKey[]
+   chatEmbeddings ChatEmbedding[]
 
   @@index([email])
   @@schema("core")
@@ -65,6 +66,7 @@ model Account {
 model Workspace {
   id        String        @id @default(cuid())
   name      String        @db.VarChar(255)
+   chatEmbeddings ChatEmbedding[]
   type      WorkspaceType @default(PERSONAL)
   createdAt DateTime      @default(now()) @db.Timestamptz(6)
   updatedAt DateTime      @updatedAt @db.Timestamptz(6)
@@ -239,7 +241,6 @@ model ShareLink {
   @@schema("core")
 }
 
-
 model Notification {
   id     String           @id @default(cuid())
   userId String
@@ -248,17 +249,17 @@ model Notification {
   body   String           @db.Text
 
   // Reference to related entity
-  entityType String?        @db.VarChar(50)
+  entityType String? @db.VarChar(50)
   entityId   String?
 
   // Metadata (invitation IDs, workspace IDs, etc.)
   metadata Json?
 
-  isRead     Boolean  @default(false)
-  readAt     DateTime? @db.Timestamptz(6)
-  actionUrl  String?   @db.VarChar(500)
+  isRead    Boolean   @default(false)
+  readAt    DateTime? @db.Timestamptz(6)
+  actionUrl String?   @db.VarChar(500)
 
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  createdAt DateTime  @default(now()) @db.Timestamptz(6)
   expiresAt DateTime? @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -267,7 +268,6 @@ model Notification {
   @@index([userId, type, isRead])
   @@schema("core")
 }
-
 
 // ==========================================
 // ENUMS
@@ -280,8 +280,6 @@ enum AuthProvider {
 
   @@schema("core")
 }
-
-
 
 enum NotificationType {
   WORKSPACE_INVITATION
@@ -296,7 +294,6 @@ enum NotificationType {
 
   @@schema("core")
 }
-
 
 enum WorkspaceType {
   PERSONAL
@@ -343,6 +340,7 @@ enum LLMProvider {
   XAI
   DEEPSEEK
   CUSTOM
+  HUGGING_FACE
 
   @@schema("core")
 }

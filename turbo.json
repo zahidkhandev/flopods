@@ -21,6 +21,7 @@
         "GOOGLE_CLIENT_ID",
         "GOOGLE_CLIENT_SECRET",
         "GOOGLE_CALLBACK_URL",
+        "YOUTUBE_API_KEY",
         "GITHUB_CLIENT_ID",
         "GITHUB_CLIENT_SECRET",
         "GITHUB_CALLBACK_URL",
@@ -33,6 +34,7 @@
         "AWS_S3_SECRET_ACCESS_KEY",
         "AWS_S3_BUCKET_NAME",
         "AWS_S3_REGION",
+        "AWS_S3_ENDPOINT",
         "AWS_SNS_ACCESS_KEY_ID",
         "AWS_SNS_SECRET_ACCESS_KEY",
         "AWS_DYNAMODB_ACCESS_KEY_ID",
@@ -58,6 +60,10 @@
         "DOCUMENT_S3_BUCKET",
         "DOCUMENT_VECTOR_S3_BUCKET",
         "GEMINI_API_KEY",
+        "HUGGING_FACE_API_TOKEN",
+        "PROFIT_MARKUP_MULTIPLIER",
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
         "VITE_*"
       ]
     },
@@ -79,6 +85,7 @@
         "GOOGLE_CLIENT_ID",
         "GOOGLE_CLIENT_SECRET",
         "GOOGLE_CALLBACK_URL",
+        "YOUTUBE_API_KEY",
         "GITHUB_CLIENT_ID",
         "GITHUB_CLIENT_SECRET",
         "GITHUB_CALLBACK_URL",
@@ -115,6 +122,10 @@
         "DOCUMENT_S3_BUCKET",
         "DOCUMENT_VECTOR_S3_BUCKET",
         "GEMINI_API_KEY",
+        "HUGGING_FACE_API_TOKEN",
+        "PROFIT_MARKUP_MULTIPLIER",
+        "HTTP_PROXY",
+        "HTTPS_PROXY",
         "VITE_*"
       ]
     },
@@ -175,6 +186,8 @@
         "DOCUMENT_S3_BUCKET",
         "DOCUMENT_VECTOR_S3_BUCKET",
         "GEMINI_API_KEY",
+        "HUGGING_FACE_API_TOKEN",
+        "PROFIT_MARKUP_MULTIPLIER",
         "QUEUE_BACKEND",
         "REDIS_HOST",
         "REDIS_PORT"

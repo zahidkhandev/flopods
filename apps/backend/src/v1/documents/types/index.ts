@@ -14,7 +14,8 @@
  *   DocumentQueueMessage,
  *   DocumentTextChunk,
  *   DocumentEmbeddingProvider,
- *   GEMINI_EMBEDDING_PROVIDER,
+ *   YouTubeTranscriptResult,
+ *   YouTubeExtractionOptions,
  * } from '../types';
  * ```
  */
@@ -30,3 +31,6 @@ export * from './processor.types';
 
 // Embedding types
 export * from './embedding.types';
+
+// YouTube types
+export * from './youtube.types';

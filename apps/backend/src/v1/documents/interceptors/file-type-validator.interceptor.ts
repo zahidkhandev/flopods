@@ -1,3 +1,5 @@
+// src/modules/v1/documents/interceptors/file-type-validator.interceptor.ts
+
 /**
  * File Type Validator Interceptor
  *
@@ -6,11 +8,11 @@
  *
  * **Allowed Types:**
  * - PDF documents
- * - Images (PNG, JPG, JPEG, WebP)
- * - Word documents (DOCX)
- * - Text files (TXT, MD, CSV)
- * - PowerPoint (PPTX)
- * - Excel (XLSX)
+ * - Images (PNG, JPG, JPEG, WebP, GIF)
+ * - Word documents (DOCX, DOC)
+ * - Text files (TXT, MD, CSV, JSON)
+ * - PowerPoint (PPTX, PPT)
+ * - Excel (XLSX, XLS)
  *
  * @module v1/documents/interceptors/file-type-validator
  */
@@ -26,7 +28,6 @@ import { Observable } from 'rxjs';
 
 /**
  * Allowed MIME types for document uploads
- *
  * @constant
  */
 const ALLOWED_MIME_TYPES = [
@@ -40,7 +41,7 @@ const ALLOWED_MIME_TYPES = [
   'image/webp',
   'image/gif',
 
-  // Microsoft Office
+  // Microsoft Office (Modern)
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // DOCX
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // XLSX
   'application/vnd.openxmlformats-officedocument.presentationml.presentation', // PPTX
@@ -51,7 +52,7 @@ const ALLOWED_MIME_TYPES = [
   'text/csv',
   'application/json',
 
-  // Older Office formats (optional)
+  // Microsoft Office (Legacy)
   'application/msword', // DOC
   'application/vnd.ms-excel', // XLS
   'application/vnd.ms-powerpoint', // PPT
@@ -59,32 +60,13 @@ const ALLOWED_MIME_TYPES = [
 
 /**
  * File type validator interceptor
- *
- * @description Validates file MIME type before processing.
- * Uses magic number detection for accurate type validation.
- *
- * **Security:**
- * - Prevents executable uploads
- * - Blocks potentially malicious files
- * - Validates against whitelist (not blacklist)
- *
- * **Usage:**
- * ```
- * @UseInterceptors(FileInterceptor('file'), FileTypeValidatorInterceptor)
- * @Post('upload')
- * async upload(@UploadedFile() file: Express.Multer.File) {}
- * ```
+ * ✅ Validates file MIME type before processing
+ * ✅ Uses magic number detection for accurate type validation
+ * ✅ Prevents executable uploads
+ * ✅ Blocks potentially malicious files
  */
 @Injectable()
 export class V1FileTypeValidatorInterceptor implements NestInterceptor {
-  /**
-   * Intercept and validate file type
-   *
-   * @param context - Execution context
-   * @param next - Call handler
-   * @returns Observable
-   * @throws {UnsupportedMediaTypeException} Invalid or unsupported file type
-   */
   async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<any>> {
     const request = context.switchToHttp().getRequest();
     const file = request.file as Express.Multer.File;
@@ -94,18 +76,17 @@ export class V1FileTypeValidatorInterceptor implements NestInterceptor {
       return next.handle();
     }
 
-    // Get MIME type from multer (uses magic numbers)
     const mimeType = file.mimetype;
 
-    // Check if MIME type is allowed
+    // ✅ Check if MIME type is allowed
     if (!ALLOWED_MIME_TYPES.includes(mimeType as any)) {
       throw new UnsupportedMediaTypeException(
         `File type '${mimeType}' is not supported. ` +
-          `Allowed types: PDF, images (PNG, JPG, WebP), Word (DOCX), Excel (XLSX), PowerPoint (PPTX), text files (TXT, MD, CSV).`,
+          `Allowed types: PDF, Images (PNG, JPG, WebP, GIF), Office (DOCX, XLSX, PPTX), Text (TXT, MD, CSV, JSON).`,
       );
     }
 
-    // Additional validation: check file extension matches MIME type
+    // ✅ Validate file extension matches MIME type
     const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
     const isValidExtension = this.validateExtension(mimeType, fileExtension);
 
@@ -116,17 +97,9 @@ export class V1FileTypeValidatorInterceptor implements NestInterceptor {
       );
     }
 
-    // File type OK, continue
     return next.handle();
   }
 
-  /**
-   * Validate file extension matches MIME type
-   *
-   * @param mimeType - Detected MIME type
-   * @param extension - File extension
-   * @returns True if extension matches MIME type
-   */
   private validateExtension(mimeType: string, extension: string | undefined): boolean {
     if (!extension) return false;
 

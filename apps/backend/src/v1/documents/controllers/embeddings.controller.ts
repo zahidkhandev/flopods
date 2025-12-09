@@ -1,19 +1,4 @@
-/**
- * Embeddings Controller
- *
- * @description Advanced API for managing document embeddings and vector operations.
- * Provides direct access to embedding data, regeneration, statistics, and debugging tools.
- * Useful for power users, debugging, and custom vector search implementations.
- *
- * **Use Cases:**
- * - View embedding chunks and vectors for specific documents
- * - Regenerate embeddings after model upgrades
- * - Get embedding statistics (chunk count, token usage)
- * - Export embeddings for external vector databases
- * - Debug embedding quality and coverage
- *
- * @module v1/documents/controllers/embeddings
- */
+// /src/modules/v1/documents/controllers/embeddings.controller.ts
 
 import {
   Controller,
@@ -25,6 +10,8 @@ import {
   HttpStatus,
   HttpCode,
   ParseIntPipe,
+  Logger,
+  BadRequestException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -34,118 +21,203 @@ import {
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
-import { AccessTokenGuard } from '../../../common/guards/auth';
-import { V1DocumentAccessGuard } from '../guards';
-import { PrismaService } from '../../../prisma/prisma.service';
+import { AuthGuard } from '@nestjs/passport';
 import { V1DocumentEmbeddingsService } from '../services/embeddings.service';
+import { V1BullMQDocumentQueueService } from '../queues/bullmq-queue.service';
+import { PrismaService } from '../../../prisma/prisma.service';
 
-/**
- * Embeddings controller
- *
- * @description Handles embedding-specific operations including viewing, regenerating,
- * and exporting embeddings. All routes require authentication and document access validation.
- */
-@ApiTags('Embeddings')
+@ApiTags('Documents - Embeddings')
 @ApiBearerAuth()
-@Controller('embeddings')
-@UseGuards(AccessTokenGuard)
+@Controller('documents')
+@UseGuards(AuthGuard('jwt'))
 export class V1EmbeddingsController {
+  private readonly logger = new Logger(V1EmbeddingsController.name);
+
   constructor(
-    private readonly prisma: PrismaService,
     private readonly embeddingsService: V1DocumentEmbeddingsService,
+    private readonly queueService: V1BullMQDocumentQueueService,
+    private readonly prisma: PrismaService,
   ) {}
 
-  /**
-   * List document embeddings
-   *
-   * @description Retrieves all embedding chunks for a specific document with pagination.
-   * Returns chunk text, index, token count, and vector metadata.
-   *
-   * **Response Data:**
-   * - Chunk index (sequential number)
-   * - Chunk text content (preview)
-   * - Token count
-   * - Model used (e.g., text-embedding-004)
-   * - Vector dimension (768)
-   * - S3 backup location
-   * - Created timestamp
-   *
-   * **Use Cases:**
-   * - Review embedding quality and coverage
-   * - Debug missing or incomplete chunks
-   * - Export embeddings for external systems
-   * - Analyze token distribution
-   *
-   * @param documentId - Document ID
-   * @param page - Page number (default: 1)
-   * @param limit - Items per page (default: 20, max: 100)
-   * @returns Paginated list of embeddings
-   */
-  @Get('documents/:documentId')
-  @UseGuards(V1DocumentAccessGuard)
+  // ✅ KEEP OLD ROUTE - for frontend compatibility
+  @Post('embeddings/workspaces/:workspaceId/documents/:documentId/regenerate')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiOperation({ summary: 'Regenerate embeddings (legacy route)' })
+  @ApiResponse({ status: 202, description: 'Regeneration job queued' })
+  async regenerateEmbeddingsLegacy(
+    @Param('workspaceId') workspaceId: string,
+    @Param('documentId') documentId: string,
+  ): Promise<any> {
+    if (!documentId) {
+      throw new BadRequestException('documentId is required');
+    }
+
+    this.logger.log(`[Controller] Regenerating embeddings (LEGACY) for: ${documentId}`);
+
+    const result = await this.embeddingsService.regenerateDocumentEmbeddings(documentId);
+
+    return {
+      ...result,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  // ✅ NEW ROUTE - with embeddings prefix
+  @Post(':documentId/regenerate-embeddings')
+  @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({
-    summary: 'List document embeddings',
+    summary: 'Regenerate document embeddings (async)',
     description:
-      'Get all embedding chunks for document with pagination. ' +
-      'Shows chunk text, token count, model, and S3 backup location. ' +
-      'Useful for debugging and quality review.',
+      'Trigger regeneration of embeddings for a document. Deletes existing embeddings and queues reprocessing job. ' +
+      '⚠️ Consumes credits/tokens same as initial processing. Processing happens asynchronously.',
   })
   @ApiParam({
     name: 'documentId',
-    description: 'Document ID',
-    example: 'cm3d1o2c3u4m5e6n7t',
+    description: 'Document UUID',
+    example: 'cm3document456',
+    type: String,
+  })
+  @ApiResponse({
+    status: 202,
+    description: 'Regeneration job accepted and queued',
+    schema: {
+      example: {
+        documentId: 'cm3doc456',
+        status: 'queued',
+        jobId: 'msg_1735142400000_abc123xyz',
+        message:
+          'Regeneration job queued. Deleted 42 old embeddings. Document will be re-embedded shortly.',
+        timestamp: '2025-11-05T03:24:00.000Z',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad request - document has no source file',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - missing/invalid JWT',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Document not found',
+  })
+  async regenerateEmbeddings(@Param('documentId') documentId: string): Promise<any> {
+    if (!documentId) {
+      throw new BadRequestException('documentId is required');
+    }
+
+    this.logger.log(`[Controller] Regenerating embeddings for: ${documentId}`);
+
+    const result = await this.embeddingsService.regenerateDocumentEmbeddings(documentId);
+
+    return {
+      ...result,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  // ✅ GET STATUS
+  @Get(':documentId/embedding-status')
+  @ApiOperation({
+    summary: 'Get embedding processing status',
+    description: 'Check embedding status, count, and last update time for a document.',
+  })
+  @ApiParam({
+    name: 'documentId',
+    description: 'Document UUID',
+    example: 'cm3document456',
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Status retrieved',
+    schema: {
+      example: {
+        documentId: 'cm3doc456',
+        status: 'READY',
+        embeddingsCount: 42,
+        lastUpdated: '2025-11-05T03:24:00.000Z',
+      },
+    },
+  })
+  async getEmbeddingStatus(@Param('documentId') documentId: string): Promise<any> {
+    this.logger.debug(`[Controller] Fetching embedding status for: ${documentId}`);
+    return this.embeddingsService.getEmbeddingStatus(documentId);
+  }
+
+  // ✅ QUEUE METRICS
+  @Get('queue/metrics')
+  @ApiOperation({
+    summary: 'Get document processing queue metrics',
+    description: 'Monitor queue health - jobs waiting, active, completed, failed, delayed.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Queue metrics',
+    schema: {
+      example: {
+        queue: {
+          waiting: 5,
+          active: 2,
+          completed: 158,
+          failed: 3,
+          delayed: 0,
+        },
+        timestamp: '2025-11-05T03:24:00.000Z',
+      },
+    },
+  })
+  async getQueueMetrics(): Promise<any> {
+    this.logger.debug(`[Controller] Fetching queue metrics`);
+    const metrics = await this.queueService.getDocumentQueueMetrics();
+    return {
+      queue: metrics,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  // ✅ LIST EMBEDDINGS
+  @Get('workspaces/:workspaceId/documents/:documentId/embeddings')
+  @ApiOperation({
+    summary: 'List document embeddings',
+    description: 'Retrieve paginated list of all embedding chunks for a document.',
+  })
+  @ApiParam({
+    name: 'workspaceId',
+    description: 'Workspace UUID',
+    example: 'cm3workspace123',
+    type: String,
+  })
+  @ApiParam({
+    name: 'documentId',
+    description: 'Document UUID',
+    example: 'cm3document456',
+    type: String,
   })
   @ApiQuery({
     name: 'page',
+    description: 'Page number (1-indexed, default: 1)',
     required: false,
-    description: 'Page number (1-indexed)',
     example: 1,
     type: Number,
   })
   @ApiQuery({
     name: 'limit',
+    description: 'Items per page (1-100, default: 20)',
     required: false,
-    description: 'Items per page (1-100)',
     example: 20,
     type: Number,
   })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Embeddings retrieved successfully',
-    schema: {
-      example: {
-        data: [
-          {
-            id: 'cm3emb123',
-            chunkIndex: 0,
-            chunkText: 'Machine learning is a subset of artificial intelligence...',
-            model: 'text-embedding-004',
-            vectorDimension: 768,
-            s3VectorBucket: 'flopods-vectors-prod',
-            s3VectorKey: 'embeddings/cm3d1o2c3u4m5e6n7t/chunk-0.json',
-            metadata: {
-              tokenCount: 487,
-              startChar: 0,
-              endChar: 2450,
-            },
-            createdAt: '2025-10-27T10:35:00Z',
-          },
-        ],
-        pagination: {
-          totalItems: 42,
-          totalPages: 3,
-          currentPage: 1,
-          pageSize: 20,
-        },
-      },
-    },
-  })
   async listDocumentEmbeddings(
+    @Param('workspaceId') workspaceId: string,
     @Param('documentId') documentId: string,
     @Query('page', new ParseIntPipe({ optional: true })) page: number = 1,
     @Query('limit', new ParseIntPipe({ optional: true })) limit: number = 20,
   ): Promise<any> {
-    // Validate limits
+    this.logger.debug(`Listing embeddings: doc=${documentId}, page=${page}, limit=${limit}`);
+
     const safeLimit = Math.min(Math.max(limit, 1), 100);
     const safePage = Math.max(page, 1);
 
@@ -170,6 +242,8 @@ export class V1EmbeddingsController {
       this.prisma.embedding.count({ where: { documentId } }),
     ]);
 
+    this.logger.debug(`Retrieved ${embeddings.length}/${total} embeddings for ${documentId}`);
+
     return {
       data: embeddings,
       pagination: {
@@ -181,61 +255,30 @@ export class V1EmbeddingsController {
     };
   }
 
-  /**
-   * Get embedding statistics
-   *
-   * @description Retrieves aggregated statistics about document embeddings including
-   * chunk count, total tokens, average tokens per chunk, and storage size estimates.
-   *
-   * **Statistics Included:**
-   * - Total chunks created
-   * - Total tokens processed
-   * - Average tokens per chunk
-   * - Model used
-   * - Embedding dimension
-   * - Estimated storage size (PostgreSQL + S3)
-   * - Processing timestamp
-   *
-   * **Use Cases:**
-   * - Cost analysis and optimization
-   * - Storage planning
-   * - Quality assessment
-   * - Processing time estimates
-   *
-   * @param documentId - Document ID
-   * @returns Embedding statistics
-   */
-  @Get('documents/:documentId/stats')
-  @UseGuards(V1DocumentAccessGuard)
+  // ✅ GET EMBEDDING STATS
+  @Get('workspaces/:workspaceId/documents/:documentId/embeddings/stats')
   @ApiOperation({
     summary: 'Get embedding statistics',
-    description:
-      'Retrieve aggregated statistics about document embeddings. ' +
-      'Shows chunk count, tokens, storage size, and processing info. ' +
-      'Useful for cost analysis and optimization.',
+    description: 'Retrieve comprehensive statistics about document embeddings.',
+  })
+  @ApiParam({
+    name: 'workspaceId',
+    description: 'Workspace UUID',
+    example: 'cm3workspace123',
+    type: String,
   })
   @ApiParam({
     name: 'documentId',
-    description: 'Document ID',
-    example: 'cm3d1o2c3u4m5e6n7t',
+    description: 'Document UUID',
+    example: 'cm3document456',
+    type: String,
   })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Statistics retrieved successfully',
-    schema: {
-      example: {
-        documentId: 'cm3d1o2c3u4m5e6n7t',
-        totalChunks: 42,
-        totalTokens: 21000,
-        averageTokensPerChunk: 500,
-        model: 'text-embedding-004',
-        vectorDimension: 768,
-        estimatedStorageBytes: 1290240,
-        createdAt: '2025-10-27T10:35:00Z',
-      },
-    },
-  })
-  async getEmbeddingStats(@Param('documentId') documentId: string): Promise<any> {
+  async getEmbeddingStats(
+    @Param('workspaceId') workspaceId: string,
+    @Param('documentId') documentId: string,
+  ): Promise<any> {
+    this.logger.debug(`Calculating embedding stats for document: ${documentId}`);
+
     const embeddings = await this.prisma.embedding.findMany({
       where: { documentId },
       select: {
@@ -247,6 +290,7 @@ export class V1EmbeddingsController {
     });
 
     if (embeddings.length === 0) {
+      this.logger.debug(`No embeddings found for document: ${documentId}`);
       return {
         documentId,
         totalChunks: 0,
@@ -259,15 +303,16 @@ export class V1EmbeddingsController {
       };
     }
 
-    // Calculate statistics
     const totalTokens = embeddings.reduce((sum, emb: any) => {
       return sum + (emb.metadata?.tokenCount || 0);
     }, 0);
 
     const averageTokensPerChunk = Math.round(totalTokens / embeddings.length);
-
-    // Estimate storage: vector(768) ≈ 768 * 4 bytes (float32) = 3072 bytes per embedding
     const estimatedStorageBytes = embeddings.length * 3072;
+
+    this.logger.debug(
+      `Stats: ${embeddings.length} chunks, ${totalTokens} tokens, ${estimatedStorageBytes} bytes`,
+    );
 
     return {
       documentId,
@@ -281,85 +326,37 @@ export class V1EmbeddingsController {
     };
   }
 
-  /**
-   * Regenerate embeddings
-   *
-   * @description Triggers regeneration of embeddings for a document.
-   * Useful after model upgrades, quality issues, or text extraction improvements.
-   *
-   * **Regeneration Process:**
-   * 1. Mark existing embeddings as stale
-   * 2. Re-extract text from document
-   * 3. Re-chunk text with current settings
-   * 4. Generate new embeddings with latest model
-   * 5. Replace old embeddings atomically
-   * 6. Calculate new costs
-   *
-   * **Cost Warning:** This consumes credits/tokens same as initial processing.
-   * Check costs before regenerating large documents.
-   *
-   * @param documentId - Document ID
-   * @returns Job ID for tracking regeneration progress
-   */
-  @Post('documents/:documentId/regenerate')
-  @UseGuards(V1DocumentAccessGuard)
-  @HttpCode(HttpStatus.ACCEPTED)
+  // ✅ GET SPECIFIC CHUNK
+  @Get('workspaces/:workspaceId/documents/:documentId/embeddings/chunks/:chunkIndex')
   @ApiOperation({
-    summary: 'Regenerate embeddings',
-    description:
-      'Trigger re-generation of embeddings for document. ' +
-      'Useful after model upgrades or quality issues. ' +
-      'Warning: Consumes credits/tokens same as initial processing.',
+    summary: 'Get specific embedding chunk',
+    description: 'Retrieve complete details for a single embedding chunk.',
+  })
+  @ApiParam({
+    name: 'workspaceId',
+    description: 'Workspace UUID',
+    example: 'cm3workspace123',
+    type: String,
   })
   @ApiParam({
     name: 'documentId',
-    description: 'Document ID',
-    example: 'cm3d1o2c3u4m5e6n7t',
+    description: 'Document UUID',
+    example: 'cm3document456',
+    type: String,
   })
-  @ApiResponse({
-    status: HttpStatus.ACCEPTED,
-    description: 'Regeneration queued successfully',
-    schema: {
-      example: {
-        documentId: 'cm3d1o2c3u4m5e6n7t',
-        status: 'queued',
-        message: 'Embeddings regeneration queued. This will consume credits.',
-      },
-    },
-  })
-  async regenerateEmbeddings(@Param('documentId') documentId: string): Promise<any> {
-    return this.embeddingsService.regenerateDocumentEmbeddings(documentId);
-  }
-  /**
-   * Get specific embedding chunk
-   *
-   * @description Retrieves detailed information about a specific embedding chunk
-   * including full text, token breakdown, and vector metadata.
-   *
-   * @param documentId - Document ID
-   * @param chunkIndex - Chunk index (0-based)
-   * @returns Detailed chunk information
-   */
-  @Get('documents/:documentId/chunks/:chunkIndex')
-  @UseGuards(V1DocumentAccessGuard)
-  @ApiOperation({
-    summary: 'Get specific chunk',
-    description: 'Retrieve detailed information about specific embedding chunk.',
-  })
-  @ApiParam({ name: 'documentId', example: 'cm3d1o2c3u4m5e6n7t' })
-  @ApiParam({ name: 'chunkIndex', example: 5, type: Number })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Chunk details',
-  })
-  @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Chunk not found',
+  @ApiParam({
+    name: 'chunkIndex',
+    description: 'Chunk index (0-based)',
+    example: 5,
+    type: Number,
   })
   async getEmbeddingChunk(
+    @Param('workspaceId') workspaceId: string,
     @Param('documentId') documentId: string,
     @Param('chunkIndex', ParseIntPipe) chunkIndex: number,
   ): Promise<any> {
+    this.logger.debug(`Fetching chunk ${chunkIndex} for document: ${documentId}`);
+
     const embedding = await this.prisma.embedding.findUnique({
       where: {
         documentId_chunkIndex: {
@@ -370,12 +367,21 @@ export class V1EmbeddingsController {
     });
 
     if (!embedding) {
+      this.logger.debug(`Chunk ${chunkIndex} not found for document: ${documentId}`);
       return {
         statusCode: 404,
         message: 'Chunk not found',
       };
     }
 
+    this.logger.debug(`Retrieved chunk ${chunkIndex} for document: ${documentId}`);
     return embedding;
+  }
+
+  @Get('retry-status')
+  @ApiOperation({ summary: 'Get embeddings retry status' })
+  @ApiResponse({ status: HttpStatus.OK })
+  async getRetryStatus() {
+    return this.embeddingsService.getRetryStatus();
   }
 }
