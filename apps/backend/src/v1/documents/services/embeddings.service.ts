@@ -620,4 +620,22 @@ export class V1DocumentEmbeddingsService {
       lastUpdated: document.updatedAt?.toISOString() || null,
     };
   }
+
+  getRetryStatus() {
+    const states = Array.from(this.rateLimitState.entries()).map(([key, state]) => ({
+      apiKeyFingerprint: key.substring(0, 8) + '...',
+      requestsThisMinute: state.requestsThisMinute,
+      isRateLimited: state.isRateLimited,
+      consecutiveErrors: state.consecutiveErrors,
+      cooldownRemaining:
+        state.cooldownUntil > Date.now()
+          ? Math.round((state.cooldownUntil - Date.now()) / 1000)
+          : 0,
+    }));
+
+    return {
+      activeKeys: states.length,
+      states,
+    };
+  }
 }

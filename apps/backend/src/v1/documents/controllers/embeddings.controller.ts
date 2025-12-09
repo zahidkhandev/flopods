@@ -377,4 +377,11 @@ export class V1EmbeddingsController {
     this.logger.debug(`Retrieved chunk ${chunkIndex} for document: ${documentId}`);
     return embedding;
   }
+
+  @Get('retry-status')
+  @ApiOperation({ summary: 'Get embeddings retry status' })
+  @ApiResponse({ status: HttpStatus.OK })
+  async getRetryStatus() {
+    return this.embeddingsService.getRetryStatus();
+  }
 }

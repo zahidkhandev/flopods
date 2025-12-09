@@ -8,6 +8,8 @@ import { DocumentStatus, DocumentSourceType } from '@flopods/schema';
 import type { DocumentQueueMessage } from '../types';
 import { V1DocumentQueueProducer } from '../queues/document-queue.producer';
 import { PDFParse } from 'pdf-parse';
+import { V1YouTubeInvalidURLError } from '../utils';
+import { V1YouTubeTranscriptNotAvailableError, V1YouTubeVideoNotFoundError } from '../errors';
 
 @Injectable()
 export class V1DocumentOrchestratorService {
@@ -299,8 +301,9 @@ export class V1DocumentOrchestratorService {
       const result = await this.youtubeProcessor.processYouTubeURL(videoUrl);
 
       if (!result.hasTranscript || result.transcript.length < 20) {
-        this.logger.log(`[Orchestrator] 📝 No transcript available for YouTube video`);
+        this.logger.log(`[Orchestrator] 📝 No transcript available`);
 
+        // Try to get video details as fallback
         try {
           const videoId = videoUrl.match(
             /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
@@ -316,18 +319,33 @@ export class V1DocumentOrchestratorService {
             }
           }
         } catch {
-          this.logger.debug(`[Orchestrator] Could not fetch video details (non-blocking)`);
+          // Non-blocking - continue with basic info
+          this.logger.debug(`[Orchestrator] Could not fetch video details`);
         }
 
         return `YouTube Video: ${result.videoTitle}\n\n[No transcript available]`;
       }
 
       this.logger.log(
-        `[Orchestrator] ✅ YouTube transcript extracted: ${result.characterCount} chars (${result.captionEventCount} captions)`,
+        `[Orchestrator] ✅ YouTube transcript extracted: ${result.characterCount} chars`,
       );
 
       return result.transcript;
     } catch (error) {
+      // 🔥 USE YOUR CUSTOM ERROR CLASSES HERE
+      if (error instanceof V1YouTubeInvalidURLError) {
+        throw error; // Re-throw to mark document as ERROR
+      }
+
+      if (error instanceof V1YouTubeVideoNotFoundError) {
+        throw new Error(`YouTube video not found: ${error.message}`);
+      }
+
+      if (error instanceof V1YouTubeTranscriptNotAvailableError) {
+        // Don't fail - return graceful message
+        return `[YouTube transcript unavailable: ${error.message}]`;
+      }
+
       const message = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`[Orchestrator] ❌ YouTube processing failed: ${message}`);
 

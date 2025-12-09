@@ -22,6 +22,13 @@ export class ListDocumentsDto {
   status?: DocumentStatus;
 
   @ApiPropertyOptional({
+    description: 'Filter by raw text search',
+  })
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @ApiPropertyOptional({
     description: 'Page number',
     example: 1,
     minimum: 1,

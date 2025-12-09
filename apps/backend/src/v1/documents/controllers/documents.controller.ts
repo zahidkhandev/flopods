@@ -146,14 +146,15 @@ export class V1DocumentsController {
 
   @Get('workspaces/:workspaceId')
   @UseGuards(V1WorkspaceOwnershipGuard)
-  @ApiOperation({ summary: 'List documents' })
+  @ApiOperation({ summary: 'List/search documents' })
   @ApiParam({ name: 'workspaceId', example: 'cm3a1b2c3d4e5f6g7h8i9j0k' })
   @ApiResponse({ status: HttpStatus.OK })
   async listDocuments(
     @Param('workspaceId') workspaceId: string,
     @Query() dto: ListDocumentsDto,
   ): Promise<any> {
-    return this.documentsService.listDocuments(workspaceId, dto);
+    // Enhanced: if search param present, ignore folderId, search globally
+    return this.documentsService.listDocumentsWithGlobalSearch(workspaceId, dto);
   }
 
   @Post('workspaces/:workspaceId/search')

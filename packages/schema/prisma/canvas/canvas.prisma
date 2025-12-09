@@ -211,6 +211,7 @@ model Pod {
   lastExecutionId String?
   contextFlowId   String?
   documentId      String?
+  chatEmbeddings ChatEmbedding[]
 
   lockedBy String?
   lockedAt DateTime? @db.Timestamptz(6)
@@ -377,6 +378,38 @@ model ContextModule {
 
   @@index([workspaceId, updatedAt(sort: Desc)])
   @@index([originalFlowId])
+  @@schema("canvas")
+}
+
+model ChatEmbedding {
+  id             String    @id @default(cuid())
+  workspaceId    String
+  userId         String
+  podId          String
+  executionId    String
+
+  chunkText      String    @db.Text
+  vector         Unsupported("vector(768)")?
+
+  s3VectorBucket  String?   @db.VarChar(255)
+  s3VectorKey     String?   @db.VarChar(512)
+  vectorDimension Int       @default(768)
+
+  model          String    @db.VarChar(100)
+  metadata       Json?
+
+  createdAt      DateTime  @default(now()) @db.Timestamptz(6)
+
+  // Relations with backrefs
+  workspace      Workspace @relation(fields: [workspaceId], references: [id])
+  user           User      @relation(fields: [userId], references: [id])
+  pod            Pod       @relation(fields: [podId], references: [id])
+
+  @@index([workspaceId, userId, createdAt(sort: Desc)])
+  @@index([userId, podId, createdAt(sort: Desc)])
+  @@index([podId, executionId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([model, createdAt(sort: Desc)])
   @@schema("canvas")
 }
 

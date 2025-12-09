@@ -301,6 +301,32 @@ export const MODEL_PRICING_DATA = [
       batchSize: 10,
     }),
   },
+
+  {
+    provider: 'HUGGING_FACE' as LLMProvider,
+    modelId: 'BAAI/bge-base-en-v1.5',
+    category: 'EMBEDDING' as ModelCategory,
+    displayName: 'BGE Base English v1.5',
+    description: 'Hugging Face BGE embedding model with 768 dimension embeddings',
+    inputTokenCost: new Prisma.Decimal('0.0008'), // $0.0008 per million tokens input, approximate market cost
+    outputTokenCost: new Prisma.Decimal('0'),
+    reasoningTokenCost: new Prisma.Decimal('0'),
+    creditsPerMillionInputTokens: 80, // estimated credits per million input tokens
+    creditsPerMillionOutputTokens: 0,
+    creditsPerMillionReasoningTokens: 0,
+    maxTokens: 512, // max input tokens per inference
+    maxOutputTokens: 768, // embedding output vector dimensionality
+    supportsStreaming: false,
+    supportsVision: false,
+    supportsFunctions: false,
+    supportsJsonMode: false,
+    supportsSystemPrompt: false,
+    providerConfig: JSON.stringify({
+      dimensions: 768,
+      model: 'BAAI/bge-base-en-v1.5',
+      batchSize: 10,
+    }),
+  },
 ];
 
 /**

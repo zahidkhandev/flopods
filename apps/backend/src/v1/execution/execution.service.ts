@@ -71,7 +71,7 @@ export class V1ExecutionService {
     let _podFlowId: string | null = null;
 
     try {
-      // 1) POD VALIDATION
+      // Pod validations and config fetch
       const pod = await this.prisma.pod.findFirst({
         where: { id: podId, flow: { workspaceId } },
         select: {
@@ -82,30 +82,25 @@ export class V1ExecutionService {
           dynamoSortKey: true,
         },
       });
-
       if (!pod) {
         yield { type: 'error', error: `Pod ${podId} not found` };
         return;
       }
       _podFlowId = pod.flowId;
-
       if (pod.type !== 'LLM_PROMPT') {
         yield { type: 'error', error: 'Only LLM_PROMPT pods can be executed' };
         return;
       }
-
       const podConfig = await this.getPodConfig(pod.dynamoPartitionKey, pod.dynamoSortKey);
       if (!podConfig) {
         yield { type: 'error', error: 'Pod configuration not found' };
         return;
       }
-
       const llmConfig = podConfig.config;
 
-      // 2) PARAM RESOLUTION
+      // Parameter resolution
       const finalProvider = params.provider ?? llmConfig.provider;
       const finalModel = params.model ?? llmConfig.model;
-      const finalSystemPrompt = params.systemPrompt ?? llmConfig.systemPrompt;
       const finalTemperature = params.temperature ?? llmConfig.temperature;
       const finalMaxTokens = params.maxTokens ?? llmConfig.maxTokens;
       const finalTopP = params.topP ?? llmConfig.topP;
@@ -117,7 +112,7 @@ export class V1ExecutionService {
       const userMessage = messages.find((m) => m.role === 'user');
       const userInput = userMessage?.content || '';
 
-      // 3) CREATE EXECUTION RECORD
+      // Create execution record
       await this.prisma.podExecution.create({
         data: {
           id: executionId,
@@ -142,11 +137,11 @@ export class V1ExecutionService {
 
       this.flowGateway.broadcastExecutionStart(pod.flowId, executionId, podId);
 
-      // 4) CONTEXT
+      // Context & system prompt assembly
       const conversationHistory = await this.getPodConversationHistory(podId, 20);
       const contextChain = await this.contextResolution.resolveFullContext(podId, pod.flowId);
 
-      let systemPrompt = finalSystemPrompt ?? this.DEFAULT_SYSTEM_PROMPTS.general;
+      let systemPrompt = params.systemPrompt ?? this.DEFAULT_SYSTEM_PROMPTS.general;
       systemPrompt = this.contextResolution.interpolateVariables(
         systemPrompt,
         contextChain.variables,
@@ -157,30 +152,53 @@ export class V1ExecutionService {
         const contextDetails = Object.entries(contextChain.variables)
           .map(([pid, content]) => `**Pod ${pid} History:**\n${content}`)
           .join('\n\n');
-        systemPrompt = systemPrompt + contextSection + contextDetails;
+        systemPrompt += contextSection + contextDetails;
       }
 
-      const interpolatedMessages = messages.map((msg) => {
-        if (msg.role === 'user' && typeof msg.content === 'string') {
-          return {
-            ...msg,
-            content: this.contextResolution.interpolateVariables(
-              msg.content,
-              contextChain.variables,
-            ),
-          };
-        }
-        return msg;
+      // Inject user profile & workspace info
+      const userProfile = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true, email: true },
       });
+      const workspaceUser = await this.prisma.workspaceUser.findUnique({
+        where: { userId_workspaceId: { userId, workspaceId } },
+        select: { role: true },
+      });
+      const userRole = workspaceUser?.role ?? 'Unknown';
+      if (userProfile) {
+        systemPrompt += `\n\n## User Profile:\nName: ${userProfile.name ?? 'Unknown'}\nEmail: ${userProfile.email ?? 'Unknown'}\nRole: ${userRole}`;
+      }
+      const workspace = await this.prisma.workspace.findUnique({
+        where: { id: workspaceId },
+        select: { name: true, type: true },
+      });
+      if (workspace) {
+        systemPrompt += `\n\n## Workspace Info:\nName: ${workspace.name ?? 'Unknown'}\nType: ${workspace.type}`;
+      }
+      systemPrompt += `\n\n## Instructions:\nPlease provide concise, accurate, and helpful responses considering user profile and workspace context.`;
+
+      this.logger.debug(`System prompt:\n${systemPrompt}`);
+
+      const interpolatedMessages = messages.map((msg) =>
+        msg.role === 'user' && typeof msg.content === 'string'
+          ? {
+              ...msg,
+              content: this.contextResolution.interpolateVariables(
+                msg.content,
+                contextChain.variables,
+              ),
+            }
+          : msg,
+      );
 
       const allMessages = [...conversationHistory, ...interpolatedMessages];
       const finalMessages = this.buildMessagesWithSystemPrompt(
         allMessages,
         systemPrompt,
-        /* _userProvidedSystemPrompt */ params.systemPrompt !== undefined,
+        params.systemPrompt !== undefined,
       );
 
-      // 5) PROVIDER + STREAM SETUP
+      // Provider and streaming setup
       const workspaceKey = await this.providerFactory.getWorkspaceApiKey(
         workspaceId,
         finalProvider,
@@ -225,13 +243,13 @@ export class V1ExecutionService {
         responseFormat: finalResponseFormat,
       };
 
-      // 6) STREAM
       yield { type: 'start', executionId };
 
       let fullContent = '';
       let finalUsage: any = null;
       let finishReason = 'stop';
 
+      // Streaming tokens from LLM provider
       for await (const chunk of llmProvider.executeStream(llmRequest)) {
         yield chunk;
         if (chunk.type === 'token' && chunk.content) fullContent += chunk.content;
@@ -241,7 +259,7 @@ export class V1ExecutionService {
         }
       }
 
-      // 7) COST/PROFIT/CREDITS
+      // Calculate cost/profit/credits for main LLM call
       if (finalUsage) {
         const pricing = await this.prisma.modelPricingTier.findFirst({
           where: { provider: finalProvider, modelId: finalModel, isActive: true },
@@ -307,7 +325,7 @@ export class V1ExecutionService {
             runtime: Date.now() - startTime,
           });
         } else {
-          // No pricing – still finalize minimal record
+          // No pricing, still finalize record minimally
           await this.prisma.podExecution.update({
             where: { id: executionId },
             data: {
@@ -325,7 +343,6 @@ export class V1ExecutionService {
               },
             },
           });
-
           this.flowGateway.broadcastExecutionComplete(pod.flowId, executionId, podId, {
             content: fullContent,
             usage: finalUsage,
@@ -333,7 +350,6 @@ export class V1ExecutionService {
           });
         }
       } else {
-        // No usage — still complete
         await this.prisma.podExecution.update({
           where: { id: executionId },
           data: {
@@ -347,14 +363,38 @@ export class V1ExecutionService {
             },
           },
         });
-
         this.flowGateway.broadcastExecutionComplete(pod.flowId, executionId, podId, {
           content: fullContent || 'Empty response',
           runtime: Date.now() - startTime,
         });
       }
 
-      // 8) POD STATUS
+      // Generate embedding of combined user + assistant chat and save it
+      try {
+        const combinedTextForEmbedding = `User: ${userInput}\nAssistant: ${fullContent}`;
+        const embedding = await this.contextResolution.generateTextEmbedding(
+          combinedTextForEmbedding,
+          workspaceId,
+        );
+        await this.contextResolution.saveChatEmbedding(
+          workspaceId,
+          userId,
+          podId,
+          executionId,
+          combinedTextForEmbedding,
+          embedding,
+        );
+        this.logger.debug(`[Execution] Chat embedding saved for execution ${executionId}`);
+        // Optionally, here you could calculate & track embedding API call cost similarly if pricing available
+      } catch (embeddingError) {
+        this.logger.warn(
+          `[Execution] Embedding generation/saving failed: ${
+            embeddingError instanceof Error ? embeddingError.message : embeddingError
+          }`,
+        );
+      }
+
+      // Update pod final status
       await this.prisma.pod.update({
         where: { id: podId },
         data: {
@@ -370,10 +410,9 @@ export class V1ExecutionService {
           status: PodExecutionStatus.ERROR,
           finishedAt: new Date(),
           runtimeInMs: Date.now() - startTime,
-          errorMessage: errorMessage,
+          errorMessage,
         },
       });
-
       this.logger.error(`[Execution] ❌ ${executionId} failed: ${errorMessage}`, error);
       if (_podFlowId) {
         this.flowGateway.broadcastExecutionError(_podFlowId, executionId, podId, errorMessage);

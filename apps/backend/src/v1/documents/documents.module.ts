@@ -15,7 +15,7 @@
  * @module v1/documents
  */
 
-import { Module } from '@nestjs/common';
+import { Logger, Module, OnModuleInit } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
 // Controllers
@@ -112,4 +112,14 @@ import { ApiKeyEncryptionService } from '../../common/services/encryption.servic
     V1DocumentQueueProducer,
   ],
 })
-export class V1DocumentModule {}
+export class V1DocumentModule implements OnModuleInit {
+  private readonly logger = new Logger(V1DocumentModule.name);
+
+  constructor(private readonly consumer: V1DocumentQueueConsumer) {}
+
+  async onModuleInit() {
+    this.logger.log('📦 Documents Module: Initializing...');
+    // Consumer will auto-start via its own OnModuleInit
+    this.logger.log('✅ Documents Module: Queue consumer started');
+  }
+}

@@ -77,7 +77,7 @@ CREATE TYPE "core"."InvitationStatus" AS ENUM ('PENDING', 'ACCEPTED', 'DECLINED'
 CREATE TYPE "core"."ShareAccessLevel" AS ENUM ('VIEW_ONLY', 'COMMENT', 'EDIT');
 
 -- CreateEnum
-CREATE TYPE "core"."LLMProvider" AS ENUM ('OPENAI', 'ANTHROPIC', 'GOOGLE_GEMINI', 'PERPLEXITY', 'MISTRAL', 'COHERE', 'GROQ', 'XAI', 'DEEPSEEK', 'CUSTOM');
+CREATE TYPE "core"."LLMProvider" AS ENUM ('OPENAI', 'ANTHROPIC', 'GOOGLE_GEMINI', 'PERPLEXITY', 'MISTRAL', 'COHERE', 'GROQ', 'XAI', 'DEEPSEEK', 'CUSTOM', 'HUGGING_FACE');
 
 -- CreateEnum
 CREATE TYPE "core"."ShareableAssetType" AS ENUM ('FLOW', 'CONTEXT_MODULE');
@@ -560,6 +560,25 @@ CREATE TABLE "canvas"."ContextModule" (
     "updatedAt" TIMESTAMPTZ(6) NOT NULL,
 
     CONSTRAINT "ContextModule_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "canvas"."ChatEmbedding" (
+    "id" TEXT NOT NULL,
+    "workspaceId" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "podId" TEXT NOT NULL,
+    "executionId" TEXT NOT NULL,
+    "chunkText" TEXT NOT NULL,
+    "vector" vector(768),
+    "s3VectorBucket" VARCHAR(255),
+    "s3VectorKey" VARCHAR(512),
+    "vectorDimension" INTEGER NOT NULL DEFAULT 768,
+    "model" VARCHAR(100) NOT NULL,
+    "metadata" JSONB,
+    "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ChatEmbedding_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -1280,6 +1299,21 @@ CREATE INDEX "ContextModule_workspaceId_updatedAt_idx" ON "canvas"."ContextModul
 CREATE INDEX "ContextModule_originalFlowId_idx" ON "canvas"."ContextModule"("originalFlowId");
 
 -- CreateIndex
+CREATE INDEX "ChatEmbedding_workspaceId_userId_createdAt_idx" ON "canvas"."ChatEmbedding"("workspaceId", "userId", "createdAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "ChatEmbedding_userId_podId_createdAt_idx" ON "canvas"."ChatEmbedding"("userId", "podId", "createdAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "ChatEmbedding_podId_executionId_idx" ON "canvas"."ChatEmbedding"("podId", "executionId");
+
+-- CreateIndex
+CREATE INDEX "ChatEmbedding_userId_createdAt_idx" ON "canvas"."ChatEmbedding"("userId", "createdAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "ChatEmbedding_model_createdAt_idx" ON "canvas"."ChatEmbedding"("model", "createdAt" DESC);
+
+-- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "core"."User"("email");
 
 -- CreateIndex
@@ -1596,6 +1630,15 @@ ALTER TABLE "canvas"."ContextModule" ADD CONSTRAINT "ContextModule_workspaceId_f
 
 -- AddForeignKey
 ALTER TABLE "canvas"."ContextModule" ADD CONSTRAINT "ContextModule_originalFlowId_fkey" FOREIGN KEY ("originalFlowId") REFERENCES "canvas"."Flow"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "canvas"."ChatEmbedding" ADD CONSTRAINT "ChatEmbedding_workspaceId_fkey" FOREIGN KEY ("workspaceId") REFERENCES "core"."Workspace"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "canvas"."ChatEmbedding" ADD CONSTRAINT "ChatEmbedding_userId_fkey" FOREIGN KEY ("userId") REFERENCES "core"."User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "canvas"."ChatEmbedding" ADD CONSTRAINT "ChatEmbedding_podId_fkey" FOREIGN KEY ("podId") REFERENCES "canvas"."Pod"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "core"."RefreshToken" ADD CONSTRAINT "RefreshToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "core"."User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

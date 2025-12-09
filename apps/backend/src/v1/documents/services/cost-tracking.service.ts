@@ -14,13 +14,11 @@ import {
   estimateTokensFromBytes,
   getEmbeddingProvider,
 } from '../utils/cost-calculator.util';
+import { PROFIT_CONFIG } from '../../../common/config/profit.config';
 
 @Injectable()
 export class V1DocumentCostTrackingService {
   private readonly logger = new Logger(V1DocumentCostTrackingService.name);
-
-  // Centralized monetization rule (revenue = cost * MARKUP_MULTIPLIER)
-  private readonly MARKUP_MULTIPLIER = 2;
 
   constructor(private readonly prisma: PrismaService) {}
 
@@ -53,7 +51,7 @@ export class V1DocumentCostTrackingService {
     const tokensProcessed = costs.reduce((sum, c) => sum + c.tokensProcessed, 0);
     const chunksCreated = costs.reduce((sum, c) => sum + (c.chunkCount || 0), 0);
 
-    const totalRevenue = totalCost * this.MARKUP_MULTIPLIER;
+    const totalRevenue = totalCost * PROFIT_CONFIG.MARKUP_MULTIPLIER;
     const totalProfit = totalRevenue - totalCost;
 
     const typeMap = new Map<
@@ -70,7 +68,7 @@ export class V1DocumentCostTrackingService {
         revenue: 0,
       };
       const costAmount = Number(c.totalCostInUsd);
-      const revenueAmount = costAmount * this.MARKUP_MULTIPLIER;
+      const revenueAmount = costAmount * PROFIT_CONFIG.MARKUP_MULTIPLIER;
       typeMap.set(c.processingType, {
         cost: existing.cost + costAmount,
         credits: existing.credits + c.creditsConsumed,
@@ -135,7 +133,7 @@ export class V1DocumentCostTrackingService {
     const tokensProcessed = costs.reduce((sum, c) => sum + c.tokensProcessed, 0);
     const chunksCreated = costs.reduce((sum, c) => sum + (c.chunkCount || 0), 0);
 
-    const totalRevenue = totalCost * this.MARKUP_MULTIPLIER;
+    const totalRevenue = totalCost * PROFIT_CONFIG.MARKUP_MULTIPLIER;
     const totalProfit = totalRevenue - totalCost;
 
     const typeMap = new Map<
@@ -152,7 +150,7 @@ export class V1DocumentCostTrackingService {
         revenue: 0,
       };
       const costAmount = Number(c.totalCostInUsd);
-      const revenueAmount = costAmount * this.MARKUP_MULTIPLIER;
+      const revenueAmount = costAmount * PROFIT_CONFIG.MARKUP_MULTIPLIER;
 
       typeMap.set(c.processingType, {
         cost: existing.cost + costAmount,
@@ -213,7 +211,7 @@ export class V1DocumentCostTrackingService {
 
     return results.map((r) => {
       const cost = Number(r.total_cost);
-      const revenue = cost * this.MARKUP_MULTIPLIER;
+      const revenue = cost * PROFIT_CONFIG.MARKUP_MULTIPLIER;
       const profit = revenue - cost;
 
       return {
@@ -249,7 +247,7 @@ export class V1DocumentCostTrackingService {
     if (!cost) return null;
 
     const costUsd = Number(cost.totalCostInUsd);
-    const revenueUsd = costUsd * this.MARKUP_MULTIPLIER;
+    const revenueUsd = costUsd * PROFIT_CONFIG.MARKUP_MULTIPLIER;
     const profitUsd = revenueUsd - costUsd;
 
     return {
@@ -290,7 +288,7 @@ export class V1DocumentCostTrackingService {
     if (!cost) return null;
 
     const costUsd = Number(cost.totalCostInUsd);
-    const revenueUsd = costUsd * this.MARKUP_MULTIPLIER;
+    const revenueUsd = costUsd * PROFIT_CONFIG.MARKUP_MULTIPLIER;
     const profitUsd = revenueUsd - costUsd;
 
     return {
@@ -336,7 +334,7 @@ export class V1DocumentCostTrackingService {
 
     return costs.map((c) => {
       const costUsd = Number(c.totalCostInUsd);
-      const revenueUsd = costUsd * this.MARKUP_MULTIPLIER;
+      const revenueUsd = costUsd * PROFIT_CONFIG.MARKUP_MULTIPLIER;
       const profitUsd = revenueUsd - costUsd;
 
       return {
@@ -377,7 +375,7 @@ export class V1DocumentCostTrackingService {
 
     return costs.map((c) => {
       const costUsd = Number(c.totalCostInUsd);
-      const revenueUsd = costUsd * this.MARKUP_MULTIPLIER;
+      const revenueUsd = costUsd * PROFIT_CONFIG.MARKUP_MULTIPLIER;
       const profitUsd = revenueUsd - costUsd;
 
       return {
@@ -408,7 +406,7 @@ export class V1DocumentCostTrackingService {
       provider.costPer1MTokens,
     );
     const estimatedCredits = convertUsdToCredits(estimatedCostUsd);
-    const estimatedRevenueUsd = estimatedCostUsd * this.MARKUP_MULTIPLIER;
+    const estimatedRevenueUsd = estimatedCostUsd * PROFIT_CONFIG.MARKUP_MULTIPLIER;
     const estimatedProfitUsd = estimatedRevenueUsd - estimatedCostUsd;
 
     return {

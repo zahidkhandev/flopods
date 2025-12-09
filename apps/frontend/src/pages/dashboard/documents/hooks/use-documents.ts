@@ -1,7 +1,3 @@
-/**
- * React Query Hook for Documents - COMPLETE
- */
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useCallback, useMemo } from 'react';
 import { useWorkspaces } from '@/hooks/use-workspaces';
@@ -15,6 +11,8 @@ interface UseDocumentsOptions {
   folderId?: string;
   status?: DocumentStatus;
   search?: string;
+  autoRefresh?: boolean;
+  refreshInterval?: number;
 }
 
 export function useDocuments(options: UseDocumentsOptions = {}) {
@@ -22,18 +20,25 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
   const queryClient = useQueryClient();
   const [currentPage, setCurrentPage] = useState(options.page || 1);
 
+  // GLOBAL SEARCH support: Only send folderId to backend if no search query is active
+  const isGlobalSearch = options.search && options.search.trim().length > 0;
+
   const queryParams: ListDocumentsParams = useMemo(
     () => ({
       page: currentPage,
       limit: options.limit || 20,
-      folderId: options.folderId,
+      // If global search is active, ignore folderId for backend API
+      folderId: isGlobalSearch ? undefined : options.folderId,
       status: options.status,
       search: options.search,
     }),
-    [currentPage, options.limit, options.folderId, options.status, options.search]
+    [currentPage, options.limit, options.folderId, options.status, options.search, isGlobalSearch]
   );
 
-  const queryKey = ['documents', currentWorkspaceId, queryParams];
+  const queryKey = useMemo(
+    () => ['documents', currentWorkspaceId, queryParams],
+    [currentWorkspaceId, queryParams]
+  );
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey,
@@ -44,6 +49,7 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
     enabled: !!currentWorkspaceId,
     staleTime: 1000 * 30,
     refetchOnWindowFocus: true,
+    refetchInterval: options.autoRefresh !== false ? options.refreshInterval || 5000 : false,
   });
 
   const documents = useMemo(() => data?.data || [], [data?.data]);
@@ -58,9 +64,6 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
     [data?.pagination]
   );
 
-  // ==========================================
-  // UPDATE DOCUMENT
-  // ==========================================
   const updateDocumentMutation = useMutation({
     mutationFn: async ({
       documentId,
@@ -87,9 +90,6 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
     },
   });
 
-  // ==========================================
-  // DELETE DOCUMENT
-  // ==========================================
   const deleteDocumentMutation = useMutation({
     mutationFn: async (documentId: string) => {
       if (!currentWorkspaceId) throw new Error('No workspace selected');
@@ -106,9 +106,6 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
     },
   });
 
-  // ==========================================
-  // REGENERATE EMBEDDINGS
-  // ==========================================
   const regenerateEmbeddingsMutation = useMutation({
     mutationFn: async (documentId: string) => {
       if (!currentWorkspaceId) throw new Error('No workspace selected');
@@ -127,9 +124,6 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
     },
   });
 
-  // ==========================================
-  // DOWNLOAD DOCUMENT
-  // ==========================================
   const downloadDocumentMutation = useMutation({
     mutationFn: async (documentId: string) => {
       if (!currentWorkspaceId) throw new Error('No workspace selected');
@@ -154,7 +148,6 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
     },
   });
 
-  // Pagination
   const goToPage = useCallback((page: number) => setCurrentPage(page), []);
   const nextPage = useCallback(() => {
     if (currentPage < pagination.totalPages) setCurrentPage((prev) => prev + 1);
@@ -167,12 +160,13 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
     queryClient.invalidateQueries({ queryKey: ['documents', currentWorkspaceId] });
   }, [queryClient, currentWorkspaceId]);
 
-  // Group by status
+  // TS 7053: Force status type
   const documentsByStatus = useMemo(() => {
     return documents.reduce(
       (acc, doc) => {
-        if (!acc[doc.status]) acc[doc.status] = [];
-        acc[doc.status].push(doc);
+        const status = doc.status as DocumentStatus;
+        if (!acc[status]) acc[status] = [];
+        acc[status].push(doc);
         return acc;
       },
       {} as Record<DocumentStatus, Document[]>
@@ -182,15 +176,14 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
   const statusCounts = useMemo(
     () => ({
       total: documents.length,
-      ready: documents.filter((d) => d.status === 'READY').length,
-      processing: documents.filter((d) => d.status === 'PROCESSING').length,
-      queued: documents.filter((d) => d.status === 'QUEUED').length,
-      failed: documents.filter((d) => d.status === 'FAILED').length,
+      ready: (documentsByStatus.READY || []).length,
+      processing: (documentsByStatus.PROCESSING || []).length,
+      queued: (documentsByStatus.QUEUED || []).length,
+      failed: (documentsByStatus.FAILED || []).length,
     }),
-    [documents]
+    [documentsByStatus, documents.length]
   );
 
-  // With confirmation helpers
   const deleteWithConfirm = async (documentId: string, documentName: string) => {
     const confirmed = window.confirm(`Delete "${documentName}"? This action cannot be undone.`);
     if (confirmed) return deleteDocumentMutation.mutateAsync(documentId);
@@ -204,18 +197,13 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
   };
 
   return {
-    // Data
     documents,
     documentsByStatus,
     pagination,
     statusCounts,
-
-    // State
     isLoading,
     error,
     currentPage,
-
-    // Actions
     refetch,
     invalidateDocuments,
     updateDocument: updateDocumentMutation.mutateAsync,
@@ -224,14 +212,10 @@ export function useDocuments(options: UseDocumentsOptions = {}) {
     regenerateEmbeddings: regenerateEmbeddingsMutation.mutateAsync,
     regenerateWithConfirm,
     downloadDocument: downloadDocumentMutation.mutateAsync,
-
-    // Status
     isUpdating: updateDocumentMutation.isPending,
     isDeleting: deleteDocumentMutation.isPending,
     isRegenerating: regenerateEmbeddingsMutation.isPending,
     isDownloading: downloadDocumentMutation.isPending,
-
-    // Pagination
     goToPage,
     nextPage,
     prevPage,

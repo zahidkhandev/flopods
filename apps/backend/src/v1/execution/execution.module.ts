@@ -9,11 +9,17 @@ import { V1FlowModule } from '../flow/flow.module';
 import { AwsModule } from '../../common/aws/aws.module';
 import { V1ContextResolutionService } from './context-resolution.service';
 import { ProviderFactory } from './providers/provider.factory';
+import { ApiKeyEncryptionService } from '../../common/services/encryption.service';
 
 @Module({
   imports: [PrismaModule, AwsModule, ProviderModule, V1FlowModule],
   controllers: [V1ExecutionController],
-  providers: [V1ExecutionService, V1ContextResolutionService, ProviderFactory],
+  providers: [
+    V1ExecutionService,
+    V1ContextResolutionService,
+    ProviderFactory,
+    ApiKeyEncryptionService,
+  ],
   exports: [V1ExecutionService],
 })
 export class V1ExecutionModule {}
