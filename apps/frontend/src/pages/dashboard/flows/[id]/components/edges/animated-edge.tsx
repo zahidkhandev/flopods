@@ -25,18 +25,18 @@ export default memo(function AnimatedEdge({
 
   return (
     <g className="react-flow__edge">
-      {/* ✅ SIMPLE VISIBLE PATH - NO ANIMATIONS */}
+      {/* SIMPLE VISIBLE PATH - NO ANIMATIONS */}
       <path
         id={id}
         d={edgePath}
         fill="none"
-        stroke="#a855f7" // ✅ HARD-CODED PURPLE (always visible)
-        strokeWidth={selected ? 4 : 3} // ✅ THICK line
+        stroke="#a855f7" // HARD-CODED PURPLE (always visible)
+        strokeWidth={selected ? 4 : 3} // THICK line
         markerEnd={markerEnd}
-        style={{ opacity: 1 }} // ✅ FORCE visible
+        style={{ opacity: 1 }} // FORCE visible
       />
 
-      {/* ✅ Glow effect */}
+      {/* Glow effect */}
       <path
         d={edgePath}
         fill="none"

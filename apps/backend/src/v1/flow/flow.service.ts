@@ -185,7 +185,7 @@ export class V1FlowService {
         visibility: flow.visibility,
       });
 
-      this.logger.log(`✅ Flow created: ${flow.id} by user ${userId}`);
+      this.logger.log(`Flow created: ${flow.id} by user ${userId}`);
 
       return plainToInstance(
         FlowResponseDto,
@@ -255,7 +255,7 @@ export class V1FlowService {
       // Log activity
       await this.logActivity(flowId, userId, FlowActivityAction.FLOW_UPDATED, dto);
 
-      this.logger.log(`✅ Flow updated: ${flowId} by user ${userId}`);
+      this.logger.log(`Flow updated: ${flowId} by user ${userId}`);
 
       return plainToInstance(
         FlowResponseDto,
@@ -300,7 +300,7 @@ export class V1FlowService {
         where: { id: flowId },
       });
 
-      this.logger.log(`✅ Flow deleted: ${flowId} by user ${userId}`);
+      this.logger.log(`Flow deleted: ${flowId} by user ${userId}`);
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof ForbiddenException) throw error;
       this.logger.error(`Failed to delete flow ${flowId}`, error);
@@ -413,7 +413,7 @@ export class V1FlowService {
         accessLevel: dto.accessLevel,
       });
 
-      this.logger.log(`✅ Collaborator added to flow ${flowId}: ${dto.email}`);
+      this.logger.log(`Collaborator added to flow ${flowId}: ${dto.email}`);
 
       return plainToInstance(CollaboratorResponseDto, collaborator, {
         excludeExtraneousValues: true,
@@ -462,7 +462,7 @@ export class V1FlowService {
         changes: dto,
       });
 
-      this.logger.log(`✅ Collaborator updated in flow ${flowId}: ${collaboratorId}`);
+      this.logger.log(`Collaborator updated in flow ${flowId}: ${collaboratorId}`);
 
       return plainToInstance(CollaboratorResponseDto, collaborator, {
         excludeExtraneousValues: true,
@@ -498,7 +498,7 @@ export class V1FlowService {
         collaboratorEmail: collaborator?.user.email,
       });
 
-      this.logger.log(`✅ Collaborator removed from flow ${flowId}: ${collaboratorId}`);
+      this.logger.log(`Collaborator removed from flow ${flowId}: ${collaboratorId}`);
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof ForbiddenException) throw error;
       this.logger.error(`Failed to remove collaborator ${collaboratorId}`, error);

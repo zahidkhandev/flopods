@@ -46,7 +46,7 @@ export class SnsService {
         },
         maxAttempts: 3,
       });
-      this.logger.log('✅ AWS SNS initialized successfully');
+      this.logger.log('AWS SNS initialized successfully');
     } else {
       this.logger.warn('⚠️  AWS SNS not configured');
     }
@@ -89,7 +89,7 @@ export class SnsService {
     try {
       const command = new CreateTopicCommand({ Name: name });
       const response = await this.snsClient.send(command);
-      this.logger.log(`✅ SNS topic created: ${name}`);
+      this.logger.log(`SNS topic created: ${name}`);
       return response.TopicArn || '';
     } catch (error: any) {
       this.logger.error('❌ SNS create topic error:', error);
@@ -113,7 +113,7 @@ export class SnsService {
       });
 
       const response = await this.snsClient.send(command);
-      this.logger.log(`✅ Subscribed to SNS topic: ${options.topicArn}`);
+      this.logger.log(`Subscribed to SNS topic: ${options.topicArn}`);
       return response.SubscriptionArn || '';
     } catch (error: any) {
       this.logger.error('❌ SNS subscribe error:', error);
@@ -132,7 +132,7 @@ export class SnsService {
     try {
       const command = new UnsubscribeCommand({ SubscriptionArn: subscriptionArn });
       await this.snsClient.send(command);
-      this.logger.log(`✅ Unsubscribed from SNS topic`);
+      this.logger.log(`Unsubscribed from SNS topic`);
     } catch (error: any) {
       this.logger.error('❌ SNS unsubscribe error:', error);
       throw new InternalServerErrorException(`Failed to unsubscribe: ${error.message}`);
@@ -177,7 +177,7 @@ export class SnsService {
       });
 
       await this.snsClient.send(command);
-      this.logger.log(`✅ SNS topic attribute set: ${attributeName}`);
+      this.logger.log(`SNS topic attribute set: ${attributeName}`);
     } catch (error: any) {
       this.logger.error('❌ SNS set attribute error:', error);
       throw new InternalServerErrorException(`Failed to set topic attribute: ${error.message}`);

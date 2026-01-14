@@ -1,7 +1,10 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PodType } from '@flopods/schema';
 import { PrismaService } from '../../prisma/prisma.service';
 import { DynamoDbService } from '../../common/aws/dynamodb/dynamodb.service';
+import axios from 'axios';
+import { ConfigService } from '@nestjs/config';
+import { ApiKeyEncryptionService } from '../../common/services/encryption.service';
 
 export interface ResolvedContext {
   podId: string;
@@ -19,17 +22,29 @@ export interface ContextChain {
   variables: Record<string, string>;
 }
 
+interface GeminiEmbeddingResponse {
+  embedding?: { values?: number[] };
+  error?: { message?: string; code?: string };
+}
+
 @Injectable()
 export class V1ContextResolutionService {
   private readonly logger = new Logger(V1ContextResolutionService.name);
+  private readonly GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta';
+  private readonly EMBEDDING_TIMEOUT = 60000;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly dynamoDb: DynamoDbService,
+    private readonly configService: ConfigService,
+    private readonly encryptionService: ApiKeyEncryptionService,
   ) {}
 
   /**
-   * ✅ BEST: Resolve FULL conversation context with OPTIONAL pins
+   * OPTIMIZED: Resolve FULL conversation context (Batched Queries)
+   * 1. Groups IDs.
+   * 2. Fires 2 queries total (instead of N).
+   * 3. Maps results back to structure.
    */
   async resolveFullContext(
     podId: string,
@@ -54,130 +69,126 @@ export class V1ContextResolutionService {
       return { pod, context: [], variables: {} };
     }
 
-    // Build mapping of pod → execution ID (if pinned)
-    const executionMap = new Map<string, string | null>();
+    // --- 1. PREPARE IDs ---
+    const pinnedMap = new Map<string, string>(); // podId -> executionId
+    const defaultPodIds: string[] = [];
+
     if (contextMappings) {
       for (const mapping of contextMappings) {
-        executionMap.set(mapping.sourcePodId, mapping.pinnedExecutionId);
+        if (mapping.pinnedExecutionId) {
+          pinnedMap.set(mapping.sourcePodId, mapping.pinnedExecutionId);
+        }
       }
     }
 
-    // For each upstream pod:
-    const contextPromises = upstreamPodIds.map(async (upstreamPodId) => {
-      const pinnedExecutionId = executionMap.get(upstreamPodId);
-
-      if (pinnedExecutionId) {
-        // ✅ Use ONLY this specific pinned execution
-        const pinned = await this.getPinnedPodOutput(upstreamPodId, pinnedExecutionId);
-        return pinned ? [pinned] : [];
-      } else {
-        // ✅ Use ALL executions (full conversation history)
-        return await this.getAllPodOutputs(upstreamPodId, 50);
+    upstreamPodIds.forEach((upid) => {
+      if (!pinnedMap.has(upid)) {
+        defaultPodIds.push(upid);
       }
     });
 
-    const allContexts = await Promise.all(contextPromises);
+    const contextResults: ResolvedContext[] = [];
 
-    // Build variables
-    const variables: Record<string, string> = {};
-    const flatContexts: ResolvedContext[] = [];
+    // --- 2. BATCH FETCH PINNED (1 Query) ---
+    if (pinnedMap.size > 0) {
+      const pinnedExecutions = await this.prisma.podExecution.findMany({
+        where: {
+          id: { in: Array.from(pinnedMap.values()) },
+          status: 'COMPLETED',
+        },
+        select: {
+          id: true,
+          podId: true,
+          responseMetadata: true,
+          finishedAt: true,
+        },
+      });
 
-    for (const contexts of allContexts) {
-      if (contexts.length > 0) {
-        const podId = contexts[0].podId;
+      for (const exec of pinnedExecutions) {
+        const output = this.extractOutputFromResponse(exec.responseMetadata);
+        if (output) {
+          contextResults.push({
+            podId: exec.podId,
+            output,
+            executionId: exec.id,
+            timestamp: exec.finishedAt!,
+          });
+        }
+      }
+    }
 
-        // ✅ Parse and reconstruct as proper conversation
-        const conversationParts: string[] = [];
+    // --- 3. BATCH FETCH HISTORY (1 Query) ---
+    if (defaultPodIds.length > 0) {
+      // Optimization: Fetch a pool of latest executions for these pods
+      // We assume 50 items per pod is sufficient history context
+      const historyPool = await this.prisma.podExecution.findMany({
+        where: {
+          podId: { in: defaultPodIds },
+          status: 'COMPLETED',
+        },
+        orderBy: { finishedAt: 'desc' },
+        take: defaultPodIds.length * 50,
+        select: {
+          id: true,
+          podId: true,
+          requestMetadata: true,
+          responseMetadata: true,
+          finishedAt: true,
+        },
+      });
 
-        for (const ctx of contexts) {
-          try {
-            const turnData = JSON.parse(ctx.output);
-            if (turnData.user) {
-              conversationParts.push(`[User]: ${turnData.user}`);
-            }
-            if (turnData.assistant) {
-              conversationParts.push(`[Assistant]: ${turnData.assistant}`);
-            }
-          } catch {
-            // Fallback if not JSON
-            conversationParts.push(ctx.output);
+      // Group by podId in memory
+      const grouped = new Map<string, typeof historyPool>();
+      historyPool.forEach((h) => {
+        if (!grouped.has(h.podId)) grouped.set(h.podId, []);
+        if (grouped.get(h.podId)!.length < 50) {
+          grouped.get(h.podId)!.push(h);
+        }
+      });
+
+      // Process groups
+      for (const [pId, execs] of grouped.entries()) {
+        const sorted = execs.sort((a, b) => a.finishedAt!.getTime() - b.finishedAt!.getTime());
+
+        for (const exec of sorted) {
+          const output = this.extractOutputFromResponse(exec.responseMetadata);
+          const userInput = (exec.requestMetadata as any)?.userInput || '';
+
+          if (output) {
+            const turnData = {
+              user: userInput,
+              assistant: output,
+            };
+            contextResults.push({
+              podId: pId,
+              output: JSON.stringify(turnData),
+              executionId: exec.id,
+              timestamp: exec.finishedAt!,
+            });
           }
         }
-
-        variables[podId] = conversationParts.join('\n\n');
-        flatContexts.push(...contexts);
       }
     }
 
+    // --- 4. FORMAT VARIABLES ---
+    const variables = this.buildVariablesFromContext(contextResults);
+
     this.logger.debug(
-      `✅ Resolved context for pod ${podId}: ${flatContexts.length} messages from ${upstreamPodIds.length} upstream pods`,
+      `Resolved context for pod ${podId}: ${contextResults.length} items (Batched)`,
     );
 
-    return { pod, context: flatContexts, variables };
+    return { pod, context: contextResults, variables };
   }
 
   /**
-   * Resolve latest context only (backward compatible)
+   * OPTIMIZED: Resolve latest context only
    */
   async resolveContext(podId: string, flowId: string): Promise<ContextChain> {
-    const pod = await this.prisma.pod.findUnique({
-      where: { id: podId },
-      select: {
-        id: true,
-        type: true,
-      },
-    });
-
-    if (!pod) {
-      throw new NotFoundException(`Pod ${podId} not found`);
-    }
-
-    const upstreamEdges = await this.prisma.edge.findMany({
-      where: {
-        flowId,
-        targetPodId: podId,
-      },
-      select: {
-        sourcePodId: true,
-      },
-    });
-
-    if (upstreamEdges.length === 0) {
-      this.logger.debug(`Pod ${podId} has no upstream dependencies`);
-      return {
-        pod,
-        context: [],
-        variables: {},
-      };
-    }
-
-    const upstreamPodIds = upstreamEdges.map((e: { sourcePodId: string }) => e.sourcePodId);
-
-    const contextPromises = upstreamPodIds.map((upstreamPodId: string) => {
-      return this.getLatestPodOutput(upstreamPodId);
-    });
-
-    const resolvedContexts = await Promise.all(contextPromises);
-    const validContexts = resolvedContexts.filter(
-      (c: ResolvedContext | null): c is ResolvedContext => c !== null,
-    );
-
-    const variables: Record<string, string> = {};
-    for (const ctx of validContexts) {
-      variables[ctx.podId] = ctx.output;
-    }
-
-    this.logger.debug(`Resolved ${validContexts.length} context items for pod ${podId}`);
-
-    return {
-      pod,
-      context: validContexts,
-      variables,
-    };
+    return this.resolveContextWithPins(podId, flowId);
   }
 
   /**
-   * Resolve context with support for pinned executions
+   * OPTIMIZED: Resolve context with support for pinned executions (Batched)
    */
   async resolveContextWithPins(
     podId: string,
@@ -189,275 +200,146 @@ export class V1ContextResolutionService {
   ): Promise<ContextChain> {
     const pod = await this.prisma.pod.findUnique({
       where: { id: podId },
-      select: {
-        id: true,
-        type: true,
-      },
+      select: { id: true, type: true },
     });
 
-    if (!pod) {
-      throw new NotFoundException(`Pod ${podId} not found`);
+    if (!pod) throw new NotFoundException(`Pod ${podId} not found`);
+
+    const upstreamPodIds = await this.getUpstreamPods(podId, flowId);
+    if (upstreamPodIds.length === 0) {
+      return { pod, context: [], variables: {} };
     }
 
-    const upstreamEdges = await this.prisma.edge.findMany({
-      where: {
-        flowId,
-        targetPodId: podId,
-      },
-      select: {
-        sourcePodId: true,
-      },
-    });
+    const pinnedMap = new Map<string, string>();
+    const latestPodIds: string[] = [];
 
-    if (upstreamEdges.length === 0) {
-      this.logger.debug(`Pod ${podId} has no upstream dependencies`);
-      return {
-        pod,
-        context: [],
-        variables: {},
-      };
-    }
-
-    const upstreamPodIds = upstreamEdges.map((e: { sourcePodId: string }) => e.sourcePodId);
-
-    // Build mapping of pod → execution ID
-    const executionMap = new Map<string, string | null>();
     if (contextMappings) {
       for (const mapping of contextMappings) {
-        executionMap.set(mapping.sourcePodId, mapping.pinnedExecutionId);
+        if (mapping.pinnedExecutionId) {
+          pinnedMap.set(mapping.sourcePodId, mapping.pinnedExecutionId);
+        }
       }
     }
 
-    const contextPromises = upstreamPodIds.map((upstreamPodId: string) => {
-      const pinnedExecutionId = executionMap.get(upstreamPodId);
-
-      if (pinnedExecutionId) {
-        // Use specific pinned execution
-        return this.getPinnedPodOutput(upstreamPodId, pinnedExecutionId);
-      } else {
-        // Use latest execution (default behavior)
-        return this.getLatestPodOutput(upstreamPodId);
-      }
+    upstreamPodIds.forEach((id) => {
+      if (!pinnedMap.has(id)) latestPodIds.push(id);
     });
 
-    const resolvedContexts = await Promise.all(contextPromises);
-    const validContexts = resolvedContexts.filter(
-      (c: ResolvedContext | null): c is ResolvedContext => c !== null,
-    );
+    const contextResults: ResolvedContext[] = [];
+
+    // 1. Fetch Pinned
+    if (pinnedMap.size > 0) {
+      const pinnedExecutions = await this.prisma.podExecution.findMany({
+        where: {
+          id: { in: Array.from(pinnedMap.values()) },
+          status: 'COMPLETED',
+        },
+        select: { id: true, podId: true, responseMetadata: true, finishedAt: true },
+      });
+
+      for (const exec of pinnedExecutions) {
+        const output = this.extractOutputFromResponse(exec.responseMetadata);
+        if (output) {
+          contextResults.push({
+            podId: exec.podId,
+            output,
+            executionId: exec.id,
+            timestamp: exec.finishedAt!,
+          });
+        }
+      }
+    }
+
+    // 2. Fetch Latest for others (Using Postgres DISTINCT ON logic via distinct)
+    if (latestPodIds.length > 0) {
+      const latestExecutions = await this.prisma.podExecution.findMany({
+        where: {
+          podId: { in: latestPodIds },
+          status: 'COMPLETED',
+        },
+        distinct: ['podId'], // <--- THIS IS THE MAGIC OPTIMIZATION
+        orderBy: { finishedAt: 'desc' },
+        select: { id: true, podId: true, responseMetadata: true, finishedAt: true },
+      });
+
+      for (const exec of latestExecutions) {
+        const output = this.extractOutputFromResponse(exec.responseMetadata);
+        if (output) {
+          contextResults.push({
+            podId: exec.podId,
+            output,
+            executionId: exec.id,
+            timestamp: exec.finishedAt!,
+          });
+        }
+      }
+    }
 
     const variables: Record<string, string> = {};
-    for (const ctx of validContexts) {
+    for (const ctx of contextResults) {
       variables[ctx.podId] = ctx.output;
     }
 
-    this.logger.debug(
-      `Resolved ${validContexts.length} context items for pod ${podId} (${contextMappings?.length || 0} pinned)`,
-    );
-
-    return {
-      pod,
-      context: validContexts,
-      variables,
-    };
+    return { pod, context: contextResults, variables };
   }
 
-  /**
-   * ✅ Get upstream pod IDs
-   */
+  // --- Helpers ---
+
+  private buildVariablesFromContext(contexts: ResolvedContext[]): Record<string, string> {
+    const varsByPod = new Map<string, string[]>();
+
+    for (const ctx of contexts) {
+      if (!varsByPod.has(ctx.podId)) varsByPod.set(ctx.podId, []);
+      try {
+        const json = JSON.parse(ctx.output);
+        if (json.user) varsByPod.get(ctx.podId)!.push(`[User]: ${json.user}`);
+        if (json.assistant) varsByPod.get(ctx.podId)!.push(`[Assistant]: ${json.assistant}`);
+      } catch {
+        varsByPod.get(ctx.podId)!.push(ctx.output);
+      }
+    }
+
+    const variables: Record<string, string> = {};
+    varsByPod.forEach((val, key) => {
+      variables[key] = val.join('\n\n');
+    });
+    return variables;
+  }
+
   private async getUpstreamPods(podId: string, flowId: string): Promise<string[]> {
     const upstreamEdges = await this.prisma.edge.findMany({
-      where: {
-        flowId,
-        targetPodId: podId,
-      },
-      select: {
-        sourcePodId: true,
-      },
+      where: { flowId, targetPodId: podId },
+      select: { sourcePodId: true },
     });
-
     return upstreamEdges.map((e) => e.sourcePodId);
   }
 
-  /**
-   * ✅ FIXED: Get ALL completed executions as proper messages
-   */
-  private async getAllPodOutputs(podId: string, limit: number = 50): Promise<ResolvedContext[]> {
-    const executions = await this.prisma.podExecution.findMany({
-      where: {
-        podId,
-        status: 'COMPLETED',
-      },
-      orderBy: {
-        finishedAt: 'asc',
-      },
-      select: {
-        id: true,
-        responseMetadata: true,
-        finishedAt: true,
-        requestMetadata: true,
-      },
-      take: limit,
-    });
-
-    const contexts: ResolvedContext[] = [];
-
-    for (const exec of executions) {
-      const userInput = (exec.requestMetadata as any)?.userInput || '';
-      const assistantOutput = this.extractOutputFromResponse(exec.responseMetadata);
-
-      if (!assistantOutput || !exec.finishedAt) continue;
-
-      // ✅ Store as JSON so it can be parsed back into messages
-      const turnData = {
-        user: userInput,
-        assistant: assistantOutput,
-      };
-
-      contexts.push({
-        podId,
-        output: JSON.stringify(turnData), // Store structured data
-        executionId: exec.id,
-        timestamp: exec.finishedAt,
-      });
-    }
-
-    return contexts;
-  }
-
-  /**
-   * Get specific pinned execution output
-   */
-  private async getPinnedPodOutput(
-    podId: string,
-    executionId: string,
-  ): Promise<ResolvedContext | null> {
-    const execution = await this.prisma.podExecution.findFirst({
-      where: {
-        id: executionId,
-        podId,
-        status: 'COMPLETED',
-      },
-      select: {
-        id: true,
-        responseMetadata: true,
-        finishedAt: true,
-      },
-    });
-
-    if (!execution || !execution.responseMetadata) {
-      this.logger.warn(`Pinned execution ${executionId} not found or incomplete for pod ${podId}`);
-      return null;
-    }
-
-    const output = this.extractOutputFromResponse(execution.responseMetadata);
-
-    if (!output) {
-      this.logger.warn(`Could not extract output from pinned execution ${executionId}`);
-      return null;
-    }
-
-    return {
-      podId,
-      output,
-      executionId: execution.id,
-      timestamp: execution.finishedAt!,
-    };
-  }
-
-  /**
-   * Get latest execution output for a pod
-   */
-  private async getLatestPodOutput(podId: string): Promise<ResolvedContext | null> {
-    const latestExecution = await this.prisma.podExecution.findFirst({
-      where: {
-        podId,
-        status: 'COMPLETED',
-      },
-      orderBy: {
-        finishedAt: 'desc',
-      },
-      select: {
-        id: true,
-        responseMetadata: true,
-        finishedAt: true,
-      },
-      take: 1,
-    });
-
-    if (!latestExecution || !latestExecution.responseMetadata) {
-      this.logger.warn(`No completed execution found for pod ${podId}`);
-      return null;
-    }
-
-    const output = this.extractOutputFromResponse(latestExecution.responseMetadata);
-
-    if (!output) {
-      this.logger.warn(`Could not extract output from execution ${latestExecution.id}`);
-      return null;
-    }
-
-    return {
-      podId,
-      output,
-      executionId: latestExecution.id,
-      timestamp: latestExecution.finishedAt!,
-    };
-  }
-
-  /**
-   * Extract text output from LLM response metadata
-   */
   private extractOutputFromResponse(responseMetadata: any): string | null {
     try {
-      // ✅ GEMINI FORMAT - Check for streaming content first
-      if (responseMetadata.content && typeof responseMetadata.content === 'string') {
+      if (responseMetadata?.content && typeof responseMetadata.content === 'string') {
         return responseMetadata.content;
       }
-
-      // Gemini API response format
-      if (responseMetadata.candidates && responseMetadata.candidates[0]) {
-        const parts = responseMetadata.candidates[0].content?.parts;
-        if (parts && Array.isArray(parts)) {
-          const text = parts
-            .map((p: any) => p.text || '')
-            .filter(Boolean)
-            .join('\n');
-          if (text) return text;
-        }
+      if (responseMetadata?.candidates?.[0]?.content?.parts) {
+        const parts = responseMetadata.candidates[0].content.parts;
+        return parts.map((p: any) => p.text || '').join('\n');
       }
-
-      // OpenAI format
-      if (responseMetadata.choices && responseMetadata.choices[0]) {
-        const content = responseMetadata.choices[0].message?.content;
-        if (content) return content;
+      if (responseMetadata?.choices?.[0]?.message?.content) {
+        return responseMetadata.choices[0].message.content;
       }
-
-      // Anthropic format
-      if (responseMetadata.content && Array.isArray(responseMetadata.content)) {
+      if (Array.isArray(responseMetadata?.content)) {
         const textBlocks = responseMetadata.content.filter((block: any) => block.type === 'text');
-        const text = textBlocks.map((block: any) => block.text).join('\n');
-        if (text) return text;
+        return textBlocks.map((block: any) => block.text).join('\n');
       }
-
-      this.logger.warn(
-        `Unknown response format: ${JSON.stringify(responseMetadata).substring(0, 100)}`,
-      );
       return null;
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.logger.error(`Failed to extract output from response: ${errorMessage}`);
+    } catch (err) {
+      this.logger.error('Failed to extract output from response', err);
       return null;
     }
   }
 
-  /**
-   * Interpolate variables in a string
-   */
   interpolateVariables(text: string, variables: Record<string, string>): string {
     let result = text;
-
     const variableRegex = /\{\{([a-zA-Z0-9_-]+)(?:\.output)?\}\}/g;
-
     result = result.replace(variableRegex, (match, podId) => {
       const value = variables[podId];
       if (value === undefined) {
@@ -466,13 +348,9 @@ export class V1ContextResolutionService {
       }
       return value;
     });
-
     return result;
   }
 
-  /**
-   * Get execution order for all pods in a flow (topological sort)
-   */
   async getExecutionOrder(flowId: string): Promise<string[]> {
     const pods = await this.prisma.pod.findMany({
       where: { flowId },
@@ -481,10 +359,7 @@ export class V1ContextResolutionService {
 
     const edges = await this.prisma.edge.findMany({
       where: { flowId },
-      select: {
-        sourcePodId: true,
-        targetPodId: true,
-      },
+      select: { sourcePodId: true, targetPodId: true },
     });
 
     const graph = new Map<string, string[]>();
@@ -504,9 +379,7 @@ export class V1ContextResolutionService {
     const result: string[] = [];
 
     for (const [podId, degree] of inDegree.entries()) {
-      if (degree === 0) {
-        queue.push(podId);
-      }
+      if (degree === 0) queue.push(podId);
     }
 
     while (queue.length > 0) {
@@ -526,5 +399,151 @@ export class V1ContextResolutionService {
     }
 
     return result;
+  }
+
+  // --- Embedding Helpers (Still here for Worker to use) ---
+
+  private async getByokKey(workspaceId?: string): Promise<string> {
+    if (workspaceId) {
+      const keyRecord = await this.prisma.providerAPIKey.findFirst({
+        where: {
+          workspaceId,
+          provider: 'GOOGLE_GEMINI',
+          isActive: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { keyHash: true },
+      });
+
+      if (keyRecord) {
+        try {
+          return this.encryptionService.decrypt(keyRecord.keyHash);
+        } catch (error) {
+          throw new ForbiddenException('Failed to decrypt workspace API key');
+        }
+      }
+    }
+
+    const envKey = this.configService.get<string>('GEMINI_API_KEY');
+    if (!envKey || envKey.length < 20) {
+      throw new ForbiddenException('No valid Gemini API key configured');
+    }
+    return envKey;
+  }
+
+  async generateTextEmbedding(text: string, workspaceId?: string): Promise<number[]> {
+    const sanitizedText = this.sanitizeText(text);
+    if (!sanitizedText || sanitizedText.length < 10) return [];
+
+    try {
+      const apiKey = await this.getByokKey(workspaceId);
+      const url = `${this.GEMINI_BASE_URL}/models/embedding-001:embedContent?key=${apiKey}`;
+      const response = await axios.post<GeminiEmbeddingResponse>(
+        url,
+        {
+          model: 'models/embedding-001',
+          content: { parts: [{ text: sanitizedText }] },
+        },
+        { timeout: this.EMBEDDING_TIMEOUT },
+      );
+      const embedding = response.data.embedding?.values;
+      if (embedding && Array.isArray(embedding)) return embedding;
+    } catch (err) {
+      // Fallback
+    }
+
+    try {
+      const hfApiToken = this.configService.get<string>('HUGGING_FACE_API_TOKEN');
+      if (hfApiToken) {
+        const hfResponse = await axios.post(
+          `https://api-inference.huggingface.co/pipeline/feature-extraction/BAAI/bge-base-en-v1.5`,
+          [sanitizedText],
+          {
+            headers: { Authorization: `Bearer ${hfApiToken}` },
+            timeout: this.EMBEDDING_TIMEOUT,
+          },
+        );
+        if (hfResponse.data && Array.isArray(hfResponse.data)) {
+          return hfResponse.data[0];
+        }
+      }
+    } catch (e) {
+      this.logger.error('All embedding providers failed');
+    }
+    return [];
+  }
+
+  async saveChatEmbedding(
+    workspaceId: string,
+    userId: string,
+    podId: string,
+    executionId: string,
+    chunkText: string,
+    embedding: number[],
+  ): Promise<void> {
+    if (!embedding.length) return;
+    const vectorString = `[${embedding.join(',')}]`;
+    const vectorDimension = embedding.length;
+
+    try {
+      await this.prisma.$executeRaw`
+        INSERT INTO documents."ChatEmbedding"
+        (id, "workspaceId", "userId", "podId", "executionId", "chunkText",
+          vector, "vectorDimension", model, metadata, "createdAt")
+        VALUES (
+          gen_random_uuid()::text,
+          ${workspaceId},
+          ${userId},
+          ${podId},
+          ${executionId},
+          ${chunkText},
+          ${vectorString}::vector(${vectorDimension}),
+          ${vectorDimension},
+          'embedding-001',
+          '{}'::jsonb,
+          NOW()
+        )
+      `;
+    } catch (error) {
+      this.logger.error(`Error saving embedding: ${error}`);
+    }
+  }
+
+  private sanitizeText(text: string): string {
+    return text.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').trim();
+  }
+
+  async semanticSearchUserContext(
+    userId: string,
+    query: string,
+    threshold: number = 0.75,
+    maxResults: number = 10,
+  ): Promise<ResolvedContext[]> {
+    const queryEmbedding = await this.generateTextEmbedding(query);
+    if (!queryEmbedding.length) return [];
+
+    const results = await this.prisma.$queryRaw<
+      {
+        id: string;
+        podId: string;
+        executionId: string;
+        chunkText: string;
+        createdAt: Date;
+        similarity: number;
+      }[]
+    >`
+    SELECT id, "podId", "executionId", "chunkText", "createdAt",
+    1 - (vector <=> ${queryEmbedding}::vector) AS similarity
+    FROM documents."ChatEmbedding"
+    WHERE "userId" = ${userId} AND 1 - (vector <=> ${queryEmbedding}::vector) > ${threshold}
+    ORDER BY similarity DESC
+    LIMIT ${maxResults}
+  `;
+    return results.map((r) => ({
+      podId: r.podId,
+      output: r.chunkText,
+      executionId: r.executionId,
+      timestamp: r.createdAt,
+    }));
   }
 }

@@ -179,7 +179,7 @@ export class ExecutionDetailDto {
 
   @ApiProperty({ description: 'Request metadata (user input, params)', required: false })
   @Expose()
-  requestMetadata!: any; // ✅ Added for user input
+  requestMetadata!: any; // Added for user input
 
   @ApiProperty({ description: 'Raw response from LLM provider' })
   @Expose()

@@ -3,7 +3,7 @@
 import { Logger } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { ILLMProvider, LLMRequest, LLMResponse } from '../types/llm-provider.types';
-import { LLMProvider, APIRequestType, ModelPricingTier } from '@flopods/schema'; // ✅ Add APIRequestType
+import { LLMProvider, APIRequestType, ModelPricingTier } from '@flopods/schema'; // Add APIRequestType
 import { PROFIT_CONFIG } from '../../../common/config/profit.config';
 import { Decimal } from '@prisma/client/runtime/library';
 
@@ -131,9 +131,9 @@ export abstract class BaseLLMProvider implements ILLMProvider {
       await this.prisma.documentAPILog.create({
         data: {
           workspaceId,
-          provider, // ✅ Use LLMProvider directly
+          provider, // Use LLMProvider directly
           modelId: model,
-          requestType: APIRequestType.TEXT_GENERATION, // ✅ Changed from 'TEXT_EXTRACTION'
+          requestType: APIRequestType.TEXT_GENERATION, // Changed from 'TEXT_EXTRACTION'
           inputTokens: usage.promptTokens,
           outputTokens: usage.completionTokens,
           totalTokens: usage.promptTokens + usage.completionTokens + (usage.reasoningTokens || 0),

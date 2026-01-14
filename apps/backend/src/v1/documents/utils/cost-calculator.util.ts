@@ -9,7 +9,7 @@ import { CREDIT_VALUE_USD } from '../../../common/utils/profit-and-credits';
  */
 
 /**
- * ✅ Get embedding pricing from DB (centralized)
+ * Get embedding pricing from DB (centralized)
  */
 export async function getEmbeddingProvider(
   prisma: PrismaService,

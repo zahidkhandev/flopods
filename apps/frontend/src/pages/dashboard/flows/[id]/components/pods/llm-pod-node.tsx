@@ -212,14 +212,14 @@ export default memo(function LLMPodNode({
     return messages;
   }, [messages, streamingContent]);
 
-  // ✅ Get the actual scrollable viewport inside ScrollArea
+  // Get the actual scrollable viewport inside ScrollArea
   const getScrollContainer = useCallback(() => {
     return chatContainerRef.current?.querySelector(
       '[data-radix-scroll-area-viewport]'
     ) as HTMLDivElement;
   }, []);
 
-  // ✅ Load ALL execution history into continuous conversation
+  // Load ALL execution history into continuous conversation
   const loadAllExecutionHistory = useCallback(async () => {
     if (!executionHistory || executionHistory.length === 0 || !currentWorkspaceId) return;
 
@@ -279,14 +279,14 @@ export default memo(function LLMPodNode({
     }
   }, [executionHistory, currentWorkspaceId]);
 
-  // ✅ Auto-load ALL history on mount
+  // Auto-load ALL history on mount
   useEffect(() => {
     if (executionHistory && executionHistory.length > 0 && messages.length === 0) {
       loadAllExecutionHistory();
     }
   }, [executionHistory, messages.length, loadAllExecutionHistory]);
 
-  // ✅ Auto-scroll to bottom + detect manual scroll (FIXED for ScrollArea)
+  // Auto-scroll to bottom + detect manual scroll (FIXED for ScrollArea)
   useEffect(() => {
     const viewport = getScrollContainer();
     if (!viewport) return;
@@ -467,10 +467,10 @@ export default memo(function LLMPodNode({
 
       try {
         const newNodeData: Partial<Node> = {
-          type: 'SOURCE', // ✅ CHANGED from 'SourceInput' to 'SOURCE' to match nodeTypes
+          type: 'SOURCE', // CHANGED from 'SourceInput' to 'SOURCE' to match nodeTypes
           position: newNodePosition,
           data: {
-            label: 'Source', // ✅ Changed from 'Response Source' to just 'Source'
+            label: 'Source', // Changed from 'Response Source' to just 'Source'
             config: {
               sourceType: 'text',
               content: content,
@@ -761,7 +761,7 @@ export default memo(function LLMPodNode({
                           (message.metadata || !message.content.includes('⚠️')) &&
                           !message.isStreaming && (
                             <div className="border-border/30 text-muted-foreground mt-3 flex items-center justify-between gap-3 border-t pt-2 text-xs">
-                              {/* ✅ LEFT SIDE: Token stats */}
+                              {/* LEFT SIDE: Token stats */}
                               <div className="flex items-center gap-3">
                                 {message.metadata?.runtime && (
                                   <div className="flex items-center gap-1.5">
@@ -786,7 +786,7 @@ export default memo(function LLMPodNode({
                                 )}
                               </div>
 
-                              {/* ✅ RIGHT SIDE: Always visible action icons */}
+                              {/* RIGHT SIDE: Always visible action icons */}
                               {!message.content.includes('⚠️') && (
                                 <div className="flex items-center gap-1">
                                   <Button
@@ -834,7 +834,7 @@ export default memo(function LLMPodNode({
               )}
             </ScrollArea>
 
-            {/* ✅ Scroll to bottom button */}
+            {/* Scroll to bottom button */}
             {showScrollButton && (
               <Button
                 onClick={scrollToBottom}

@@ -38,18 +38,18 @@ export const useWorkspaces = () => {
       const response = await axiosInstance.get('/workspaces');
       return response.data.data || response.data;
     },
-    // ✅ Ensure workspace is selected immediately
+    // Ensure workspace is selected immediately
     staleTime: 1000 * 60 * 5, // Cache for 5 minutes
   });
 
-  // ✅ CRITICAL FIX: Auto-select first workspace IMMEDIATELY when data loads
+  // CRITICAL FIX: Auto-select first workspace IMMEDIATELY when data loads
   useEffect(() => {
     if (!isLoading && workspaces && workspaces.length > 0) {
       // If no workspace is selected OR selected workspace doesn't exist
       const workspaceExists = workspaces.some((ws) => ws.id === currentWorkspaceId);
 
       if (!currentWorkspaceId || !workspaceExists) {
-        // ✅ Prioritize PERSONAL workspace, fallback to first
+        // Prioritize PERSONAL workspace, fallback to first
         const defaultWorkspace = workspaces.find((ws) => ws.type === 'PERSONAL') || workspaces[0];
 
         setCurrentWorkspaceId(defaultWorkspace.id);
@@ -69,11 +69,11 @@ export const useWorkspaces = () => {
   return {
     workspaces: workspaces || [],
     currentWorkspace,
-    currentWorkspaceId: currentWorkspaceId || workspaces?.[0]?.id || null, // ✅ Fallback
+    currentWorkspaceId: currentWorkspaceId || workspaces?.[0]?.id || null, // Fallback
     switchWorkspace,
     isLoading,
     error,
-    // ✅ Helper to check if workspace is ready
+    // Helper to check if workspace is ready
     isReady: !isLoading && !!currentWorkspaceId,
   };
 };

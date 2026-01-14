@@ -53,7 +53,7 @@ async function checkPricing() {
       return;
     }
 
-    console.log('\n✅ gemini-2.5-flash Details:');
+    console.log('\ngemini-2.5-flash Details:');
     console.log(`   Input Cost: ${gemini.inputTokenCost}`);
     console.log(`   Output Cost: ${gemini.outputTokenCost}`);
     console.log(`   Type: ${typeof gemini.inputTokenCost}`);

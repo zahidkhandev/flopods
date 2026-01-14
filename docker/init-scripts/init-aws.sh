@@ -50,7 +50,7 @@ until awslocal s3 ls >/dev/null 2>&1; do
   sleep 2
 done
 
-echo "✅ LocalStack is ready!"
+echo "LocalStack is ready!"
 echo ""
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -71,7 +71,7 @@ create_bucket() {
     echo "⚠️  Bucket ${bucket_name} already exists (skipping)"
   else
     awslocal s3 mb "s3://${bucket_name}" --region "${AWS_DEFAULT_REGION}"
-    echo "✅ Created: ${bucket_name} - ${description}"
+    echo "Created: ${bucket_name} - ${description}"
   fi
 }
 
@@ -103,7 +103,7 @@ awslocal s3api put-bucket-cors \
     ]
   }'
 
-echo "✅ S3 buckets configured"
+echo "S3 buckets configured"
 echo ""
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -163,7 +163,7 @@ if ! create_table "flopods-pods-dev"; then
       ]" \
     --billing-mode PAY_PER_REQUEST \
     >/dev/null
-  echo "✅ Created: flopods-pods-dev"
+  echo "Created: flopods-pods-dev"
 fi
 
 # ───────────────────────────────────────────────────────────────────────────────
@@ -204,7 +204,7 @@ if ! create_table "flopods-executions-dev"; then
       ]" \
     --billing-mode PAY_PER_REQUEST \
     >/dev/null
-  echo "✅ Created: flopods-executions-dev"
+  echo "Created: flopods-executions-dev"
 fi
 
 # ───────────────────────────────────────────────────────────────────────────────
@@ -235,7 +235,7 @@ if ! create_table "flopods-context-dev"; then
       ]" \
     --billing-mode PAY_PER_REQUEST \
     >/dev/null
-  echo "✅ Created: flopods-context-dev"
+  echo "Created: flopods-context-dev"
 fi
 
 # ───────────────────────────────────────────────────────────────────────────────
@@ -253,7 +253,7 @@ if ! create_table "flopods-sessions-dev"; then
       AttributeName=sk,KeyType=RANGE \
     --billing-mode PAY_PER_REQUEST \
     >/dev/null
-  echo "✅ Created: flopods-sessions-dev"
+  echo "Created: flopods-sessions-dev"
 fi
 
 # ───────────────────────────────────────────────────────────────────────────────
@@ -278,7 +278,7 @@ if ! create_table "flopods-cache-dev"; then
     --time-to-live-specification "Enabled=true,AttributeName=ttl" \
     >/dev/null
 
-  echo "✅ Created: flopods-cache-dev (with TTL)"
+  echo "Created: flopods-cache-dev (with TTL)"
 fi
 
 echo ""
@@ -296,8 +296,8 @@ echo ""
 awslocal ses verify-email-identity --email-address noreply@flopods.local
 awslocal ses verify-email-identity --email-address support@flopods.local
 
-echo "✅ Verified: noreply@flopods.local"
-echo "✅ Verified: support@flopods.local"
+echo "Verified: noreply@flopods.local"
+echo "Verified: support@flopods.local"
 echo ""
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -323,7 +323,7 @@ else
       "ReceiveMessageWaitTimeSeconds": "20"
     }' \
     >/dev/null
-  echo "✅ Created: flopods-document-processing.fifo"
+  echo "Created: flopods-document-processing.fifo"
 fi
 
 # Create dead letter queue (FIFO)
@@ -337,7 +337,7 @@ else
       "MessageRetentionPeriod": "1209600"
     }' \
     >/dev/null
-  echo "✅ Created: flopods-document-processing-dlq.fifo"
+  echo "Created: flopods-document-processing-dlq.fifo"
 fi
 
 echo ""
@@ -347,7 +347,7 @@ echo ""
 # ═══════════════════════════════════════════════════════════════════════════════
 
 echo "╔══════════════════════════════════════════════════════════════════════════╗"
-echo "║  ✅ Verification                                                         ║"
+echo "║  Verification                                                         ║"
 echo "╚══════════════════════════════════════════════════════════════════════════╝"
 echo ""
 

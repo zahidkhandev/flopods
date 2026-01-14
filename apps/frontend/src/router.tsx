@@ -10,7 +10,6 @@ import { AuthLayout } from './layout/auth-layout';
 import { ProtectedRoute } from './components/shared/protected-route';
 import { RootLayout } from './layout/root-layout';
 
-// Error Pages
 import NotFoundPage from './pages/errors/404';
 import ServerErrorPage from './pages/errors/500';
 import ForbiddenPage from './pages/errors/403';
@@ -68,12 +67,10 @@ export const router = createBrowserRouter([
             path: 'settings',
             element: <WorkspaceSettingsPage />,
           },
-
           {
             path: 'flows',
             element: <FlowsPage />,
           },
-
           {
             path: 'flows/:id',
             element: <FlowIdPage />,
@@ -84,6 +81,10 @@ export const router = createBrowserRouter([
           },
           {
             path: 'documents',
+            element: <DocumentsPage />,
+          },
+          {
+            path: 'documents/folder/:folderId',
             element: <DocumentsPage />,
           },
           {
@@ -100,7 +101,6 @@ export const router = createBrowserRouter([
           },
         ],
       },
-      // Error Pages
       {
         path: 'errors',
         children: [

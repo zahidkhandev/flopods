@@ -25,7 +25,7 @@ async function testDynamoDB(retries = 5) {
   for (let i = 1; i <= retries; i++) {
     try {
       const listResponse = await client.send(new ListTablesCommand({}));
-      console.log('✅ DynamoDB Local is running!');
+      console.log('DynamoDB Local is running!');
       console.log('📋 Existing tables:', listResponse.TableNames?.length || 0);
 
       if (listResponse.TableNames && listResponse.TableNames.length > 0) {
@@ -34,7 +34,7 @@ async function testDynamoDB(retries = 5) {
         console.log('   No tables yet (will be created when backend starts)');
       }
 
-      console.log('\n✅ Connection test passed!');
+      console.log('\nConnection test passed!');
       process.exit(0);
     } catch (error) {
       if (i === retries) {

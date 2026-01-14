@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { axiosInstance } from '@/lib/axios-instance';
 import { useWorkspaces } from '@/hooks/use-workspaces';
 
-// ✅ Matches backend ExecutionHistoryItemDto exactly
+// Matches backend ExecutionHistoryItemDto exactly
 export interface ExecutionHistoryItem {
   id: string;
   podId: string;
@@ -22,7 +22,7 @@ export interface ExecutionHistoryItem {
   errorCode: string | null;
 }
 
-// ✅ Matches backend ExecutionDetailDto exactly
+// Matches backend ExecutionDetailDto exactly
 export interface ExecutionDetail {
   id: string;
   podId: string;

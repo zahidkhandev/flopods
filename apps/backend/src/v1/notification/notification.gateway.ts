@@ -53,7 +53,7 @@ export class V1NotificationGateway
       const secret = this.configService.get<string>('JWT_ACCESS_TOKEN_SECRET');
       const payload = await this.jwtService.verifyAsync(token, { secret });
 
-      // ✅ Use userId instead of sub (matches your JWT payload structure)
+      // Use userId instead of sub (matches your JWT payload structure)
       const userId = payload.userId || payload.sub;
 
       if (!userId) {
@@ -76,7 +76,7 @@ export class V1NotificationGateway
       });
 
       const deviceCount = this.userSockets.get(userId)!.size;
-      this.logger.log(`✅ User ${userId} connected [${deviceCount} device(s)]`);
+      this.logger.log(`User ${userId} connected [${deviceCount} device(s)]`);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Auth failed';
       this.logger.error(`❌ Connection failed: ${errorMessage}`);

@@ -113,7 +113,7 @@ export interface Message {
   };
 }
 
-// ✅ UPDATED: Matches backend response exactly
+// UPDATED: Matches backend response exactly
 export interface Execution {
   id: string;
   podId: string;
@@ -123,24 +123,24 @@ export interface Execution {
   modelId: string;
   modelName: string | null;
 
-  // ✅ Token fields
+  // Token fields
   inputTokens: number;
   outputTokens: number;
   reasoningTokens: number;
 
-  // ✅ Cost and runtime
+  // Cost and runtime
   costInUsd: string | null;
   runtimeInMs: number | null;
 
-  // ✅ Timestamps
+  // Timestamps
   startedAt: string;
   finishedAt: string | null;
 
-  // ✅ Metadata
+  // Metadata
   requestMetadata: any;
   responseMetadata: any;
 
-  // ✅ Error info
+  // Error info
   errorMessage: string | null;
   errorCode: string | null;
 }

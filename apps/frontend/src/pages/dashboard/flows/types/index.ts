@@ -33,7 +33,7 @@ export interface FlowsResponse {
   pagination: FlowPagination;
 }
 
-// ✅ Backend response wrapper
+// Backend response wrapper
 export interface ApiResponse<T> {
   statusCode: number;
   message: string;

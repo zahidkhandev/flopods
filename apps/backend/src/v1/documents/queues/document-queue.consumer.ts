@@ -21,7 +21,7 @@ export class V1DocumentQueueConsumer implements OnModuleInit, OnModuleDestroy {
 
     try {
       await this.queueService.startDocumentConsumer(this.handleDocumentMessage.bind(this));
-      this.logger.log('[Consumer] ✅ Document queue consumer started successfully');
+      this.logger.log('[Consumer] Document queue consumer started successfully');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`[Consumer] ❌ Failed to start consumer: ${errorMessage}`);
@@ -34,7 +34,7 @@ export class V1DocumentQueueConsumer implements OnModuleInit, OnModuleDestroy {
 
     try {
       await this.queueService.stopDocumentConsumer();
-      this.logger.log('[Consumer] ✅ Consumer stopped gracefully');
+      this.logger.log('[Consumer] Consumer stopped gracefully');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`[Consumer] ⚠️ Error during shutdown: ${errorMessage}`);
@@ -49,11 +49,11 @@ export class V1DocumentQueueConsumer implements OnModuleInit, OnModuleDestroy {
         `[Consumer] 📨 Processing: ${message.documentId} (action: ${message.action})`,
       );
 
-      // ✅ Route to orchestrator
+      // Route to orchestrator
       await this.orchestrator.processDocument(message);
 
       const duration = Date.now() - startTime;
-      this.logger.log(`[Consumer] ✅ Success: ${message.documentId} (${duration}ms)`);
+      this.logger.log(`[Consumer] Success: ${message.documentId} (${duration}ms)`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       const duration = Date.now() - startTime;
@@ -62,7 +62,7 @@ export class V1DocumentQueueConsumer implements OnModuleInit, OnModuleDestroy {
         `[Consumer] ❌ Failed: ${message.documentId} (${duration}ms) - ${errorMessage}`,
       );
 
-      // ✅ Don't fail on quota - let embeddings service handle retry
+      // Don't fail on quota - let embeddings service handle retry
       if (errorMessage.includes('429') || errorMessage.includes('quota')) {
         this.logger.warn(`[Consumer] ⏰ Quota exceeded - Will retry with backoff`);
         return;

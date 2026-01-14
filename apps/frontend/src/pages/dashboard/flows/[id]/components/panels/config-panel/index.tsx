@@ -204,7 +204,7 @@ export default memo(function ConfigPanel({ selectedPodId }: ConfigPanelProps) {
     [provider, getModelsForProvider]
   );
 
-  // ✅ Debounce streaming updates to reduce renders
+  // Debounce streaming updates to reduce renders
   useEffect(() => {
     if (streamingContent) {
       if (streamDebounceRef.current) {
@@ -267,7 +267,7 @@ export default memo(function ConfigPanel({ selectedPodId }: ConfigPanelProps) {
     },
   });
 
-  // ✅ Optimized displayMessages with thinking state
+  // Optimized displayMessages with thinking state
   const displayMessages = useMemo(() => {
     if (isExecuting && !debouncedStreamingContent) {
       return [
@@ -390,7 +390,7 @@ export default memo(function ConfigPanel({ selectedPodId }: ConfigPanelProps) {
     }
   }, []);
 
-  // ✅ NEW: Only reset when switching to a DIFFERENT pod
+  // NEW: Only reset when switching to a DIFFERENT pod
   const previousPodIdRef = useRef<string | null>(null);
   const isCurrentlyExecutingRef = useRef(false);
 
@@ -400,7 +400,7 @@ export default memo(function ConfigPanel({ selectedPodId }: ConfigPanelProps) {
 
   useEffect(() => {
     if (selectedPodId && selectedPodId !== previousPodIdRef.current) {
-      // ✅ New pod selected, reset everything
+      // New pod selected, reset everything
       previousPodIdRef.current = selectedPodId;
 
       if (selectedNode) {
@@ -716,13 +716,13 @@ export default memo(function ConfigPanel({ selectedPodId }: ConfigPanelProps) {
                                     </div>
                                   )}
 
-                                  {/* ✅ Stats + Actions in one line */}
+                                  {/* Stats + Actions in one line */}
                                   {message.role === 'assistant' &&
                                     !message.content.includes('⚠️') &&
                                     !message.isStreaming &&
                                     !message.isThinking && (
                                       <div className="border-border/30 text-muted-foreground mt-3 flex items-center justify-between gap-3 border-t pt-2 text-xs">
-                                        {/* ✅ LEFT SIDE: Token stats (only show if metadata exists) */}
+                                        {/* LEFT SIDE: Token stats (only show if metadata exists) */}
                                         {message.metadata && (
                                           <div className="flex items-center gap-3">
                                             {message.metadata.runtime && (
@@ -749,7 +749,7 @@ export default memo(function ConfigPanel({ selectedPodId }: ConfigPanelProps) {
                                           </div>
                                         )}
 
-                                        {/* ✅ RIGHT SIDE: Actions (always visible) */}
+                                        {/* RIGHT SIDE: Actions (always visible) */}
                                         <div className="flex items-center gap-1">
                                           <Button
                                             variant="ghost"

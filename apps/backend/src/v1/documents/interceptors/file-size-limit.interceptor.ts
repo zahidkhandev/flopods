@@ -37,9 +37,9 @@ const FILE_SIZE_LIMITS: Record<SubscriptionTier, number> = {
 
 /**
  * File size limit interceptor
- * ✅ Checks file size against subscription tier
- * ✅ Prevents uploads exceeding plan limits
- * ✅ Provides upgrade suggestions
+ * Checks file size against subscription tier
+ * Prevents uploads exceeding plan limits
+ * Provides upgrade suggestions
  */
 @Injectable()
 export class V1FileSizeLimitInterceptor implements NestInterceptor {

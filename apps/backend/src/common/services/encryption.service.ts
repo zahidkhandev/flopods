@@ -20,7 +20,7 @@ export class ApiKeyEncryptionService {
   }
 
   /**
-   * ✅ Encrypt sensitive API keys using AES-256-GCM
+   * Encrypt sensitive API keys using AES-256-GCM
    * @param plaintext The API key or secret to encrypt
    * @returns Encrypted string in format: iv:authTag:ciphertext
    */
@@ -43,7 +43,7 @@ export class ApiKeyEncryptionService {
   }
 
   /**
-   * ✅ Decrypt API keys encrypted with encrypt()
+   * Decrypt API keys encrypted with encrypt()
    * @param encryptedData The encrypted string in format: iv:authTag:ciphertext
    * @returns Decrypted plaintext
    */
@@ -79,7 +79,7 @@ export class ApiKeyEncryptionService {
   }
 
   /**
-   * ✅ Get fingerprint of API key (last 8 chars, safe for logs)
+   * Get fingerprint of API key (last 8 chars, safe for logs)
    */
   getFingerprint(plaintext: string): string {
     return `key_${plaintext.slice(-8)}`;

@@ -54,7 +54,7 @@ def run(cmd):
     print(f"🔄 {cmd[:60]}...")
     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
     if result.returncode == 0:
-        print("✅ Done")
+        print("Done")
         return True
     print("⚠️  Skipped (may already exist)")
     return True
@@ -126,7 +126,7 @@ def main():
 
     # Verify
     print("╔════════════════════════════════════════════════════════════╗")
-    print("║  ✅ Verification                                           ║")
+    print("║  Verification                                           ║")
     print("╚════════════════════════════════════════════════════════════╝\n")
 
     print("📦 S3 Buckets:")
@@ -146,7 +146,7 @@ def main():
         shell=True,
     )
 
-    print("\n✅ LocalStack initialization complete!\n")
+    print("\nLocalStack initialization complete!\n")
 
 if __name__ == "__main__":
     main()

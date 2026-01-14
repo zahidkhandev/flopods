@@ -50,6 +50,10 @@ export class V1ModelsService {
       displayName: 'DeepSeek',
       capabilities: ['text', 'reasoning', 'cost-effective'],
     },
+    [LLMProvider.HUGGING_FACE]: {
+      displayName: 'Hugging Face',
+      capabilities: ['text', 'embedding', 'models', 'custom'],
+    },
     [LLMProvider.CUSTOM]: {
       displayName: 'Custom',
       capabilities: ['text'],
@@ -97,14 +101,14 @@ export class V1ModelsService {
     return models.map((model) =>
       plainToInstance(ModelPricingDto, {
         modelId: model.modelId,
-        modelName: model.displayName, // ✅ FIXED: Use displayName
+        modelName: model.displayName, // FIXED: Use displayName
         provider: model.provider,
         inputTokenCost: model.inputTokenCost.toString(),
         outputTokenCost: model.outputTokenCost.toString(),
         reasoningTokenCost: model.reasoningTokenCost?.toString() || null,
-        contextWindow: model.maxTokens || 0, // ✅ FIXED: Use maxTokens
+        contextWindow: model.maxTokens || 0, // FIXED: Use maxTokens
         supportsVision: model.supportsVision,
-        supportsFunctionCalling: model.supportsFunctions, // ✅ FIXED: Use supportsFunctions
+        supportsFunctionCalling: model.supportsFunctions, // FIXED: Use supportsFunctions
         supportsStreaming: model.supportsStreaming,
         isActive: model.isActive,
         effectiveFrom: model.effectiveFrom,
@@ -128,14 +132,14 @@ export class V1ModelsService {
     const modelDtos = models.map((model) =>
       plainToInstance(ModelPricingDto, {
         modelId: model.modelId,
-        modelName: model.displayName, // ✅ FIXED
+        modelName: model.displayName, // FIXED
         provider: model.provider,
         inputTokenCost: model.inputTokenCost.toString(),
         outputTokenCost: model.outputTokenCost.toString(),
         reasoningTokenCost: model.reasoningTokenCost?.toString() || null,
-        contextWindow: model.maxTokens || 0, // ✅ FIXED
+        contextWindow: model.maxTokens || 0, // FIXED
         supportsVision: model.supportsVision,
-        supportsFunctionCalling: model.supportsFunctions, // ✅ FIXED
+        supportsFunctionCalling: model.supportsFunctions, // FIXED
         supportsStreaming: model.supportsStreaming,
         isActive: model.isActive,
         effectiveFrom: model.effectiveFrom,
@@ -166,14 +170,14 @@ export class V1ModelsService {
 
     return plainToInstance(ModelPricingDto, {
       modelId: model.modelId,
-      modelName: model.displayName, // ✅ FIXED
+      modelName: model.displayName, // FIXED
       provider: model.provider,
       inputTokenCost: model.inputTokenCost.toString(),
       outputTokenCost: model.outputTokenCost.toString(),
       reasoningTokenCost: model.reasoningTokenCost?.toString() || null,
-      contextWindow: model.maxTokens || 0, // ✅ FIXED
+      contextWindow: model.maxTokens || 0, // FIXED
       supportsVision: model.supportsVision,
-      supportsFunctionCalling: model.supportsFunctions, // ✅ FIXED
+      supportsFunctionCalling: model.supportsFunctions, // FIXED
       supportsStreaming: model.supportsStreaming,
       isActive: model.isActive,
       effectiveFrom: model.effectiveFrom,

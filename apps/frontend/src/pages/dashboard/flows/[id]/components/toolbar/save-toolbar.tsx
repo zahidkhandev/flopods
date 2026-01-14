@@ -11,7 +11,7 @@ export default memo(function SaveToolbar() {
   const { fitView } = useReactFlow();
 
   const handleAutoLayout = () => {
-    // ✅ For now, just fit view nicely
+    // For now, just fit view nicely
     // Later you can add dagre layout algorithm
     fitView({
       padding: 0.2,

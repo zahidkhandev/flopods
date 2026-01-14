@@ -12,7 +12,7 @@ interface UseFlowsOptions {
   spaceId?: string;
 }
 
-// ✅ Match your backend's interceptor structure
+// Match your backend's interceptor structure
 interface BackendResponse<T> {
   statusCode: number;
   message: string;
@@ -56,7 +56,7 @@ export function useFlows(options: UseFlowsOptions = {}) {
         }
       );
 
-      // ✅ Your interceptor returns: { statusCode, message, data: [], pagination: {}, errors, timestamp }
+      // Your interceptor returns: { statusCode, message, data: [], pagination: {}, errors, timestamp }
       setFlows(response.data.data || []);
       setPagination(
         response.data.pagination || {

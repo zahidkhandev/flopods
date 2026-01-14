@@ -104,7 +104,7 @@ export function UpdateMemberDialog({
       });
 
       onOpenChange(false);
-      onSuccess?.(); // ✅ Call onSuccess to reload data
+      onSuccess?.(); // Call onSuccess to reload data
     } catch (error: any) {
       console.error('Update member error:', error);
     } finally {

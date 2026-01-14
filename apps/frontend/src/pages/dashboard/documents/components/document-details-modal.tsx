@@ -1,26 +1,18 @@
-/**
- * Document Details Modal - SUPER RESPONSIVE
- */
-
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
   FileText,
-  Calendar,
   Database,
   FileStack,
   TrendingUp,
   Hash,
   AlertCircle,
+  DollarSign,
+  Calendar,
 } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import type { Document } from '../types';
 
 interface DocumentDetailsModalProps {
@@ -32,22 +24,14 @@ interface DocumentDetailsModalProps {
 export function DocumentDetailsModal({ document, open, onOpenChange }: DocumentDetailsModalProps) {
   if (!document) return null;
 
-  const formatFileSize = (bytes?: number) => {
-    if (!bytes) return 'N/A';
+  const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).format(date);
+    return format(new Date(dateString), 'MMM d, yyyy h:mm a');
   };
 
   const getStatusColor = (status: string) => {
@@ -56,235 +40,227 @@ export function DocumentDetailsModal({ document, open, onOpenChange }: DocumentD
         return 'bg-green-500';
       case 'PROCESSING':
         return 'bg-blue-500';
-      case 'QUEUED':
+      case 'UPLOADING':
         return 'bg-yellow-500';
-      case 'FAILED':
+      case 'ERROR':
         return 'bg-red-500';
       default:
         return 'bg-gray-500';
     }
   };
 
+  const getStatusVariant = (status: string) => {
+    if (status === 'READY') return 'default';
+    if (status === 'ERROR') return 'destructive';
+    return 'secondary';
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] w-[95vw] max-w-2xl overflow-y-auto sm:w-full">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 sm:gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 sm:h-10 sm:w-10">
-              <FileText className="h-4 w-4 text-white sm:h-5 sm:w-5" />
+      <DialogContent className="h-[90vh] max-h-[800px] w-[95vw] max-w-2xl p-0 sm:h-auto">
+        <DialogHeader className="border-b px-4 py-4 sm:px-6">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-blue-500 to-purple-600">
+              <FileText className="h-5 w-5 text-white" />
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-base sm:text-lg">{document.name}</p>
+            <div className="min-w-0 flex-1 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <DialogTitle className="text-foreground m-0 truncate text-lg">
+                  {document.name}
+                </DialogTitle>
+                <div
+                  className={`h-2 w-2 shrink-0 rounded-full ${getStatusColor(document.status)}`}
+                />
+                <Badge variant={getStatusVariant(document.status)} className="text-xs">
+                  {document.status}
+                </Badge>
+              </div>
+              <p className="text-muted-foreground text-xs">ID: {document.id}</p>
             </div>
-          </DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm">
-            Detailed information about this document
-          </DialogDescription>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-4 sm:space-y-6">
-          {/* Status Section */}
-          <div>
-            <h3 className="mb-2 text-sm font-semibold sm:mb-3">Status</h3>
-            <div className="flex items-center gap-2">
-              <div className={`h-2 w-2 rounded-full ${getStatusColor(document.status)}`} />
-              <Badge
-                variant={
-                  document.status === 'READY'
-                    ? 'default'
-                    : document.status === 'FAILED'
-                      ? 'destructive'
-                      : 'secondary'
-                }
-                className="text-xs"
-              >
-                {document.status}
-              </Badge>
-              {document.status === 'PROCESSING' && (
-                <span className="text-muted-foreground text-xs">Processing...</span>
-              )}
-            </div>
+        <ScrollArea className="h-[calc(90vh-120px)] max-h-[600px] sm:h-auto sm:max-h-[500px]">
+          <div className="space-y-4 p-4 sm:space-y-6 sm:p-6">
+            {/* Error Message */}
             {document.failureReason && (
-              <div className="bg-destructive/10 mt-2 rounded-lg p-2 sm:mt-3 sm:p-3">
+              <div className="bg-destructive/10 rounded-lg p-3">
                 <div className="flex items-start gap-2">
-                  <AlertCircle className="text-destructive mt-0.5 h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
+                  <AlertCircle className="text-destructive mt-0.5 h-4 w-4 shrink-0" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-destructive text-xs font-medium sm:text-sm">
-                      Processing Failed
-                    </p>
-                    <p className="text-destructive/80 mt-1 text-xs break-words">
-                      {document.failureReason}
-                    </p>
+                    <p className="text-destructive text-xs font-medium">Processing Failed</p>
+                    <p className="text-destructive/80 mt-1 text-xs">{document.failureReason}</p>
                   </div>
                 </div>
               </div>
             )}
-          </div>
 
-          <Separator />
-
-          {/* File Information */}
-          <div>
-            <h3 className="mb-2 text-sm font-semibold sm:mb-3">File Information</h3>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
-              <div className="flex items-start gap-2 sm:gap-3">
-                <Database className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-muted-foreground text-xs">File Size</p>
-                  <p className="truncate text-sm font-medium">
-                    {formatFileSize(document.fileSize)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2 sm:gap-3">
-                <FileText className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-muted-foreground text-xs">MIME Type</p>
-                  <p className="truncate text-sm font-medium">{document.mimeType || 'N/A'}</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2 sm:gap-3">
-                <Hash className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-muted-foreground text-xs">Source Type</p>
-                  <p className="truncate text-sm font-medium">{document.sourceType}</p>
-                </div>
-              </div>
-
-              {document.externalUrl && (
-                <div className="col-span-1 flex items-start gap-2 sm:col-span-2 sm:gap-3">
-                  <FileText className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
+            {/* File Information */}
+            <div>
+              <h3 className="text-foreground mb-3 text-sm font-semibold">File Information</h3>
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                <div className="flex items-start gap-2">
+                  <Database className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-muted-foreground text-xs">External URL</p>
-                    <p className="text-sm font-medium break-all">{document.externalUrl}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Processing Statistics */}
-          <div>
-            <h3 className="mb-2 text-sm font-semibold sm:mb-3">Processing Statistics</h3>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
-              <div className="flex items-start gap-2 sm:gap-3">
-                <FileStack className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
-                <div>
-                  <p className="text-muted-foreground text-xs">Chunks</p>
-                  <p className="text-xl font-bold sm:text-2xl">{document.chunkCount}</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2 sm:gap-3">
-                <TrendingUp className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
-                <div>
-                  <p className="text-muted-foreground text-xs">Embeddings</p>
-                  <p className="text-xl font-bold sm:text-2xl">{document.embeddingCount}</p>
-                </div>
-              </div>
-
-              <div className="col-span-2 flex items-start gap-2 sm:col-span-1 sm:gap-3">
-                <Hash className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
-                <div>
-                  <p className="text-muted-foreground text-xs">Tokens</p>
-                  <p className="text-xl font-bold sm:text-2xl">
-                    {document.totalTokens.toLocaleString()}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Timeline */}
-          <div>
-            <h3 className="mb-2 text-sm font-semibold sm:mb-3">Timeline</h3>
-            <div className="space-y-2 sm:space-y-3">
-              <div className="flex items-start gap-2 sm:gap-3">
-                <Calendar className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-muted-foreground text-xs">Created</p>
-                  <p className="text-sm font-medium">{formatDate(document.createdAt)}</p>
-                  <p className="text-muted-foreground text-xs">
-                    {formatDistanceToNow(new Date(document.createdAt), { addSuffix: true })}
-                  </p>
-                </div>
-              </div>
-
-              {document.processedAt && (
-                <div className="flex items-start gap-2 sm:gap-3">
-                  <Calendar className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-muted-foreground text-xs">Processed</p>
-                    <p className="text-sm font-medium">{formatDate(document.processedAt)}</p>
-                    <p className="text-muted-foreground text-xs">
-                      {formatDistanceToNow(new Date(document.processedAt), { addSuffix: true })}
+                    <p className="text-muted-foreground text-xs">File Size</p>
+                    <p className="text-foreground truncate text-sm font-medium">
+                      {formatFileSize(document.sizeInBytes)}
                     </p>
                   </div>
                 </div>
-              )}
 
-              <div className="flex items-start gap-2 sm:gap-3">
-                <Calendar className="text-muted-foreground mt-0.5 h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-muted-foreground text-xs">Last Updated</p>
-                  <p className="text-sm font-medium">{formatDate(document.updatedAt)}</p>
-                  <p className="text-muted-foreground text-xs">
-                    {formatDistanceToNow(new Date(document.updatedAt), { addSuffix: true })}
-                  </p>
+                <div className="flex items-start gap-2">
+                  <FileText className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-muted-foreground text-xs">File Type</p>
+                    <p className="text-foreground truncate text-sm font-medium">
+                      {document.fileType}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <Calendar className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-muted-foreground text-xs">Created</p>
+                    <p className="text-foreground truncate text-sm font-medium">
+                      {formatDate(document.createdAt)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <Calendar className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-muted-foreground text-xs">Updated</p>
+                    <p className="text-foreground truncate text-sm font-medium">
+                      {formatDate(document.updatedAt)}
+                    </p>
+                  </div>
+                </div>
+
+                {document.processing.processedAt && (
+                  <div className="col-span-2 flex items-start gap-2">
+                    <Calendar className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-muted-foreground text-xs">Processed</p>
+                      <p className="text-foreground truncate text-sm font-medium">
+                        {formatDate(document.processing.processedAt)}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Processing Statistics */}
+            <div>
+              <h3 className="text-foreground mb-3 text-sm font-semibold">Processing Statistics</h3>
+              <div className="grid grid-cols-3 gap-3 sm:gap-4">
+                <div className="flex items-start gap-2">
+                  <FileStack className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
+                  <div>
+                    <p className="text-muted-foreground text-xs">Chunks</p>
+                    <p className="text-foreground text-xl font-bold sm:text-2xl">
+                      {document.processing.chunks}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <TrendingUp className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
+                  <div>
+                    <p className="text-muted-foreground text-xs">Embeddings</p>
+                    <p className="text-foreground text-xl font-bold sm:text-2xl">
+                      {document.processing.embeddings}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-2">
+                  <Hash className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
+                  <div>
+                    <p className="text-muted-foreground text-xs">Tokens</p>
+                    <p className="text-foreground text-xl font-bold sm:text-2xl">
+                      {document.processing.tokens.toLocaleString()}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Tags */}
-          {document.tags && document.tags.length > 0 && (
-            <>
-              <Separator />
-              <div>
-                <h3 className="mb-2 text-sm font-semibold sm:mb-3">Tags</h3>
-                <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                  {document.tags.map((tag) => (
-                    <Badge key={tag} variant="outline" className="text-xs">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
+            {/* Cost Information */}
+            {document.cost && (
+              <>
+                <Separator />
+                <div>
+                  <h3 className="text-foreground mb-3 text-sm font-semibold">Processing Cost</h3>
+                  <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                    <div className="flex items-start gap-2">
+                      <DollarSign className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
+                      <div>
+                        <p className="text-muted-foreground text-xs">Total Cost</p>
+                        <p className="text-foreground text-xl font-bold sm:text-2xl">
+                          ${document.cost.totalUsd.toFixed(4)}
+                        </p>
+                      </div>
+                    </div>
 
-          {/* IDs */}
-          <Separator />
-          <div>
-            <h3 className="mb-2 text-sm font-semibold sm:mb-3">Identifiers</h3>
-            <div className="space-y-1.5 text-xs sm:space-y-2">
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-center">
-                <span className="text-muted-foreground shrink-0">Document ID:</span>
-                <code className="bg-muted px-1.1.5 rounded py-0.5 break-all">{document.id}</code>
-              </div>
-              <div className="flex flex-col gap-1 sm:flex-row sm:items-center">
-                <span className="text-muted-foreground shrink-0">Workspace ID:</span>
-                <code className="bg-muted px-1.5.5 rounded py-0.5 break-all">
-                  {document.workspaceId}
-                </code>
-              </div>
-              {document.s3Key && (
-                <div className="flex flex-col gap-1">
-                  <span className="text-muted-foreground">S3 Key:</span>
-                  <code className="bg-muted py-0.0.5 rounded px-1.5 break-all">
-                    {document.s3Key}
-                  </code>
+                    <div className="flex items-start gap-2">
+                      <Hash className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
+                      <div>
+                        <p className="text-muted-foreground text-xs">Credits Used</p>
+                        <p className="text-foreground text-xl font-bold sm:text-2xl">
+                          {document.cost.credits}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-muted/50 mt-3 space-y-1.5 rounded-lg p-3 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Extraction:</span>
+                      <span className="text-foreground font-mono">
+                        ${document.cost.breakdown.extraction.toFixed(6)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Embedding:</span>
+                      <span className="text-foreground font-mono">
+                        ${document.cost.breakdown.embedding.toFixed(6)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Vision:</span>
+                      <span className="text-foreground font-mono">
+                        ${document.cost.breakdown.vision.toFixed(6)}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              )}
-            </div>
+              </>
+            )}
+
+            {/* Tags */}
+            {document.tags && document.tags.length > 0 && (
+              <>
+                <Separator />
+                <div>
+                  <h3 className="text-foreground mb-3 text-sm font-semibold">Tags</h3>
+                  <div className="flex flex-wrap gap-1.5">
+                    {document.tags.map((tag) => (
+                      <Badge key={tag} variant="outline" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
-        </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

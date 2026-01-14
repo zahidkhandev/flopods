@@ -94,7 +94,7 @@ export class AnthropicProvider extends BaseLLMProvider {
         timestamp: new Date(),
       };
 
-      // ✅ Calculate profit if pricing exists
+      // Calculate profit if pricing exists
       if (request.workspaceId && modelPricing) {
         const profitData = this.calculateProfit(modelPricing, {
           promptTokens: result.usage.promptTokens,
@@ -114,13 +114,13 @@ export class AnthropicProvider extends BaseLLMProvider {
         );
 
         this.logger.log(
-          `✅ Anthropic: ${result.usage.totalTokens} tokens | Cost: $${profitData.actualCostUsd.toFixed(6)} | Charge: $${profitData.userChargeUsd.toFixed(6)} | Profit: $${profitData.profitUsd.toFixed(6)} (${profitData.profitMarginPercentage.toFixed(2)}%)`,
+          `Anthropic: ${result.usage.totalTokens} tokens | Cost: $${profitData.actualCostUsd.toFixed(6)} | Charge: $${profitData.userChargeUsd.toFixed(6)} | Profit: $${profitData.profitUsd.toFixed(6)} (${profitData.profitMarginPercentage.toFixed(2)}%)`,
         );
       }
 
       const executionTime = Date.now() - startTime;
       this.logger.log(
-        `✅ Anthropic completed: ${result.usage.totalTokens} tokens in ${executionTime}ms`,
+        `Anthropic completed: ${result.usage.totalTokens} tokens in ${executionTime}ms`,
       );
 
       return result;
@@ -261,7 +261,7 @@ export class AnthropicProvider extends BaseLLMProvider {
         }
       }
 
-      this.logger.log(`✅ Anthropic stream completed`);
+      this.logger.log(`Anthropic stream completed`);
     } catch (error) {
       this.logger.error(
         `❌ Anthropic stream failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -329,7 +329,7 @@ export class AnthropicProvider extends BaseLLMProvider {
           timeout: 10000,
         },
       );
-      this.logger.log('✅ Anthropic API key valid');
+      this.logger.log('Anthropic API key valid');
       return true;
     } catch {
       this.logger.warn('Anthropic API key validation failed');

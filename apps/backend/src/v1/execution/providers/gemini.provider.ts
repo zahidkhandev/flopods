@@ -126,7 +126,7 @@ export class GeminiProvider extends BaseLLMProvider {
 
             // Log nicely (compat accepts both styles)
             this.logger.log(
-              `✅ Gemini: ${llmResponse.usage.totalTokens} tokens\n` +
+              `Gemini: ${llmResponse.usage.totalTokens} tokens\n` +
                 `${formatCostBreakdown(costBreakdown, {
                   promptTokens: llmResponse.usage.promptTokens,
                   completionTokens: llmResponse.usage.completionTokens,
@@ -166,7 +166,7 @@ export class GeminiProvider extends BaseLLMProvider {
 
       const executionTime = Date.now() - startTime;
       this.logger.log(
-        `✅ Gemini completed: ${llmResponse.usage.totalTokens} tokens in ${executionTime}ms`,
+        `Gemini completed: ${llmResponse.usage.totalTokens} tokens in ${executionTime}ms`,
       );
 
       return llmResponse;
@@ -376,7 +376,7 @@ export class GeminiProvider extends BaseLLMProvider {
         this.logger.warn(`[Gemini Stream] ⚠️ Completed with NO content`);
       } else {
         this.logger.log(
-          `✅ Gemini stream: ${totalUsage.totalTokens} tokens, ${chunkCount} chunks, ${fullContent.length} chars`,
+          `Gemini stream: ${totalUsage.totalTokens} tokens, ${chunkCount} chunks, ${fullContent.length} chars`,
         );
       }
     } catch (error) {
@@ -568,7 +568,7 @@ export class GeminiProvider extends BaseLLMProvider {
       });
 
       if (response.status === 200) {
-        this.logger.log('✅ Gemini API key valid');
+        this.logger.log('Gemini API key valid');
         return true;
       }
 
@@ -587,7 +587,7 @@ export class GeminiProvider extends BaseLLMProvider {
         this.logger.warn('⚠️ No Gemini models in database - please seed ModelPricingTier');
         return [];
       }
-      this.logger.debug(`✅ Loaded ${dbModels.length} Gemini models from database`);
+      this.logger.debug(`Loaded ${dbModels.length} Gemini models from database`);
       return dbModels;
     } catch (error) {
       this.logger.error(

@@ -2,8 +2,15 @@ import path from 'path';
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 
 import { PrismaClient, LLMProvider, ModelCategory, Prisma } from '@flopods/schema';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
+
+// Create PostgreSQL pool matching your DATABASE_URL
+const pool = new Pool({ connectionString: process.env.DATABASE_URL! });
+const adapter = new PrismaPg(pool);
 
 const prisma = new PrismaClient({
+  adapter, // Required for engineType: "library"
   log: ['error'],
 });
 
@@ -301,6 +308,32 @@ export const MODEL_PRICING_DATA = [
       batchSize: 10,
     }),
   },
+
+  {
+    provider: 'HUGGING_FACE' as LLMProvider,
+    modelId: 'BAAI/bge-base-en-v1.5',
+    category: 'EMBEDDING' as ModelCategory,
+    displayName: 'BGE Base English v1.5',
+    description: 'Hugging Face BGE embedding model with 768 dimension embeddings',
+    inputTokenCost: new Prisma.Decimal('0.0008'), // $0.0008 per million tokens input, approximate market cost
+    outputTokenCost: new Prisma.Decimal('0'),
+    reasoningTokenCost: new Prisma.Decimal('0'),
+    creditsPerMillionInputTokens: 80, // estimated credits per million input tokens
+    creditsPerMillionOutputTokens: 0,
+    creditsPerMillionReasoningTokens: 0,
+    maxTokens: 512, // max input tokens per inference
+    maxOutputTokens: 768, // embedding output vector dimensionality
+    supportsStreaming: false,
+    supportsVision: false,
+    supportsFunctions: false,
+    supportsJsonMode: false,
+    supportsSystemPrompt: false,
+    providerConfig: JSON.stringify({
+      dimensions: 768,
+      model: 'BAAI/bge-base-en-v1.5',
+      batchSize: 10,
+    }),
+  },
 ];
 
 /**
@@ -340,26 +373,35 @@ async function seedModelPricing() {
     console.log(`  ✓ ${count}/${MODEL_PRICING_DATA.length} models seeded...`);
   }
 
-  console.log(`\n✅ Seeded ${MODEL_PRICING_DATA.length} LATEST models only`);
+  console.log(`\nSeeded ${MODEL_PRICING_DATA.length} LATEST models only`);
   console.log('\n📊 Active Models:');
   console.log('  🟠 OpenAI:    5 models (GPT-5 series + O3)');
   console.log('  🔴 Anthropic: 3 models (Claude 4.5 latest)');
   console.log('  🟡 Google:    5 models (Gemini 2.5 + embedding)');
   console.log('\n💰 Pricing multiplied by 1M (per 1M tokens)');
-  console.log('✅ Ready for production');
+  console.log('Ready for production');
 }
 
 seedModelPricing()
   .then(async () => {
     await prisma.$disconnect();
-    console.log('\n✅ Seed completed successfully');
+    await pool.end(); // Clean up PG pool
+    console.log('\nSeed completed successfully');
     process.exit(0);
   })
   .catch(async (error) => {
     console.error('\n❌ Seed failed:', error);
     await prisma.$disconnect();
+    await pool.end();
     process.exit(1);
   });
+
+setTimeout(async () => {
+  console.error('\n⏱️  Seed timeout after 30s');
+  await prisma.$disconnect();
+  await pool.end();
+  process.exit(1);
+}, 30000);
 
 setTimeout(() => {
   console.error('\n⏱️  Seed timeout after 30s');

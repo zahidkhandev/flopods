@@ -8,7 +8,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
@@ -23,16 +22,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
-import {
-  MoreVertical,
-  Download,
-  Trash2,
-  RefreshCw,
-  Eye,
-  Loader2,
-  Edit,
-  FolderInput,
-} from 'lucide-react';
+import { MoreVertical, Trash2, RefreshCw, Eye, Loader2, Edit, FolderInput } from 'lucide-react';
 import { useDocuments } from '../hooks';
 import type { Document } from '../types';
 
@@ -52,14 +42,7 @@ export function DocumentActions({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showRegenerateDialog, setShowRegenerateDialog] = useState(false);
 
-  const {
-    deleteDocument,
-    regenerateEmbeddings,
-    downloadDocument,
-    isDeleting,
-    isRegenerating,
-    isDownloading,
-  } = useDocuments();
+  const { deleteDocument, regenerateEmbeddings, isDeleting, isRegenerating } = useDocuments();
 
   const handleDelete = async () => {
     try {
@@ -79,16 +62,7 @@ export function DocumentActions({
     }
   };
 
-  const handleDownload = async () => {
-    try {
-      await downloadDocument(doc.id);
-    } catch {
-      // Error handled in hook
-    }
-  };
-
-  const canRegenerate = doc.status !== 'PROCESSING' && doc.status !== 'QUEUED';
-  const canDownload = !!doc.s3Key && doc.status === 'READY';
+  const canRegenerate = doc.status !== 'PROCESSING' && doc.status !== 'UPLOADING';
 
   return (
     <>
@@ -100,9 +74,6 @@ export function DocumentActions({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52">
-          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-
           {/* View Details */}
           {onViewDetails && (
             <DropdownMenuItem onClick={() => onViewDetails(doc)} className="gap-2">
@@ -128,20 +99,6 @@ export function DocumentActions({
           )}
 
           <DropdownMenuSeparator />
-
-          {/* Download */}
-          <DropdownMenuItem
-            onClick={handleDownload}
-            disabled={!canDownload || isDownloading}
-            className="gap-2"
-          >
-            {isDownloading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4" />
-            )}
-            Download
-          </DropdownMenuItem>
 
           {/* Regenerate */}
           <DropdownMenuItem
@@ -204,7 +161,7 @@ export function DocumentActions({
             <AlertDialogDescription>
               This will reprocess <span className="font-semibold">{doc.name}</span> and regenerate
               all embeddings. Processing time depends on document size.
-              {doc.status === 'FAILED' && (
+              {doc.status === 'ERROR' && (
                 <span className="mt-2 block text-yellow-600">
                   This document previously failed. Regeneration may help resolve the issue.
                 </span>

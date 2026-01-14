@@ -25,7 +25,7 @@ interface AddApiKeyDialogProps {
   workspaceId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess?: () => void; // ✅ Add this
+  onSuccess?: () => void; // Add this
 }
 
 const LLM_PROVIDERS = [
@@ -51,7 +51,7 @@ export function AddApiKeyDialog({
   workspaceId,
   open,
   onOpenChange,
-  onSuccess, // ✅ Add this
+  onSuccess, // Add this
 }: AddApiKeyDialogProps) {
   const { addApiKey } = useWorkspaceApiKeys(workspaceId);
   const [isLoading, setIsLoading] = useState(false);
@@ -67,7 +67,7 @@ export function AddApiKeyDialog({
       onOpenChange(false);
       setFormData(DEFAULT_FORM_DATA);
       setShowApiKey(false);
-      onSuccess?.(); // ✅ Call onSuccess to refresh data
+      onSuccess?.(); // Call onSuccess to refresh data
     } catch {
       // Error handled in hook
     } finally {

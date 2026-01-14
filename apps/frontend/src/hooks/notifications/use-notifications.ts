@@ -56,7 +56,7 @@ export function useNotifications() {
     }
   }, []);
 
-  // ✅ Handle real-time new notification
+  // Handle real-time new notification
   const handleNewNotification = useCallback((notification: Notification) => {
     setNotifications((prev) => {
       // Prevent duplicates
@@ -68,12 +68,12 @@ export function useNotifications() {
     setUnreadCount((prev) => prev + 1);
   }, []);
 
-  // ✅ Handle real-time unread count update
+  // Handle real-time unread count update
   const handleUnreadCountUpdate = useCallback((count: number) => {
     setUnreadCount(count);
   }, []);
 
-  // ✅ Connect to WebSocket (no return value needed)
+  // Connect to WebSocket (no return value needed)
   useNotificationSocket(handleNewNotification, handleUnreadCountUpdate);
 
   const loadMore = useCallback(() => {

@@ -46,21 +46,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchUser]);
 
   const getRedirectPath = () => {
-    // ✅ Check sessionStorage first
+    // Check sessionStorage first
     const pendingInvitation = sessionStorage.getItem('pendingInvitation');
     if (pendingInvitation) {
       sessionStorage.removeItem('pendingInvitation');
       return `/workspace/invite/${pendingInvitation}`;
     }
 
-    // ✅ Check URL params
+    // Check URL params
     const urlParams = new URLSearchParams(window.location.search);
     const returnUrl = urlParams.get('returnUrl');
     if (returnUrl) {
       return decodeURIComponent(returnUrl);
     }
 
-    // ✅ Default
+    // Default
     return '/dashboard';
   };
 
@@ -85,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       toast.success('Logged in successfully');
 
-      // ✅ Use the helper function
+      // Use the helper function
       const redirectPath = getRedirectPath();
       navigate(redirectPath);
     } catch (error: any) {
@@ -117,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       toast.success('Account created successfully');
 
-      // ✅ Use the helper function
+      // Use the helper function
       const redirectPath = getRedirectPath();
       navigate(redirectPath);
     } catch (error: any) {

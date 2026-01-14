@@ -153,7 +153,7 @@ def main():
     run_init_localstack()
 
     print("\n" + "="*70)
-    print("✅ Reset Complete!")
+    print("Reset Complete!")
     print("="*70)
     print(f"""
 ✓ All containers stopped and removed

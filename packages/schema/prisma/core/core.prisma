@@ -23,6 +23,7 @@ model User {
   sentFlowInvites          FlowInvitation[]      @relation("FlowInvitedBy")
   receivedFlowInvites      FlowInvitation[]      @relation("FlowInvitedUser")
   createdApiKeys           ProviderAPIKey[]
+  chatEmbeddings           ChatEmbedding[]
 
   @@index([email])
   @@schema("core")
@@ -63,11 +64,12 @@ model Account {
 }
 
 model Workspace {
-  id        String        @id @default(cuid())
-  name      String        @db.VarChar(255)
-  type      WorkspaceType @default(PERSONAL)
-  createdAt DateTime      @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime      @updatedAt @db.Timestamptz(6)
+  id             String          @id @default(cuid())
+  name           String          @db.VarChar(255)
+  chatEmbeddings ChatEmbedding[]
+  type           WorkspaceType   @default(PERSONAL)
+  createdAt      DateTime        @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime        @updatedAt @db.Timestamptz(6)
 
   members         WorkspaceUser[]
   spaces          Space[]
@@ -338,6 +340,7 @@ enum LLMProvider {
   XAI
   DEEPSEEK
   CUSTOM
+  HUGGING_FACE
 
   @@schema("core")
 }

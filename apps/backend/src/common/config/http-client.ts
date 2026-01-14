@@ -27,7 +27,7 @@ export function createHttpClient(): AxiosInstance {
       client.defaults.httpsAgent = new HttpsProxyAgent(proxyUrl);
       client.defaults.proxy = false;
 
-      console.log('[HTTP Client] ✅ Proxy agents configured successfully');
+      console.log('[HTTP Client] Proxy agents configured successfully');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error(`[HTTP Client] ❌ Failed to configure proxy: ${errorMessage}`);

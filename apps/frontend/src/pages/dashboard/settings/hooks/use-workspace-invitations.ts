@@ -33,7 +33,7 @@ export function useWorkspaceInvitations(
 
         const response = await axiosInstance.get(`/workspaces/${workspaceId}/invitations`);
 
-        // ✅ FIXED: Handle both wrapped and direct responses
+        // FIXED: Handle both wrapped and direct responses
         const data = response.data?.data || response.data;
         setInvitations(Array.isArray(data) ? data : []);
       } catch (error: any) {

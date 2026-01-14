@@ -15,7 +15,7 @@
  * @module v1/documents
  */
 
-import { Module } from '@nestjs/common';
+import { Logger, Module, OnModuleInit } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
 // Controllers
@@ -69,7 +69,7 @@ import { ApiKeyEncryptionService } from '../../common/services/encryption.servic
     V1EmbeddingsController,
   ],
   providers: [
-    // ✅ Core Services
+    // Core Services
     ApiKeyEncryptionService,
     V1ApiKeyService,
     V1DocumentsService,
@@ -79,6 +79,10 @@ import { ApiKeyEncryptionService } from '../../common/services/encryption.servic
     V1DocumentEmbeddingsService,
     V1DocumentOrchestratorService,
     V1GeminiVisionService,
+
+    // YouTube Services (NO DUPLICATE)
+    V1YouTubeTranscriptExtractor,
+    V1YouTubeProcessorService,
 
     // ✅ YouTube Services (NO DUPLICATE)
     V1YouTubeTranscriptExtractor,
@@ -92,7 +96,7 @@ import { ApiKeyEncryptionService } from '../../common/services/encryption.servic
     V1FileSizeLimitInterceptor,
     V1FileTypeValidatorInterceptor,
 
-    // ✅ Queue Services
+    // Queue Services
     V1BullMQDocumentQueueService,
     V1SQSDocumentQueueService,
     V1DocumentQueueProducer,
@@ -112,4 +116,14 @@ import { ApiKeyEncryptionService } from '../../common/services/encryption.servic
     V1DocumentQueueProducer,
   ],
 })
-export class V1DocumentModule {}
+export class V1DocumentModule implements OnModuleInit {
+  private readonly logger = new Logger(V1DocumentModule.name);
+
+  constructor(private readonly consumer: V1DocumentQueueConsumer) {}
+
+  async onModuleInit() {
+    this.logger.log('📦 Documents Module: Initializing...');
+    // Consumer will auto-start via its own OnModuleInit
+    this.logger.log('Documents Module: Queue consumer started');
+  }
+}

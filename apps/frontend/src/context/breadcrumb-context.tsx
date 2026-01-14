@@ -11,7 +11,7 @@ interface BreadcrumbItem {
 export function BreadcrumbProvider({ children }: { children: ReactNode }) {
   const [customBreadcrumbs, setCustomBreadcrumbs] = useState<BreadcrumbItem[] | null>(null);
 
-  // ✅ Memoize the setter function
+  // Memoize the setter function
   const updateBreadcrumbs = useCallback((breadcrumbs: BreadcrumbItem[] | null) => {
     setCustomBreadcrumbs(breadcrumbs);
   }, []);

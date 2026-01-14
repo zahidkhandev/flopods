@@ -62,7 +62,7 @@ export default function AcceptInvitationPage() {
 
     if (!isAuthenticated) {
       sessionStorage.setItem('pendingInvitation', token || '');
-      const returnUrl = `/workspace/invite/${token}`; // ✅ Fixed path
+      const returnUrl = `/workspace/invite/${token}`; // Fixed path
       navigate(`/auth/login?returnUrl=${encodeURIComponent(returnUrl)}`);
       return;
     }

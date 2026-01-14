@@ -60,10 +60,10 @@ const ALLOWED_MIME_TYPES = [
 
 /**
  * File type validator interceptor
- * ✅ Validates file MIME type before processing
- * ✅ Uses magic number detection for accurate type validation
- * ✅ Prevents executable uploads
- * ✅ Blocks potentially malicious files
+ * Validates file MIME type before processing
+ * Uses magic number detection for accurate type validation
+ * Prevents executable uploads
+ * Blocks potentially malicious files
  */
 @Injectable()
 export class V1FileTypeValidatorInterceptor implements NestInterceptor {
@@ -86,7 +86,7 @@ export class V1FileTypeValidatorInterceptor implements NestInterceptor {
       );
     }
 
-    // ✅ Validate file extension matches MIME type
+    // Validate file extension matches MIME type
     const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
     const isValidExtension = this.validateExtension(mimeType, fileExtension);
 

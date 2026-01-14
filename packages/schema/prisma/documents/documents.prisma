@@ -60,8 +60,8 @@ model Document {
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
 
-  workspace             Workspace                @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  folder                DocumentFolder?          @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  workspace             Workspace                  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  folder                DocumentFolder?            @relation(fields: [folderId], references: [id], onDelete: SetNull)
   embeddings            Embedding[]
   pods                  Pod[]
   processingCostRecords DocumentProcessingCost[]
@@ -70,6 +70,7 @@ model Document {
   visionMetadata        VisionMetadata?
   apiLogs               DocumentAPILog[]
 
+  @@unique([dynamoPartitionKey, dynamoSortKey])
   @@index([workspaceId, folderId, status, createdAt(sort: Desc)])
   @@index([workspaceId, status, createdAt(sort: Desc)])
   @@index([workspaceId, sourceType, createdAt(sort: Desc)])
@@ -144,42 +145,42 @@ model DocumentProcessingCost {
 }
 
 model VisionMetadata {
-  id         String @id @default(cuid())
-  documentId String @unique
+  id          String @id @default(cuid())
+  documentId  String @unique
   workspaceId String
 
-  imageOriginalWidth    Int?
-  imageOriginalHeight   Int?
-  imageColorSpace       String? @db.VarChar(50)
-  imageColorDepth       Int?
-  imageDPI              Int?
+  imageOriginalWidth  Int?
+  imageOriginalHeight Int?
+  imageColorSpace     String? @db.VarChar(50)
+  imageColorDepth     Int?
+  imageDPI            Int?
 
   detectedLanguages     Json?
   handwriting           Boolean @default(false)
-  handwritingConfidence Float @default(0)
+  handwritingConfidence Float   @default(0)
 
-  aestheticScore        Float @default(0)
-  brightnessScore       Float @default(0)
-  contrastScore         Float @default(0)
+  aestheticScore  Float @default(0)
+  brightnessScore Float @default(0)
+  contrastScore   Float @default(0)
 
-  dominantColors        Json?
-  colorPalette          Json?
+  dominantColors Json?
+  colorPalette   Json?
 
-  facesDetected         Int @default(0)
-  faceCount             Json?
+  facesDetected Int   @default(0)
+  faceCount     Json?
 
-  textLines             Int @default(0)
-  linesPerImage         Json?
+  textLines     Int   @default(0)
+  linesPerImage Json?
 
-  fileSize              BigInt?
-  fileFormat            String? @db.VarChar(20)
-  fileDuration          Int?
+  fileSize     BigInt?
+  fileFormat   String? @db.VarChar(20)
+  fileDuration Int?
 
-  exifData              Json?
-  metadata              Json?
+  exifData Json?
+  metadata Json?
 
-  processingQuality     String? @db.VarChar(50)
-  qualityIssues         Json?
+  processingQuality String? @db.VarChar(50)
+  qualityIssues     Json?
 
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
@@ -191,77 +192,77 @@ model VisionMetadata {
 }
 
 model DocumentVisionAnalysis {
-  id         String @id @default(cuid())
-  documentId String
+  id          String @id @default(cuid())
+  documentId  String
   workspaceId String
 
-  provider        LLMProvider @default(GOOGLE_GEMINI) // ✅ Use LLMProvider from core
-  modelId         String @db.VarChar(100)
-  modelVersion    String? @db.VarChar(50)
+  provider     LLMProvider @default(GOOGLE_GEMINI) // Use LLMProvider from core
+  modelId      String      @db.VarChar(100)
+  modelVersion String?     @db.VarChar(50)
 
-  ocrText                    String? @db.Text
-  ocrConfidence              Float @default(0)
-  ocrLanguages               Json?
+  ocrText       String? @db.Text
+  ocrConfidence Float   @default(0)
+  ocrLanguages  Json?
 
-  imageCaption               String? @db.Text
-  captionConfidence          Float @default(0)
-  imageSummary               String? @db.Text
-  imageStyle                 String? @db.VarChar(100)
+  imageCaption      String? @db.Text
+  captionConfidence Float   @default(0)
+  imageSummary      String? @db.Text
+  imageStyle        String? @db.VarChar(100)
 
-  detectedObjects            Json?
-  objectCount                Int @default(0)
+  detectedObjects Json?
+  objectCount     Int   @default(0)
 
-  detectedText               Json?
-  textContent                String? @db.Text
+  detectedText Json?
+  textContent  String? @db.Text
 
-  entityRecognition          Json?
-  sentimentAnalysis          Json?
+  entityRecognition Json?
+  sentimentAnalysis Json?
 
-  segmentationMasks          Json?
-  segmentationCount          Int @default(0)
+  segmentationMasks Json?
+  segmentationCount Int   @default(0)
 
-  sceneType                  String? @db.VarChar(100)
-  sceneDescription           String? @db.Text
+  sceneType        String? @db.VarChar(100)
+  sceneDescription String? @db.Text
 
-  activitiesDetected         Json?
-  poseEstimation             Json?
+  activitiesDetected Json?
+  poseEstimation     Json?
 
-  imageQuality               String? @db.VarChar(50)
-  imageBlur                  Boolean @default(false)
-  imageNoise                 Boolean @default(false)
+  imageQuality String? @db.VarChar(50)
+  imageBlur    Boolean @default(false)
+  imageNoise   Boolean @default(false)
 
-  dominantColors             Json?
-  colorCount                 Int @default(0)
-  colorHarmony               String? @db.VarChar(50)
+  dominantColors Json?
+  colorCount     Int     @default(0)
+  colorHarmony   String? @db.VarChar(50)
 
-  textDetected               Boolean @default(false)
-  qualityScore               Int?
-  imageFormat                String? @db.VarChar(50)
+  textDetected Boolean @default(false)
+  qualityScore Int?
+  imageFormat  String? @db.VarChar(50)
 
-  processingTimeMs           Int?
-  requestId                  String? @unique @db.VarChar(255)
+  processingTimeMs Int?
+  requestId        String? @unique @db.VarChar(255)
 
-  inputTokens                Int @default(0)
-  outputTokens               Int @default(0)
-  totalTokens                Int @default(0)
-  estimatedCost              Decimal @db.Decimal(12, 8)
+  inputTokens   Int     @default(0)
+  outputTokens  Int     @default(0)
+  totalTokens   Int     @default(0)
+  estimatedCost Decimal @db.Decimal(12, 8)
 
-  status                     VisionAnalysisStatus @default(PENDING)
-  errorMessage               String? @db.Text
-  errorCode                  String? @db.VarChar(100)
-  retryCount                 Int @default(0)
-  lastRetryAt                DateTime? @db.Timestamptz(6)
-  maxRetries                 Int @default(3)
+  status       VisionAnalysisStatus @default(PENDING)
+  errorMessage String?              @db.Text
+  errorCode    String?              @db.VarChar(100)
+  retryCount   Int                  @default(0)
+  lastRetryAt  DateTime?            @db.Timestamptz(6)
+  maxRetries   Int                  @default(3)
 
-  requestPayload             Json?
-  responseContent            String? @db.Text
-  rawResponse                Json?
+  requestPayload  Json?
+  responseContent String? @db.Text
+  rawResponse     Json?
 
-  metadata                   Json?
-  annotations                Json?
+  metadata    Json?
+  annotations Json?
 
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime  @updatedAt @db.Timestamptz(6)
   archivedAt DateTime? @db.Timestamptz(6)
 
   document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
@@ -277,28 +278,28 @@ model DocumentVisionAnalysis {
 }
 
 model VisionExtractionSnapshot {
-  id                  String @id @default(cuid())
-  documentId          String
-  workspaceId         String
-  visionAnalysisId    String?
+  id               String  @id @default(cuid())
+  documentId       String
+  workspaceId      String
+  visionAnalysisId String?
 
-  provider            LLMProvider // ✅ Use LLMProvider from core
-  modelId             String @db.VarChar(100)
-  extractionType      VisionExtractionType
-  extractedData       String @db.Text
+  provider       LLMProvider // Use LLMProvider from core
+  modelId        String               @db.VarChar(100)
+  extractionType VisionExtractionType
+  extractedData  String               @db.Text
 
-  confidence          Float @default(0)
-  version             Int @default(1)
-  extractedAt         DateTime
+  confidence  Float    @default(0)
+  version     Int      @default(1)
+  extractedAt DateTime
 
-  metadata            Json?
-  summary             String? @db.VarChar(500)
-  rawData             Json?
+  metadata Json?
+  summary  String? @db.VarChar(500)
+  rawData  Json?
 
-  processingTimeMs    Int?
-  tokensUsed          Int @default(0)
+  processingTimeMs Int?
+  tokensUsed       Int  @default(0)
 
-  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @db.Timestamptz(6)
   archivedAt DateTime? @db.Timestamptz(6)
 
   document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
@@ -312,39 +313,39 @@ model VisionExtractionSnapshot {
   @@schema("documents")
 }
 
-// ✅ UNIFIED API LOG FOR ALL OPERATIONS
+// UNIFIED API LOG FOR ALL OPERATIONS
 model DocumentAPILog {
-  id          String @id @default(cuid())
+  id          String  @id @default(cuid())
   workspaceId String
   documentId  String?
 
-  // ✅ Unified provider & request type from core
-  provider        LLMProvider
-  modelId         String @db.VarChar(100)
-  requestType     APIRequestType
+  // Unified provider & request type from core
+  provider    LLMProvider
+  modelId     String         @db.VarChar(100)
+  requestType APIRequestType
 
   // Token tracking
-  inputTokens     Int @default(0)
-  outputTokens    Int @default(0)
-  totalTokens     Int @default(0)
+  inputTokens  Int @default(0)
+  outputTokens Int @default(0)
+  totalTokens  Int @default(0)
 
   // Cost & success tracking
-  statusCode      Int
-  success         Boolean @default(false)
-  estimatedCost   Decimal @db.Decimal(12, 8)
-  actualCost      Decimal? @db.Decimal(12, 8)
+  statusCode    Int
+  success       Boolean  @default(false)
+  estimatedCost Decimal  @db.Decimal(12, 8)
+  actualCost    Decimal? @db.Decimal(12, 8)
 
   // Error tracking
-  errorMessage    String? @db.Text
-  errorCode       String? @db.VarChar(100)
+  errorMessage String? @db.Text
+  errorCode    String? @db.VarChar(100)
 
   // Performance
   requestDurationMs Int?
 
   // Extensible metadata (profit, credits, multiplier, etc)
-  metadata        Json?
+  metadata Json?
 
-  processedAt DateTime @default(now()) @db.Timestamptz(6)
+  processedAt DateTime  @default(now()) @db.Timestamptz(6)
   archivedAt  DateTime? @db.Timestamptz(6)
 
   document Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
@@ -426,15 +427,15 @@ enum VisionExtractionType {
   @@schema("documents")
 }
 
-// ✅ ADD THIS NEW ENUM TO CORE
+// ADD THIS NEW ENUM TO CORE
 // Add to prisma/schemas/core.prisma after LLMProvider enum
 
 enum APIRequestType {
-  TEXT_GENERATION       // LLM prompts (OpenAI, Claude, Gemini)
-  VECTOR_SEARCH         // Embedding queries
-  DOCUMENT_EMBEDDING    // Creating embeddings
-  IMAGE_ANALYSIS        // Vision analysis
-  MULTIMODAL            // Any multimodal operation
+  TEXT_GENERATION // LLM prompts (OpenAI, Claude, Gemini)
+  VECTOR_SEARCH // Embedding queries
+  DOCUMENT_EMBEDDING // Creating embeddings
+  IMAGE_ANALYSIS // Vision analysis
+  MULTIMODAL // Any multimodal operation
 
   @@schema("core")
 }

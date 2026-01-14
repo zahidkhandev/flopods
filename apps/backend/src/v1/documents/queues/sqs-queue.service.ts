@@ -14,11 +14,11 @@ import type { DocumentQueueMessage, DocumentQueueMetrics } from '../types';
 
 /**
  * AWS SQS Document Queue Service
- * ✅ FIFO queue guarantees
- * ✅ Dead Letter Queue (DLQ) for failed messages
- * ✅ Message visibility timeout
- * ✅ Durable storage (AWS managed)
- * ✅ Works even if backend is down
+ * FIFO queue guarantees
+ * Dead Letter Queue (DLQ) for failed messages
+ * Message visibility timeout
+ * Durable storage (AWS managed)
+ * Works even if backend is down
  */
 @Injectable()
 export class V1SQSDocumentQueueService implements IDocumentQueueService, OnModuleDestroy {
@@ -48,7 +48,7 @@ export class V1SQSDocumentQueueService implements IDocumentQueueService, OnModul
       return;
     }
 
-    // ✅ SQS CLIENT WITH DURABLE STORAGE
+    // SQS CLIENT WITH DURABLE STORAGE
     this.sqsClient = new SQSClient({
       region,
       credentials:
@@ -58,7 +58,7 @@ export class V1SQSDocumentQueueService implements IDocumentQueueService, OnModul
               secretAccessKey,
             }
           : undefined,
-      maxAttempts: 3, // ✅ Retry failed API calls
+      maxAttempts: 3, // Retry failed API calls
     });
 
     this.logger.log(`[SQS] 🚀 Initialized: ${this.queueUrl} (FIFO + DLQ + AWS Durability)`);
@@ -130,7 +130,7 @@ export class V1SQSDocumentQueueService implements IDocumentQueueService, OnModul
   }
 
   /**
-   * ✅ Send message with delay (for embeddings backoff)
+   * Send message with delay (for embeddings backoff)
    */
   async sendDocumentMessageWithDelay(
     message: DocumentQueueMessage,
@@ -140,7 +140,7 @@ export class V1SQSDocumentQueueService implements IDocumentQueueService, OnModul
 
     try {
       const delaySeconds = Math.ceil(delayMs / 1000);
-      // ✅ SQS max delay is 900 seconds (15 minutes)
+      // SQS max delay is 900 seconds (15 minutes)
       const actualDelay = Math.min(delaySeconds, 900);
 
       if (delaySeconds > 900) {
@@ -180,7 +180,7 @@ export class V1SQSDocumentQueueService implements IDocumentQueueService, OnModul
     this.isConsuming = true;
     this.logger.log('[SQS] 🚀 Consumer started');
 
-    // ✅ Poll every second with long polling (20s wait)
+    // Poll every second with long polling (20s wait)
     this.consumerInterval = setInterval(async () => {
       await this.pollMessages(handler);
     }, 1000);
@@ -206,9 +206,9 @@ export class V1SQSDocumentQueueService implements IDocumentQueueService, OnModul
       const command = new ReceiveMessageCommand({
         QueueUrl: this.queueUrl,
         MaxNumberOfMessages: 10,
-        WaitTimeSeconds: 20, // ✅ Long polling
+        WaitTimeSeconds: 20, // Long polling
         MessageAttributeNames: ['All'],
-        VisibilityTimeout: 600, // ✅ 10 minutes visibility timeout
+        VisibilityTimeout: 600, // 10 minutes visibility timeout
       });
 
       const response = await this.sqsClient.send(command);
@@ -223,18 +223,18 @@ export class V1SQSDocumentQueueService implements IDocumentQueueService, OnModul
 
           await handler(message);
 
-          // ✅ Delete after successful processing
+          // Delete after successful processing
           await this.deleteDocumentMessage(sqsMessage.ReceiptHandle!);
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           this.logger.error(`[SQS] ⚠️ Failed to process message: ${errorMessage}`);
 
-          // ✅ Increase visibility timeout to allow retry
+          // Increase visibility timeout to allow retry
           try {
             const visibilityCommand = new ChangeMessageVisibilityCommand({
               QueueUrl: this.queueUrl,
               ReceiptHandle: sqsMessage.ReceiptHandle!,
-              VisibilityTimeout: 60, // ✅ Retry in 1 minute
+              VisibilityTimeout: 60, // Retry in 1 minute
             });
             await this.sqsClient.send(visibilityCommand);
           } catch {

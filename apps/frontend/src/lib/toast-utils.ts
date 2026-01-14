@@ -76,7 +76,7 @@ export function loading(message: string, data?: ExternalToast) {
   return sonnerToast.loading(message, data);
 }
 
-// ✅ Use wrapper function instead of direct export
+// Use wrapper function instead of direct export
 export function promise<T>(promiseToRun: Promise<T> | (() => Promise<T>), data?: any) {
   return sonnerToast.promise(promiseToRun, data);
 }

@@ -9,47 +9,33 @@ export type DocumentSourceType = 'FILE' | 'YOUTUBE' | 'VIMEO' | 'LOOM' | 'URL' |
 
 export interface Document {
   id: string;
-  workspaceId: string;
   name: string;
-  sourceType: DocumentSourceType;
-  status: DocumentStatus;
-
-  // File metadata
-  fileSize?: number;
-  mimeType?: string;
-  s3Key?: string;
-  s3Bucket?: string;
-
-  // External source
-  externalUrl?: string;
-
-  // Processing metadata
-  chunkCount: number;
-  embeddingCount: number;
-  totalTokens: number;
-
-  // Organization
-  folderId?: string | null;
-  tags?: string[];
-
-  // Timestamps
+  sourceType: string;
+  fileType: string;
+  mimeType: string;
+  sizeInBytes: number;
+  status: string;
   createdAt: string;
   updatedAt: string;
-  processedAt?: string | null;
-
-  // Creator
-  createdBy: string;
-
-  // Failure info
-  failureReason?: string | null;
-
-  // Relations (optional, based on API query)
-  folder?: {
-    id: string;
-    name: string;
+  folder: { id: string; name: string } | null;
+  tags: string[];
+  processing: {
+    chunks: number;
+    embeddings: number;
+    tokens: number;
+    processedAt: string | null;
+  };
+  cost: {
+    totalUsd: number;
+    credits: number;
+    breakdown: {
+      extraction: number;
+      embedding: number;
+      vision: number;
+    };
   } | null;
+  failureReason: string | null;
 }
-
 export interface PaginatedDocumentsResponse {
   data: Document[];
   pagination: {

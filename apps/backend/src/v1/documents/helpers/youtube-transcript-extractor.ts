@@ -8,7 +8,7 @@ export class V1YouTubeTranscriptExtractor {
 
   constructor() {
     this.logger.log(
-      '[Extractor] ✅ YouTube Extractor initialized (using youtube-caption-extractor v1.9.1)',
+      '[Extractor] YouTube Extractor initialized (using youtube-caption-extractor v1.9.1)',
     );
   }
 
@@ -45,7 +45,7 @@ export class V1YouTubeTranscriptExtractor {
           });
 
           if (subtitles && subtitles.length > 0) {
-            this.logger.debug(`[Extractor] ✅ Captions fetched on attempt ${attempt}`);
+            this.logger.debug(`[Extractor] Captions fetched on attempt ${attempt}`);
             break;
           }
         } catch (error) {
@@ -84,7 +84,7 @@ export class V1YouTubeTranscriptExtractor {
       const duration = Date.now() - startTime;
 
       this.logger.log(
-        `[Extractor] ✅ Extraction complete (${duration}ms): ${subtitles.length} captions, ${transcript.length} chars`,
+        `[Extractor] Extraction complete (${duration}ms): ${subtitles.length} captions, ${transcript.length} chars`,
       );
 
       return {
@@ -146,7 +146,7 @@ export class V1YouTubeTranscriptExtractor {
         lang: lang,
       });
 
-      this.logger.log(`[Extractor] ✅ Video details fetched: ${videoDetails.title || 'Unknown'}`);
+      this.logger.log(`[Extractor] Video details fetched: ${videoDetails.title || 'Unknown'}`);
 
       return {
         title: videoDetails.title || `YouTube Video ${videoId}`,
@@ -173,7 +173,7 @@ export class V1YouTubeTranscriptExtractor {
   async healthCheck(): Promise<{ status: string; message: string }> {
     return {
       status: 'healthy',
-      message: '✅ YouTube Transcript Service (youtube-caption-extractor v1.9.1) ready',
+      message: 'YouTube Transcript Service (youtube-caption-extractor v1.9.1) ready',
     };
   }
 

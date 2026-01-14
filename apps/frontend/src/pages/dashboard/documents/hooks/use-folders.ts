@@ -1,7 +1,3 @@
-/**
- * React Query Hook for Folders - ALL OPERATIONS
- */
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useCallback, useMemo } from 'react';
 import { useWorkspaces } from '@/hooks/use-workspaces';
@@ -31,47 +27,36 @@ export function useFolders() {
   const queryClient = useQueryClient();
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
 
-  const queryKey = ['folders', currentWorkspaceId];
+  const queryKey = useMemo(() => ['folders', currentWorkspaceId], [currentWorkspaceId]);
 
-  // Fetch folders
-  const { data: folders = [], isLoading } = useQuery({
+  // Get tree structure directly from API
+  const { data: folderTree = [], isLoading } = useQuery({
     queryKey,
     queryFn: async () => {
       if (!currentWorkspaceId) throw new Error('No workspace selected');
-      const treeData = await documentsApi.listFolders(currentWorkspaceId);
-
-      const flattenTree = (
-        nodes: DocumentFolder[],
-        result: DocumentFolder[] = []
-      ): DocumentFolder[] => {
-        nodes.forEach((node) => {
-          const { children, ...folder } = node;
-          result.push(folder as DocumentFolder);
-          if (children?.length) flattenTree(children, result);
-        });
-        return result;
-      };
-
-      return flattenTree(treeData);
+      return await documentsApi.listFolders(currentWorkspaceId);
     },
     enabled: !!currentWorkspaceId,
+    refetchInterval: 5000,
+    staleTime: 1000 * 30,
   });
 
-  // Build tree
-  const folderTree = useMemo(() => {
-    const buildTree = (parentId: string | null = null): DocumentFolder[] => {
-      return folders
-        .filter((f) => f.parentId === parentId)
-        .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map((folder) => ({
-          ...folder,
-          children: buildTree(folder.id),
-        }));
+  // Flatten tree for other operations (breadcrumb, navigation, etc.)
+  const folders = useMemo(() => {
+    const flattenTree = (
+      nodes: DocumentFolder[],
+      result: DocumentFolder[] = []
+    ): DocumentFolder[] => {
+      nodes.forEach((node) => {
+        const { children, ...folder } = node;
+        result.push(folder as DocumentFolder);
+        if (children?.length) flattenTree(children, result);
+      });
+      return result;
     };
-    return buildTree();
-  }, [folders]);
+    return flattenTree(folderTree);
+  }, [folderTree]);
 
-  // Breadcrumb
   const breadcrumb = useMemo(() => {
     if (!currentFolderId) return [];
     const path: DocumentFolder[] = [];
@@ -87,7 +72,6 @@ export function useFolders() {
     return path;
   }, [currentFolderId, folders]);
 
-  // Create folder
   const createFolderMutation = useMutation({
     mutationFn: async (data: {
       name: string;
@@ -109,7 +93,6 @@ export function useFolders() {
     },
   });
 
-  // Update folder
   const updateFolderMutation = useMutation({
     mutationFn: async ({
       folderId,
@@ -137,7 +120,6 @@ export function useFolders() {
     },
   });
 
-  // Delete folder
   const deleteFolderMutation = useMutation({
     mutationFn: async (folderId: string) => {
       if (!currentWorkspaceId) throw new Error('No workspace selected');
@@ -154,7 +136,6 @@ export function useFolders() {
     },
   });
 
-  // Move folder
   const moveFolderMutation = useMutation({
     mutationFn: async ({
       folderId,
@@ -177,7 +158,6 @@ export function useFolders() {
     },
   });
 
-  // Navigation
   const navigateToFolder = useCallback((folderId: string | null) => {
     setCurrentFolderId(folderId);
   }, []);
@@ -188,7 +168,6 @@ export function useFolders() {
     setCurrentFolderId(currentFolder?.parentId || null);
   }, [currentFolderId, folders]);
 
-  // Delete with confirm
   const deleteWithConfirm = async (folderId: string, folderName: string) => {
     const confirmed = window.confirm(
       `Delete folder "${folderName}"? This will also delete all contents.`
@@ -198,28 +177,27 @@ export function useFolders() {
     }
   };
 
+  const refreshFolders = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey });
+  }, [queryClient, queryKey]);
+
   return {
-    folders,
-    folderTree,
+    folders, // Flat list for navigation/breadcrumb
+    folderTree, // Tree structure for display
     currentFolderId,
     currentFolder: folders.find((f) => f.id === currentFolderId) || null,
     breadcrumb,
     isLoading,
-
-    // CRUD
     createFolder: createFolderMutation.mutateAsync,
     updateFolder: updateFolderMutation.mutateAsync,
     deleteFolder: deleteFolderMutation.mutateAsync,
     deleteWithConfirm,
     moveFolder: moveFolderMutation.mutateAsync,
-
-    // Status
+    refreshFolders,
     isCreatingFolder: createFolderMutation.isPending,
     isUpdatingFolder: updateFolderMutation.isPending,
     isDeletingFolder: deleteFolderMutation.isPending,
     isMovingFolder: moveFolderMutation.isPending,
-
-    // Navigation
     navigateToFolder,
     navigateUp,
     canNavigateUp: currentFolderId !== null,

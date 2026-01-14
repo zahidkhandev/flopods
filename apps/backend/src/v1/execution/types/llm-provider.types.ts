@@ -26,7 +26,7 @@ export interface LLMUsage {
   cachedTokens?: number;
 }
 
-// ✅ PROFIT MARKUP STRUCT
+// PROFIT MARKUP STRUCT
 export interface LLMProfit {
   actualCostUsd: number;
   userChargeUsd: number;

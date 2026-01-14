@@ -37,7 +37,7 @@ export function ApiKeysSettings({ workspaceId }: { workspaceId: string }) {
 
   const handleAddSuccess = () => {
     setIsAddDialogOpen(false);
-    refetch(); // ✅ Refresh data after adding
+    refetch(); // Refresh data after adding
   };
 
   if (isLoading) {
@@ -220,7 +220,7 @@ export function ApiKeysSettings({ workspaceId }: { workspaceId: string }) {
             setIsAddDialogOpen(false);
           }
         }}
-        onSuccess={handleAddSuccess} // ✅ Pass success handler
+        onSuccess={handleAddSuccess} // Pass success handler
       />
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>

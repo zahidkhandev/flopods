@@ -39,7 +39,7 @@ export class V1EmbeddingsController {
     private readonly prisma: PrismaService,
   ) {}
 
-  // ✅ KEEP OLD ROUTE - for frontend compatibility
+  // KEEP OLD ROUTE - for frontend compatibility
   @Post('embeddings/workspaces/:workspaceId/documents/:documentId/regenerate')
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({ summary: 'Regenerate embeddings (legacy route)' })
@@ -62,7 +62,7 @@ export class V1EmbeddingsController {
     };
   }
 
-  // ✅ NEW ROUTE - with embeddings prefix
+  // NEW ROUTE - with embeddings prefix
   @Post(':documentId/regenerate-embeddings')
   @HttpCode(HttpStatus.ACCEPTED)
   @ApiOperation({
@@ -118,7 +118,7 @@ export class V1EmbeddingsController {
     };
   }
 
-  // ✅ GET STATUS
+  // GET STATUS
   @Get(':documentId/embedding-status')
   @ApiOperation({
     summary: 'Get embedding processing status',
@@ -147,7 +147,7 @@ export class V1EmbeddingsController {
     return this.embeddingsService.getEmbeddingStatus(documentId);
   }
 
-  // ✅ QUEUE METRICS
+  // QUEUE METRICS
   @Get('queue/metrics')
   @ApiOperation({
     summary: 'Get document processing queue metrics',
@@ -178,7 +178,7 @@ export class V1EmbeddingsController {
     };
   }
 
-  // ✅ LIST EMBEDDINGS
+  // LIST EMBEDDINGS
   @Get('workspaces/:workspaceId/documents/:documentId/embeddings')
   @ApiOperation({
     summary: 'List document embeddings',
@@ -255,7 +255,7 @@ export class V1EmbeddingsController {
     };
   }
 
-  // ✅ GET EMBEDDING STATS
+  // GET EMBEDDING STATS
   @Get('workspaces/:workspaceId/documents/:documentId/embeddings/stats')
   @ApiOperation({
     summary: 'Get embedding statistics',
@@ -326,7 +326,7 @@ export class V1EmbeddingsController {
     };
   }
 
-  // ✅ GET SPECIFIC CHUNK
+  // GET SPECIFIC CHUNK
   @Get('workspaces/:workspaceId/documents/:documentId/embeddings/chunks/:chunkIndex')
   @ApiOperation({
     summary: 'Get specific embedding chunk',
@@ -376,5 +376,12 @@ export class V1EmbeddingsController {
 
     this.logger.debug(`Retrieved chunk ${chunkIndex} for document: ${documentId}`);
     return embedding;
+  }
+
+  @Get('retry-status')
+  @ApiOperation({ summary: 'Get embeddings retry status' })
+  @ApiResponse({ status: HttpStatus.OK })
+  async getRetryStatus() {
+    return this.embeddingsService.getRetryStatus();
   }
 }

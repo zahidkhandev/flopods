@@ -18,80 +18,84 @@ echo Runtime: %RUNTIME%
 echo ====================================
 echo.
 
-REM Check if Node.js is installed
+REM Check Node.js
 node --version >nul 2>&1
 if errorlevel 1 (
-    echo Error: Node.js is not installed. Please install Node.js v20.0.0+
+    echo [ERROR] Node.js is not installed.
     pause
     exit /b 1
 )
 
-REM Check if Docker/Podman is running
-%RUNTIME% ps >nul 2>&1
+REM Check Runtime Status
+echo [1/6] Checking %RUNTIME% status...
+%RUNTIME% info >nul 2>&1
 if errorlevel 1 (
-    echo Error: %RUNTIME% is not running. Please start %RUNTIME% first.
+    echo.
+    echo [ERROR] %RUNTIME% is not running!
+    echo Please start the %RUNTIME% desktop app first.
     pause
     exit /b 1
 )
 
-echo [1/6] Installing dependencies...
+echo [2/6] Installing dependencies...
 call yarn install
 if errorlevel 1 (
-    echo Error: Failed to install dependencies
+    echo [ERROR] Dependency install failed.
     pause
     exit /b 1
 )
 
 echo.
-echo [2/6] Creating .env file...
+echo [3/6] Setting up environment...
 if not exist .env (
     copy .env.example .env >nul
-    echo .env file created
+    echo Created .env file
 ) else (
-    echo .env file already exists
+    echo .env file exists
 )
 
 echo.
-echo [3/6] Starting services with %RUNTIME%...
-call yarn %RUNTIME%:dev
-timeout /t 10 /nobreak
+echo [4/6] Starting database services...
+call yarn %RUNTIME%:db:up
+call yarn %RUNTIME%:redis:up
+call yarn %RUNTIME%:localstack:up
+
+echo Waiting for DB to be ready...
+REM Universal 15-second delay (works in Git Bash and CMD)
+ping 127.0.0.1 -n 16 > nul
 
 echo.
-echo [4/6] Generating Prisma client...
+echo [5/6] Generating Prisma Client...
+REM Force load env vars specifically for this command
+set "DOTENV_CONFIG_PATH=../../.env"
 call yarn db:generate
 if errorlevel 1 (
-    echo Warning: Failed to generate Prisma client ^(proxy issue?^)
-)
-
-echo.
-echo [5/6] Running migrations...
-call yarn db:migrate:deploy
-if errorlevel 1 (
-    echo Error: Failed to run migrations
+    echo.
+    echo [ERROR] Prisma generation failed.
     pause
     exit /b 1
 )
 
 echo.
-echo [6/6] Seeding database ^(optional^)...
-set /p SEED="Do you want to seed the pricing data? (y/n): "
+echo [6/6] Running Migrations...
+call yarn db:migrate:deploy
+if errorlevel 1 (
+    echo [ERROR] Migrations failed.
+    pause
+    exit /b 1
+)
+
+echo.
+echo [OPTIONAL] Seeding database...
+set /p SEED="Seed pricing data? (y/n): "
 if /i "%SEED%"=="y" (
     call yarn db:seed:pricing
-    if errorlevel 1 (
-        echo Warning: Seed timed out or failed
-    )
-) else (
-    echo Skipping seed. You can run it later with: yarn db:seed:pricing
 )
 
 echo.
 echo ====================================
-echo Setup Complete!
+echo Setup Complete! Starting Backend...
 echo ====================================
 echo.
-echo Starting development servers...
-echo.
 
-call yarn dev:backend
-
-pause
+@REM call yarn dev:backend

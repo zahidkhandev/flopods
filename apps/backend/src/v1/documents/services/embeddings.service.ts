@@ -21,7 +21,7 @@ import {
 } from '../../../common/config/profit.config';
 import { V1ApiKeyService } from '../../workspace/services/api-key.service';
 
-// ✅ centralized pricing util
+// centralized pricing util
 import { getEmbeddingProvider } from '../utils/cost-calculator.util';
 
 interface GeminiEmbeddingResponse {
@@ -43,10 +43,10 @@ export class V1DocumentEmbeddingsService {
   private readonly defaultBaseUrl = 'https://generativelanguage.googleapis.com/v1beta';
   private readonly EMBEDDING_TIMEOUT = 60000;
 
-  // ✅ Rate limit tracking per API key with cooldown
+  // Rate limit tracking per API key with cooldown
   private readonly rateLimitState = new Map<string, RateLimitState>();
 
-  // ✅ Gemini Tier limits
+  // Gemini Tier limits
   private readonly RATE_LIMITS = {
     FREE_TIER: {
       requestsPerMinute: 15,
@@ -60,7 +60,7 @@ export class V1DocumentEmbeddingsService {
     },
   };
 
-  // ✅ Escalating cooldown for 429 errors
+  // Escalating cooldown for 429 errors
   private readonly COOLDOWN = {
     FIRST_429: 5000,
     SECOND_429: 30000,
@@ -89,7 +89,7 @@ export class V1DocumentEmbeddingsService {
       .trim();
   }
 
-  // ✅ Get or init rate limit state
+  // Get or init rate limit state
   private getOrInitRateLimitState(apiKeyFingerprint: string): RateLimitState {
     if (!this.rateLimitState.has(apiKeyFingerprint)) {
       this.rateLimitState.set(apiKeyFingerprint, {
@@ -103,7 +103,7 @@ export class V1DocumentEmbeddingsService {
     return this.rateLimitState.get(apiKeyFingerprint)!;
   }
 
-  // ✅ SMART rate limiting with cooldown
+  // SMART rate limiting with cooldown
   private async checkRateLimit(
     apiKeyFingerprint: string,
     tier: 'FREE_TIER' | 'PAID',
@@ -201,7 +201,7 @@ export class V1DocumentEmbeddingsService {
         const state = this.getOrInitRateLimitState(apiKeyFingerprint);
         state.consecutiveErrors = 0;
 
-        this.logger.debug(`[Embeddings] ✅ Embedding succeeded (${embedding.length} dimensions)`);
+        this.logger.debug(`[Embeddings] Embedding succeeded (${embedding.length} dimensions)`);
         return embedding;
       } catch (error) {
         const axiosError = error as AxiosError<GeminiEmbeddingResponse>;
@@ -286,7 +286,7 @@ export class V1DocumentEmbeddingsService {
     const chunks = chunkDocumentText(sanitizedText);
     const totalTokens = chunks.reduce((sum, chunk) => sum + chunk.tokenCount, 0);
 
-    // ✅ Use centralized provider
+    // Use centralized provider
     const provider = await getEmbeddingProvider(this.prisma);
 
     const actualCostUsd = (totalTokens / 1_000_000) * provider.costPer1MTokens;
@@ -354,7 +354,7 @@ export class V1DocumentEmbeddingsService {
 
       const vectorString = `[${embedding.join(',')}]`;
 
-      // ✅ use real dimension, not hard-coded 768
+      // use real dimension, not hard-coded 768
       await this.prisma.$executeRaw`
         INSERT INTO "documents"."Embedding"
         (id, "documentId", model, "chunkIndex", "chunkText", vector, "s3VectorBucket", "s3VectorKey", "vectorDimension", metadata, "createdAt")
@@ -379,7 +379,7 @@ export class V1DocumentEmbeddingsService {
         )
       `;
 
-      this.logger.log(`[Embeddings] ✅ Chunk ${chunk.index + 1}/${chunks.length} completed`);
+      this.logger.log(`[Embeddings] Chunk ${chunk.index + 1}/${chunks.length} completed`);
     }
 
     if (!subscription.isByokMode) {
@@ -577,7 +577,7 @@ export class V1DocumentEmbeddingsService {
     });
 
     this.logger.log(
-      `[Embeddings] ✅ Regeneration job queued (Job ID: ${jobId}) for "${document.name}"`,
+      `[Embeddings] Regeneration job queued (Job ID: ${jobId}) for "${document.name}"`,
     );
 
     return {
@@ -618,6 +618,24 @@ export class V1DocumentEmbeddingsService {
       status: document.status,
       embeddingsCount,
       lastUpdated: document.updatedAt?.toISOString() || null,
+    };
+  }
+
+  getRetryStatus() {
+    const states = Array.from(this.rateLimitState.entries()).map(([key, state]) => ({
+      apiKeyFingerprint: key.substring(0, 8) + '...',
+      requestsThisMinute: state.requestsThisMinute,
+      isRateLimited: state.isRateLimited,
+      consecutiveErrors: state.consecutiveErrors,
+      cooldownRemaining:
+        state.cooldownUntil > Date.now()
+          ? Math.round((state.cooldownUntil - Date.now()) / 1000)
+          : 0,
+    }));
+
+    return {
+      activeKeys: states.length,
+      states,
     };
   }
 }

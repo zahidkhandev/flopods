@@ -26,7 +26,7 @@ interface SendInvitationDialogProps {
   workspaceId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess?: () => void; // ✅ Add this
+  onSuccess?: () => void; // Add this
 }
 
 const DEFAULT_FORM_DATA = {
@@ -45,7 +45,7 @@ export function SendInvitationDialog({
   workspaceId,
   open,
   onOpenChange,
-  onSuccess, // ✅ Add this
+  onSuccess, // Add this
 }: SendInvitationDialogProps) {
   const { sendInvitation } = useWorkspaceInvitations(workspaceId);
   const [isLoading, setIsLoading] = useState(false);
@@ -61,7 +61,7 @@ export function SendInvitationDialog({
       await sendInvitation(formData);
       onOpenChange(false);
       setFormData(DEFAULT_FORM_DATA);
-      onSuccess?.(); // ✅ Call onSuccess to refresh
+      onSuccess?.(); // Call onSuccess to refresh
     } catch {
       // Error handled in hook
     } finally {

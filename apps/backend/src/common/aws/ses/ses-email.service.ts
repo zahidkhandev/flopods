@@ -45,7 +45,7 @@ export class AwsSesEmailService {
         },
         maxAttempts: 3,
       });
-      this.logger.log('✅ AWS SES initialized successfully');
+      this.logger.log('AWS SES initialized successfully');
     } else {
       this.logger.warn('⚠️  AWS SES not configured - emails will be logged only');
     }
@@ -98,7 +98,7 @@ export class AwsSesEmailService {
       this.logger.log(`📧 Sending email to: ${toAddresses.join(', ')}`);
       const command = new SendEmailCommand(params);
       const response = await this.sesClient.send(command);
-      this.logger.log(`✅ Email sent successfully. Message ID: ${response.MessageId}`);
+      this.logger.log(`Email sent successfully. Message ID: ${response.MessageId}`);
       return { messageId: response.MessageId || '' };
     } catch (error: any) {
       this.logger.error('❌ SES send email error:', error);
@@ -169,7 +169,7 @@ export class AwsSesEmailService {
     try {
       const command = new VerifyEmailIdentityCommand({ EmailAddress: email });
       await this.sesClient.send(command);
-      this.logger.log(`✅ Verification email sent to: ${email}`);
+      this.logger.log(`Verification email sent to: ${email}`);
     } catch (error: any) {
       this.logger.error('❌ SES verify email error:', error);
       throw new InternalServerErrorException(`Failed to verify email: ${error.message}`);

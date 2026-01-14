@@ -96,7 +96,7 @@ export class DynamoDbService implements OnModuleInit {
       }
 
       this.dynamoClient = new DynamoDBClient(clientConfig);
-      this.logger.log('✅ AWS DynamoDB initialized successfully');
+      this.logger.log('AWS DynamoDB initialized successfully');
       this.logger.log(`📋 Pod Table: ${this.podTableName}`);
       this.logger.log(`📋 Execution Table: ${this.executionTableName}`);
       this.logger.log(`📋 Context Table: ${this.contextTableName}`);
@@ -129,7 +129,7 @@ export class DynamoDbService implements OnModuleInit {
       ]);
 
       const successful = results.filter((r) => r.status === 'fulfilled').length;
-      this.logger.log(`✅ ${successful}/3 DynamoDB tables verified`);
+      this.logger.log(`${successful}/3 DynamoDB tables verified`);
 
       results.forEach((result, index) => {
         if (result.status === 'rejected') {
@@ -149,7 +149,7 @@ export class DynamoDbService implements OnModuleInit {
   private async ensureTableExists(tableName: string, schema: CreateTableCommand['input']) {
     try {
       await this.dynamoClient!.send(new DescribeTableCommand({ TableName: tableName }));
-      this.logger.log(`✅ DynamoDB table "${tableName}" exists`);
+      this.logger.log(`DynamoDB table "${tableName}" exists`);
     } catch (error: any) {
       if (error instanceof ResourceNotFoundException) {
         await this.createTable(schema);
@@ -167,7 +167,7 @@ export class DynamoDbService implements OnModuleInit {
   private async createTable(schema: CreateTableCommand['input']) {
     try {
       await this.dynamoClient!.send(new CreateTableCommand(schema));
-      this.logger.log(`✅ Created DynamoDB table "${schema.TableName}"`);
+      this.logger.log(`Created DynamoDB table "${schema.TableName}"`);
 
       // Wait for table to be active
       await this.waitForTableActive(schema.TableName!);
@@ -188,7 +188,7 @@ export class DynamoDbService implements OnModuleInit {
         );
 
         if (Table?.TableStatus === 'ACTIVE') {
-          this.logger.log(`✅ Table "${tableName}" is active`);
+          this.logger.log(`Table "${tableName}" is active`);
           return;
         }
 
@@ -215,7 +215,7 @@ export class DynamoDbService implements OnModuleInit {
           },
         }),
       );
-      this.logger.log(`✅ Enabled TTL for table "${tableName}"`);
+      this.logger.log(`Enabled TTL for table "${tableName}"`);
     } catch (error: any) {
       this.logger.warn(`⚠️ Could not enable TTL for "${tableName}": ${error.message}`);
     }
@@ -555,7 +555,7 @@ export class DynamoDbService implements OnModuleInit {
         await this.dynamoClient.send(command);
       }
 
-      this.logger.log(`✅ ${items.length} items batch written to table`);
+      this.logger.log(`${items.length} items batch written to table`);
     } catch (error: any) {
       this.logger.error('❌ DynamoDB batch write error:', error);
       throw new InternalServerErrorException(`Failed to batch write items: ${error.message}`);
