@@ -8,8 +8,8 @@ import {
   NotFoundException,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { LLMProvider } from '@flopods/schema'; // ✅ Import enum
-import { Decimal } from '@prisma/client/runtime/library'; // ✅ Import Decimal
+import { LLMProvider } from '@flopods/schema'; // Import enum
+import { Decimal } from '@prisma/client/runtime/library'; // Import Decimal
 import { PrismaService } from '../../../prisma/prisma.service';
 import { ApiKeyEncryptionService } from '../../../common/services/encryption.service';
 
@@ -32,7 +32,7 @@ export interface ApiKeyResponse {
 }
 
 export interface WorkspaceAddApiKeyDto {
-  provider: LLMProvider; // ✅ Use enum, not string
+  provider: LLMProvider; // Use enum, not string
   displayName: string;
   apiKey: string;
 }
@@ -47,7 +47,7 @@ export class V1ApiKeyService {
   ) {}
 
   /**
-   * ✅ Add new API key to workspace (encrypted storage)
+   * Add new API key to workspace (encrypted storage)
    */
   async addApiKey(
     workspaceId: string,
@@ -55,7 +55,7 @@ export class V1ApiKeyService {
     dto: WorkspaceAddApiKeyDto,
   ): Promise<ApiKeyResponse> {
     try {
-      // ✅ Check workspace exists
+      // Check workspace exists
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: workspaceId },
         select: { id: true },
@@ -65,7 +65,7 @@ export class V1ApiKeyService {
         throw new NotFoundException('Workspace not found');
       }
 
-      // ✅ FIX: Use workspaceUser (not workspaceMember)
+      // FIX: Use workspaceUser (not workspaceMember)
       const member = await this.prisma.workspaceUser.findUnique({
         where: {
           userId_workspaceId: {
@@ -99,26 +99,26 @@ export class V1ApiKeyService {
         );
       }
 
-      // ✅ Encrypt API key before storing
+      // Encrypt API key before storing
       const encryptedKey = this.encryptionService.encrypt(dto.apiKey);
       const fingerprint = this.encryptionService.getFingerprint(dto.apiKey);
 
       this.logger.log(
-        `[ApiKeyService] ✅ Adding ${dto.provider} key "${dto.displayName}" (${fingerprint}) for workspace ${workspaceId}`,
+        `[ApiKeyService] Adding ${dto.provider} key "${dto.displayName}" (${fingerprint}) for workspace ${workspaceId}`,
       );
 
-      // ✅ Create API key record with proper types
+      // Create API key record with proper types
       const apiKey = await this.prisma.providerAPIKey.create({
         data: {
           workspaceId,
-          provider: dto.provider, // ✅ Already LLMProvider enum
+          provider: dto.provider, // Already LLMProvider enum
           displayName: dto.displayName,
           keyHash: encryptedKey,
           isActive: true,
           createdById: userId,
           usageCount: 0,
           totalTokens: BigInt(0),
-          totalCost: new Decimal(0), // ✅ Use Decimal
+          totalCost: new Decimal(0), // Use Decimal
         },
         include: {
           createdBy: {
@@ -131,9 +131,9 @@ export class V1ApiKeyService {
         },
       });
 
-      this.logger.log(`[ApiKeyService] ✅ API key created: ${apiKey.id} (${fingerprint})`);
+      this.logger.log(`[ApiKeyService] API key created: ${apiKey.id} (${fingerprint})`);
 
-      // ✅ Transform response
+      // Transform response
       return this.formatApiKeyResponse(apiKey);
     } catch (error) {
       if (
@@ -151,12 +151,12 @@ export class V1ApiKeyService {
   }
 
   /**
-   * ✅ Format API key for response
+   * Format API key for response
    */
   private formatApiKeyResponse(apiKey: any): ApiKeyResponse {
     return {
       id: apiKey.id,
-      provider: String(apiKey.provider), // ✅ Convert enum to string
+      provider: String(apiKey.provider), // Convert enum to string
       displayName: apiKey.displayName,
       isActive: apiKey.isActive,
       lastUsedAt: apiKey.lastUsedAt?.toISOString() || null,
@@ -174,7 +174,7 @@ export class V1ApiKeyService {
   }
 
   /**
-   * ✅ Get encrypted API key (for internal use only)
+   * Get encrypted API key (for internal use only)
    */
   async getEncryptedKey(workspaceId: string, keyId: string): Promise<string> {
     const apiKey = await this.prisma.providerAPIKey.findUnique({
@@ -197,7 +197,7 @@ export class V1ApiKeyService {
   }
 
   /**
-   * ✅ Decrypt API key for use (NEVER expose to frontend)
+   * Decrypt API key for use (NEVER expose to frontend)
    */
   async getDecryptedKey(workspaceId: string, keyId: string): Promise<string> {
     const encrypted = await this.getEncryptedKey(workspaceId, keyId);
@@ -210,7 +210,7 @@ export class V1ApiKeyService {
       }
 
       const fingerprint = this.encryptionService.getFingerprint(decrypted);
-      this.logger.debug(`[ApiKeyService] ✅ Key decrypted successfully (${fingerprint})`);
+      this.logger.debug(`[ApiKeyService] Key decrypted successfully (${fingerprint})`);
 
       return decrypted;
     } catch (error) {
@@ -221,7 +221,7 @@ export class V1ApiKeyService {
   }
 
   /**
-   * ✅ List all API keys for workspace (NOT decrypted)
+   * List all API keys for workspace (NOT decrypted)
    */
   async listApiKeys(workspaceId: string): Promise<ApiKeyResponse[]> {
     const keys = await this.prisma.providerAPIKey.findMany({
@@ -238,12 +238,12 @@ export class V1ApiKeyService {
       orderBy: { createdAt: 'desc' },
     });
 
-    // ✅ Transform all keys using formatter
+    // Transform all keys using formatter
     return keys.map((k) => this.formatApiKeyResponse(k));
   }
 
   /**
-   * ✅ Update API key usage stats
+   * Update API key usage stats
    */
   async updateUsageStats(keyId: string, tokensUsed: number, costUsd: number): Promise<void> {
     await this.prisma.providerAPIKey.update({
@@ -251,7 +251,7 @@ export class V1ApiKeyService {
       data: {
         usageCount: { increment: 1 },
         totalTokens: { increment: BigInt(tokensUsed) },
-        totalCost: { increment: new Decimal(costUsd) }, // ✅ Use Decimal
+        totalCost: { increment: new Decimal(costUsd) }, // Use Decimal
         lastUsedAt: new Date(),
       },
     });
@@ -260,7 +260,7 @@ export class V1ApiKeyService {
   }
 
   /**
-   * ✅ Log API key error
+   * Log API key error
    */
   async logError(keyId: string, error: string): Promise<void> {
     await this.prisma.providerAPIKey.update({
@@ -272,7 +272,7 @@ export class V1ApiKeyService {
   }
 
   /**
-   * ✅ Delete API key
+   * Delete API key
    */
   async deleteApiKey(workspaceId: string, keyId: string): Promise<void> {
     const key = await this.prisma.providerAPIKey.findUnique({
@@ -289,12 +289,12 @@ export class V1ApiKeyService {
 
     const fingerprint = `key_${keyId.slice(-8)}`;
     this.logger.log(
-      `[ApiKeyService] ✅ API key deleted: ${key.provider}/${key.displayName} (${fingerprint})`,
+      `[ApiKeyService] API key deleted: ${key.provider}/${key.displayName} (${fingerprint})`,
     );
   }
 
   /**
-   * ✅ Get active API key for workspace and provider
+   * Get active API key for workspace and provider
    */
   async getActiveKey(workspaceId: string, provider: LLMProvider): Promise<string | null> {
     const apiKey = await this.prisma.providerAPIKey.findFirst({

@@ -117,7 +117,7 @@ export class V1EdgeService {
       }
 
       this.logger.log(
-        `✅ Edge created: ${edge.id} (${dto.sourcePodId} → ${dto.targetPodId}) by user ${userId}`,
+        `Edge created: ${edge.id} (${dto.sourcePodId} → ${dto.targetPodId}) by user ${userId}`,
       );
 
       const result = plainToInstance(EdgeResponseDto, edge, {
@@ -193,7 +193,7 @@ export class V1EdgeService {
         where: { id: edgeId },
       });
 
-      this.logger.log(`✅ Edge deleted: ${edgeId} by user ${userId}`);
+      this.logger.log(`Edge deleted: ${edgeId} by user ${userId}`);
 
       // Broadcast deletion
       this.flowGateway.broadcastToFlow(flowId, 'edge:deleted', {

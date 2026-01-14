@@ -27,7 +27,7 @@ import { SubscriptionTier } from '@flopods/schema';
 import { PrismaService } from '../../../prisma/prisma.service';
 
 /**
- * ✅ Subscription tier file size limits (in bytes)
+ * Subscription tier file size limits (in bytes)
  */
 const FILE_SIZE_LIMITS: Record<SubscriptionTier, number> = {
   [SubscriptionTier.HOBBYIST]: 10 * 1024 * 1024, // 10 MB (FREE)
@@ -37,9 +37,9 @@ const FILE_SIZE_LIMITS: Record<SubscriptionTier, number> = {
 
 /**
  * File size limit interceptor
- * ✅ Checks file size against subscription tier
- * ✅ Prevents uploads exceeding plan limits
- * ✅ Provides upgrade suggestions
+ * Checks file size against subscription tier
+ * Prevents uploads exceeding plan limits
+ * Provides upgrade suggestions
  */
 @Injectable()
 export class V1FileSizeLimitInterceptor implements NestInterceptor {
@@ -58,7 +58,7 @@ export class V1FileSizeLimitInterceptor implements NestInterceptor {
       throw new BadRequestException('Workspace ID required for file upload');
     }
 
-    // ✅ Fetch workspace subscription tier
+    // Fetch workspace subscription tier
     const subscription = await this.prisma.subscription.findUnique({
       where: { workspaceId },
       select: { tier: true },
@@ -68,12 +68,12 @@ export class V1FileSizeLimitInterceptor implements NestInterceptor {
       throw new BadRequestException('Workspace subscription not found');
     }
 
-    // ✅ Get size limit for subscription tier
+    // Get size limit for subscription tier
     const sizeLimit = FILE_SIZE_LIMITS[subscription.tier];
     const limitMB = (sizeLimit / (1024 * 1024)).toFixed(0);
     const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
 
-    // ✅ Check file size
+    // Check file size
     if (file.size > sizeLimit) {
       throw new PayloadTooLargeException(
         `File size (${fileSizeMB} MB) exceeds ${subscription.tier} plan limit of ${limitMB} MB. ` +

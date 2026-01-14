@@ -20,6 +20,7 @@ import {
   formatCostBreakdown,
   formatProfitBreakdown,
 } from '../../common/utils/profit-and-credits';
+import { QueueFactory } from '../../common/queue/queue.factory';
 
 type LLMMessage = {
   role: 'system' | 'user' | 'assistant';
@@ -29,6 +30,7 @@ type LLMMessage = {
 @Injectable()
 export class V1ExecutionService {
   private readonly logger = new Logger(V1ExecutionService.name);
+  private backgroundQueue: any;
 
   private readonly DEFAULT_SYSTEM_PROMPTS = {
     general: 'You are a helpful AI assistant. Provide clear, accurate, and concise responses.',
@@ -43,7 +45,10 @@ export class V1ExecutionService {
     private readonly providerFactory: ProviderFactory,
     private readonly contextResolution: V1ContextResolutionService,
     private readonly flowGateway: V1FlowGateway,
-  ) {}
+    private readonly queueFactory: QueueFactory,
+  ) {
+    this.backgroundQueue = this.queueFactory.createQueue('background-tasks');
+  }
 
   /**
    * INSTANT STREAMING with CONVERSATION HISTORY + PROFIT/CREDITS TRACKING
@@ -372,20 +377,20 @@ export class V1ExecutionService {
       // Generate embedding of combined user + assistant chat and save it
       try {
         const combinedTextForEmbedding = `User: ${userInput}\nAssistant: ${fullContent}`;
-        const embedding = await this.contextResolution.generateTextEmbedding(
-          combinedTextForEmbedding,
-          workspaceId,
-        );
-        await this.contextResolution.saveChatEmbedding(
-          workspaceId,
-          userId,
-          podId,
-          executionId,
-          combinedTextForEmbedding,
-          embedding,
-        );
-        this.logger.debug(`[Execution] Chat embedding saved for execution ${executionId}`);
-        // Optionally, here you could calculate & track embedding API call cost similarly if pricing available
+
+        this.backgroundQueue
+          .add('generate-embedding', {
+            workspaceId,
+            userId,
+            podId,
+            executionId,
+            text: combinedTextForEmbedding,
+          })
+          .catch((err: any) => {
+            this.logger.error('Failed to enqueue embedding job', err);
+          });
+
+        this.logger.debug(`[Execution] Enqueued embedding generation for ${executionId}`);
       } catch (embeddingError) {
         this.logger.warn(
           `[Execution] Embedding generation/saving failed: ${

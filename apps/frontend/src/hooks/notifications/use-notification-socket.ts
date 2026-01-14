@@ -20,7 +20,7 @@ export function useNotificationSocket(
       return;
     }
 
-    // ✅ Prevent duplicate connections
+    // Prevent duplicate connections
     if (socketRef.current?.connected || isConnecting.current) {
       return;
     }
@@ -33,7 +33,7 @@ export function useNotificationSocket(
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
-      // ✅ Timeout for connection attempt
+      // Timeout for connection attempt
       timeout: 10000,
     });
 

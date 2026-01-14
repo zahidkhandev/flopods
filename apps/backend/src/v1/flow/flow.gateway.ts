@@ -115,7 +115,7 @@ export class V1FlowGateway implements OnGatewayInit, OnGatewayConnection, OnGate
         serverTime: new Date().toISOString(),
       });
 
-      this.logger.log(`✅ User ${userId} connected (socket: ${client.id})`);
+      this.logger.log(`User ${userId} connected (socket: ${client.id})`);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
       this.logger.error(`❌ Connection failed for ${client.id}: ${errorMessage}`);

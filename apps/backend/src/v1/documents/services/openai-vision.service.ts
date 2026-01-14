@@ -50,7 +50,7 @@ export class V1OpenAIVisionService {
     private readonly configService: ConfigService,
   ) {}
 
-  // ✅ Get OpenAI vision pricing from DB - NO HARDCODING
+  // Get OpenAI vision pricing from DB - NO HARDCODING
   private async getVisionPricing() {
     const pricing = await this.prisma.modelPricingTier.findFirst({
       where: {
@@ -94,7 +94,7 @@ export class V1OpenAIVisionService {
         throw new BadRequestException('OpenAI API key not configured');
       }
 
-      // ✅ Get pricing from DB - NO HARDCODING
+      // Get pricing from DB - NO HARDCODING
       const visionPricing = await this.getVisionPricing();
 
       const base64Image = imageBuffer.toString('base64');
@@ -103,7 +103,7 @@ export class V1OpenAIVisionService {
         `[OpenAI Vision] Using model: ${visionPricing.modelId} | Max tokens: ${visionPricing.maxOutputTokens}`,
       );
 
-      // ✅ Use model from DB
+      // Use model from DB
       const response = await axios.post(
         'https://api.openai.com/v1/chat/completions',
         {
@@ -180,18 +180,18 @@ Respond in JSON format:
         };
       }
 
-      // ✅ Get token usage from OpenAI response
+      // Get token usage from OpenAI response
       inputTokens = response.data.usage?.prompt_tokens || 0;
       outputTokens = response.data.usage?.completion_tokens || 0;
       totalTokens = response.data.usage?.total_tokens || 0;
 
-      // ✅ Calculate actual cost from DB pricing - NO HARDCODING
+      // Calculate actual cost from DB pricing - NO HARDCODING
       const inputCost = (inputTokens / 1_000_000) * Number(visionPricing.inputTokenCost);
       const outputCost = (outputTokens / 1_000_000) * Number(visionPricing.outputTokenCost);
       const totalCostUsd = inputCost + outputCost;
       actualCostUsd = new Decimal(totalCostUsd);
 
-      // ✅ Calculate profit using global multiplier
+      // Calculate profit using global multiplier
       profitData = calculateProfitData(totalCostUsd);
       creditsToCharge = calculateCreditsFromCharge(profitData.userChargeUsd);
 
@@ -202,7 +202,7 @@ Respond in JSON format:
           `ROI: ${profitData.roi.toFixed(0)}% | Multiplier: ${PROFIT_CONFIG.MARKUP_MULTIPLIER}x`,
       );
 
-      // ✅ Get subscription for credit tracking
+      // Get subscription for credit tracking
       const subscription = await this.prisma.subscription.findUnique({
         where: { workspaceId },
         select: { id: true, isByokMode: true },
@@ -212,7 +212,7 @@ Respond in JSON format:
         throw new BadRequestException('No active subscription found for workspace');
       }
 
-      // ✅ Use model from DB in DB record
+      // Use model from DB in DB record
       const visionAnalysis = await this.prisma.documentVisionAnalysis.create({
         data: {
           documentId,
@@ -260,7 +260,7 @@ Respond in JSON format:
         visionPricing.modelId,
       );
 
-      // ✅ Log with profit tracking
+      // Log with profit tracking
       await this.logApiCall(
         workspaceId,
         documentId,
@@ -278,7 +278,7 @@ Respond in JSON format:
       );
 
       this.logger.log(
-        `[OpenAI Vision] ✅ Completed: ${documentId} (${processingTimeMs}ms, ${totalTokens} tokens) | ` +
+        `[OpenAI Vision] Completed: ${documentId} (${processingTimeMs}ms, ${totalTokens} tokens) | ` +
           `Profit: $${profitData.profitUsd.toFixed(6)} 💰 (${subscription.isByokMode ? 'BYOK=0' : 'Platform'})`,
       );
 
@@ -289,7 +289,7 @@ Respond in JSON format:
 
       this.logger.error(`[OpenAI Vision] ❌ Failed: ${documentId} - ${errorMessage}`);
 
-      // ✅ Get pricing for error log
+      // Get pricing for error log
       const visionPricing = await this.getVisionPricing().catch(() => null);
 
       await this.prisma.documentVisionAnalysis.create({
@@ -306,7 +306,7 @@ Respond in JSON format:
         },
       });
 
-      // ✅ Log error with profit tracking
+      // Log error with profit tracking
       const subscription = await this.prisma.subscription.findUnique({
         where: { workspaceId },
         select: { id: true, isByokMode: true },
@@ -341,14 +341,14 @@ Respond in JSON format:
     extractionType: VisionExtractionType,
     extractedData: string,
     confidence: number,
-    modelId: string, // ✅ From DB
+    modelId: string, // From DB
   ): Promise<void> {
     await this.prisma.visionExtractionSnapshot.create({
       data: {
         documentId,
         workspaceId,
         provider: LLMProvider.OPENAI,
-        modelId, // ✅ Use DB model
+        modelId, // Use DB model
         extractionType,
         extractedData,
         confidence,
@@ -359,7 +359,7 @@ Respond in JSON format:
     });
   }
 
-  // ✅ Updated with profit tracking and DB models
+  // Updated with profit tracking and DB models
   private async logApiCall(
     workspaceId: string,
     documentId: string | null,
@@ -372,8 +372,8 @@ Respond in JSON format:
     profitUsd: Decimal,
     isByokMode: boolean,
     success: boolean,
-    modelId: string, // ✅ From DB
-    modelName: string, // ✅ From DB
+    modelId: string, // From DB
+    modelName: string, // From DB
     errorMessage?: string,
   ): Promise<void> {
     await this.prisma.documentAPILog.create({
@@ -381,7 +381,7 @@ Respond in JSON format:
         workspaceId,
         documentId: documentId || undefined,
         provider: LLMProvider.OPENAI,
-        modelId, // ✅ Use DB model
+        modelId, // Use DB model
         requestType: APIRequestType.IMAGE_ANALYSIS,
         inputTokens,
         outputTokens,
@@ -407,7 +407,7 @@ Respond in JSON format:
       },
     });
 
-    // ✅ Track in CreditUsageLog too
+    // Track in CreditUsageLog too
     const dummyCanvasId = 'system-vision';
     const dummyPodId = 'system-vision';
     const dummyExecutionId = `vision_${documentId}_${Date.now()}`;
@@ -423,8 +423,8 @@ Respond in JSON format:
         balanceBefore: 0,
         balanceAfter: 0,
         provider: LLMProvider.OPENAI,
-        modelId, // ✅ Use DB model
-        modelName, // ✅ Use DB display name
+        modelId, // Use DB model
+        modelName, // Use DB display name
       },
     });
   }

@@ -83,7 +83,7 @@ export class V1DocumentOrchestratorService {
             },
           });
 
-          this.logger.log(`[Orchestrator] ✅ Embeddings generated successfully: ${documentId}`);
+          this.logger.log(`[Orchestrator] Embeddings generated successfully: ${documentId}`);
           return;
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -101,7 +101,7 @@ export class V1DocumentOrchestratorService {
                   retryCount: retryCount + 1,
                 });
                 this.logger.log(
-                  `[Orchestrator] ✅ Embeddings requeued with backoff (attempt ${retryCount + 2})`,
+                  `[Orchestrator] Embeddings requeued with backoff (attempt ${retryCount + 2})`,
                 );
               } catch (queueError) {
                 const qErr = queueError instanceof Error ? queueError.message : 'Unknown error';
@@ -180,7 +180,7 @@ export class V1DocumentOrchestratorService {
         },
       });
 
-      this.logger.log(`[Orchestrator] ✅ Document saved with text: ${extractedText.length} chars`);
+      this.logger.log(`[Orchestrator] Document saved with text: ${extractedText.length} chars`);
 
       if (document.mimeType?.startsWith('image/')) {
         try {
@@ -265,7 +265,7 @@ export class V1DocumentOrchestratorService {
       }
 
       const buffer = Buffer.from(await response.arrayBuffer());
-      this.logger.debug(`[Orchestrator] ✅ Downloaded ${buffer.length} bytes`);
+      this.logger.debug(`[Orchestrator] Downloaded ${buffer.length} bytes`);
 
       return this.extractTextFromBuffer(buffer, mimeType);
     } catch (error) {
@@ -327,7 +327,7 @@ export class V1DocumentOrchestratorService {
       }
 
       this.logger.log(
-        `[Orchestrator] ✅ YouTube transcript extracted: ${result.characterCount} chars`,
+        `[Orchestrator] YouTube transcript extracted: ${result.characterCount} chars`,
       );
 
       return result.transcript;

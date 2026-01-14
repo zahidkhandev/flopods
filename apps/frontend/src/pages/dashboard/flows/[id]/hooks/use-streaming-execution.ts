@@ -93,7 +93,7 @@ export function useStreamingExecution(options: UseStreamingExecutionOptions = {}
         let executionId = '';
         let startTime = Date.now();
 
-        // ✅ Initialize metadata with proper structure
+        // Initialize metadata with proper structure
         let metadata = {
           runtime: 0,
           tokens: 0,
@@ -118,7 +118,7 @@ export function useStreamingExecution(options: UseStreamingExecutionOptions = {}
               const data = line.slice(6);
 
               if (data === '[DONE]') {
-                // ✅ Calculate runtime
+                // Calculate runtime
                 metadata.runtime = Date.now() - startTime;
 
                 options.onComplete?.({
@@ -140,7 +140,7 @@ export function useStreamingExecution(options: UseStreamingExecutionOptions = {}
                     break;
 
                   case 'token': {
-                    // ✅ Handle BOTH `token` and `content` fields
+                    // Handle BOTH `token` and `content` fields
                     const tokenText = parsed.token || parsed.content || '';
                     if (tokenText) {
                       fullContent += tokenText;
@@ -150,7 +150,7 @@ export function useStreamingExecution(options: UseStreamingExecutionOptions = {}
                   }
 
                   case 'done':
-                    // ✅ Capture token usage from Gemini's done event
+                    // Capture token usage from Gemini's done event
                     if (parsed.usage) {
                       metadata = {
                         runtime: Date.now() - startTime,
@@ -163,7 +163,7 @@ export function useStreamingExecution(options: UseStreamingExecutionOptions = {}
                     break;
 
                   case 'metadata':
-                    // ✅ Override with backend metadata if provided
+                    // Override with backend metadata if provided
                     metadata = {
                       ...metadata,
                       ...parsed.metadata,

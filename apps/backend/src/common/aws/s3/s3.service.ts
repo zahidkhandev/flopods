@@ -189,9 +189,9 @@ export class S3Service implements OnModuleInit {
       if (this.isLocalStack && this.endpoint) {
         clientConfig.endpoint = this.endpoint;
         clientConfig.forcePathStyle = true; // Required for LocalStack
-        this.logger.log(`✅ S3 initialized with LocalStack: ${this.endpoint}`);
+        this.logger.log(`S3 initialized with LocalStack: ${this.endpoint}`);
       } else {
-        this.logger.log(`✅ S3 initialized with AWS: ${this.region}`);
+        this.logger.log(`S3 initialized with AWS: ${this.region}`);
       }
 
       this.s3Client = new S3Client(clientConfig);
@@ -217,7 +217,7 @@ export class S3Service implements OnModuleInit {
           // Ignore 404 - we just want to verify credentials work
         });
 
-        this.logger.log(`✅ S3 connection verified: bucket=${this.bucketName}`);
+        this.logger.log(`S3 connection verified: bucket=${this.bucketName}`);
       } catch (error: any) {
         this.logger.error(`❌ S3 connection failed: ${error.message}`);
       }

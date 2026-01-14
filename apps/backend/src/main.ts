@@ -85,7 +85,7 @@ async function bootstrap() {
   const prisma = app.get(PrismaService);
   try {
     await prisma.$connect();
-    logger.log('✅ Database connected successfully');
+    logger.log('Database connected successfully');
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('❌ Database connection failed', errorMessage);

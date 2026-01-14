@@ -74,7 +74,7 @@ export class ProviderFactory implements OnModuleInit {
         );
       }
 
-      this.logger.log('✅ Encryption key validated successfully');
+      this.logger.log('Encryption key validated successfully');
       return keyBuffer;
     } catch (error) {
       this.logger.error('Failed to initialize encryption:', error);
@@ -481,7 +481,7 @@ export class ProviderFactory implements OnModuleInit {
       );
 
       this.logger.debug(
-        `✅ Usage tracked for key ${keyId}: ${totalTokens} tokens, $${cost.toFixed(6)}, success=${success}`,
+        `Usage tracked for key ${keyId}: ${totalTokens} tokens, $${cost.toFixed(6)}, success=${success}`,
       );
     } catch (error) {
       this.logger.error(
@@ -544,7 +544,7 @@ export class ProviderFactory implements OnModuleInit {
       // Test database connection
       await this.prisma.$queryRaw`SELECT 1`;
 
-      this.logger.log('✅ Provider factory health check passed');
+      this.logger.log('Provider factory health check passed');
     } catch (error) {
       this.logger.error('❌ Provider factory health check failed:', error);
       throw error;

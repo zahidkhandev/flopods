@@ -15,10 +15,6 @@ export default function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
-          <CardHeader>
-            <CardTitle>Profile</CardTitle>
-            <CardDescription>Your account information</CardDescription>
-          </CardHeader>
           <CardContent className="space-y-2">
             <div>
               <p className="text-sm font-medium">Email</p>

@@ -42,7 +42,7 @@ export function CreateFlowDialog({ open, onOpenChange }: CreateFlowDialogProps) 
     e.preventDefault();
 
     if (!formData.name.trim()) {
-      return; // ✅ Guard clause
+      return; // Guard clause
     }
 
     setIsLoading(true);
@@ -67,7 +67,7 @@ export function CreateFlowDialog({ open, onOpenChange }: CreateFlowDialogProps) 
       <DialogContent
         className="sm:max-w-[500px]"
         onPointerDownOutside={(e) => {
-          // ✅ Prevent closing when clicking outside
+          // Prevent closing when clicking outside
           if (isLoading) e.preventDefault();
         }}
       >

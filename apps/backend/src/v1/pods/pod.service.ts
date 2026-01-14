@@ -91,7 +91,7 @@ export class V1PodService {
       );
 
       this.logger.debug(
-        `✅ Fetched canvas for flow ${flowId}: ${podsWithContent.length} pods, ${edgeResponses.length} edges`,
+        `Fetched canvas for flow ${flowId}: ${podsWithContent.length} pods, ${edgeResponses.length} edges`,
       );
 
       return {
@@ -177,7 +177,7 @@ export class V1PodService {
       });
 
       this.logger.log(
-        `✅ Pod created: ${pod.id} (${dto.type}) in flow ${dto.flowId} by user ${userId}`,
+        `Pod created: ${pod.id} (${dto.type}) in flow ${dto.flowId} by user ${userId}`,
       );
 
       const result = plainToInstance(
@@ -280,7 +280,7 @@ export class V1PodService {
         });
       }
 
-      this.logger.log(`✅ Pod updated: ${podId} by user ${userId}`);
+      this.logger.log(`Pod updated: ${podId} by user ${userId}`);
 
       const result = plainToInstance(
         PodResponseDto,
@@ -344,7 +344,7 @@ export class V1PodService {
         where: { id: podId },
       });
 
-      this.logger.log(`✅ Pod deleted: ${podId} by user ${userId}`);
+      this.logger.log(`Pod deleted: ${podId} by user ${userId}`);
 
       // Broadcast deletion
       this.flowGateway.broadcastToFlow(flowId, 'pod:deleted', {

@@ -29,14 +29,14 @@ export default function WorkspaceSettingsPage() {
   const { currentWorkspace, isLoading } = useWorkspaces();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // ✅ Derive active tab from URL - no state needed!
+  // Derive active tab from URL - no state needed!
   const activeTab = useMemo(() => {
     const urlTab = searchParams.get('tab') || 'general';
     // Validate tab exists
     return tabs.some((tab) => tab.value === urlTab) ? urlTab : 'general';
   }, [searchParams]);
 
-  // ✅ Update URL when tab changes
+  // Update URL when tab changes
   const handleTabChange = (newTab: string) => {
     setSearchParams({ tab: newTab });
   };

@@ -119,11 +119,11 @@ export class OpenAIProvider extends BaseLLMProvider {
         ? ` + ${result.usage.reasoningTokens} reasoning`
         : '';
       this.logger.log(
-        `✅ OpenAI: ${result.usage.totalTokens} tokens (${result.usage.promptTokens} in + ${result.usage.completionTokens} out${reasoningMsg})${profitMsg}`,
+        `OpenAI: ${result.usage.totalTokens} tokens (${result.usage.promptTokens} in + ${result.usage.completionTokens} out${reasoningMsg})${profitMsg}`,
       );
 
       const executionTime = Date.now() - startTime;
-      this.logger.log(`✅ OpenAI completed in ${executionTime}ms`);
+      this.logger.log(`OpenAI completed in ${executionTime}ms`);
 
       return result;
     } catch (error) {
@@ -255,7 +255,7 @@ export class OpenAIProvider extends BaseLLMProvider {
         }
       }
 
-      this.logger.log(`✅ OpenAI stream completed`);
+      this.logger.log(`OpenAI stream completed`);
     } catch (error) {
       this.logger.error(
         `❌ OpenAI stream failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -274,7 +274,7 @@ export class OpenAIProvider extends BaseLLMProvider {
         headers: { Authorization: `Bearer ${apiKey}` },
         timeout: 10000,
       });
-      this.logger.log('✅ OpenAI API key valid');
+      this.logger.log('OpenAI API key valid');
       return true;
     } catch {
       this.logger.warn('OpenAI API key validation failed');

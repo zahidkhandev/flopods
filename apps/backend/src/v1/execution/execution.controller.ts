@@ -39,10 +39,10 @@ export class V1ExecutionController {
       Execute a pod with real-time streaming response.
 
       **Key Features:**
-      - ✅ Instant token streaming (no queuing)
-      - ✅ Automatic conversation history (last 20 turns)
-      - ✅ Full upstream context from connected pods
-      - ✅ Variable interpolation ({{podId}})
+      - Instant token streaming (no queuing)
+      - Automatic conversation history (last 20 turns)
+      - Full upstream context from connected pods
+      - Variable interpolation ({{podId}})
 
       **Conversation History:**
       Each pod maintains its own conversation thread. The last 20 executions

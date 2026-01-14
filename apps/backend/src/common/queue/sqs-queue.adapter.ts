@@ -3,11 +3,10 @@ import { ConfigService } from '@nestjs/config';
 import {
   SQSClient,
   SendMessageCommand,
-  ReceiveMessageCommand,
-  DeleteMessageCommand,
   GetQueueAttributesCommand,
   Message,
 } from '@aws-sdk/client-sqs';
+import { Consumer } from 'sqs-consumer';
 import { QueueAdapter, QueueJobStatus } from './queue-adapter.interface';
 
 @Injectable()
@@ -15,8 +14,7 @@ export class SqsQueueAdapter implements QueueAdapter {
   private readonly logger = new Logger(SqsQueueAdapter.name);
   private sqs: SQSClient;
   private queueUrl: string;
-  private isProcessing = false;
-  private processingHandler: ((job: any) => Promise<any>) | null = null;
+  private consumer: Consumer | null = null;
 
   constructor(private readonly config: ConfigService) {
     const region = this.config.get('AWS_SQS_REGION') || this.config.get('AWS_REGION');
@@ -30,7 +28,7 @@ export class SqsQueueAdapter implements QueueAdapter {
     });
 
     this.queueUrl = this.config.get('AWS_SQS_QUEUE_URL')!;
-    this.logger.log(`✅ SQS queue initialized: ${this.queueUrl}`);
+    this.logger.log(`SQS queue initialized: ${this.queueUrl}`);
   }
 
   async add(jobName: string, data: any, options?: any): Promise<string> {
@@ -50,58 +48,57 @@ export class SqsQueueAdapter implements QueueAdapter {
   }
 
   process(handler: (job: any) => Promise<any>): void {
-    this.processingHandler = handler;
-    this.startPolling();
-  }
-
-  private async startPolling() {
-    this.isProcessing = true;
-
-    while (this.isProcessing) {
-      try {
-        const command = new ReceiveMessageCommand({
-          QueueUrl: this.queueUrl,
-          MaxNumberOfMessages: 10,
-          WaitTimeSeconds: 20,
-          MessageAttributeNames: ['All'],
-        });
-
-        const result = await this.sqs.send(command);
-
-        if (result.Messages && result.Messages.length > 0) {
-          await Promise.all(
-            result.Messages.map(async (message: Message) => {
-              try {
-                const body = JSON.parse(message.Body!);
-                const job = {
-                  id: message.MessageAttributes?.jobId?.StringValue || message.MessageId,
-                  data: body.data,
-                  attemptsMade: 0,
-                };
-
-                await this.processingHandler!(job);
-
-                const deleteCommand = new DeleteMessageCommand({
-                  QueueUrl: this.queueUrl,
-                  ReceiptHandle: message.ReceiptHandle!,
-                });
-                await this.sqs.send(deleteCommand);
-
-                this.logger.log(`✅ Job ${job.id} completed`);
-              } catch (error) {
-                this.logger.error(
-                  `❌ Job processing failed:`,
-                  error instanceof Error ? error.message : 'Unknown error',
-                );
-              }
-            }),
-          );
-        }
-      } catch (error) {
-        this.logger.error('SQS polling error:', error);
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-      }
+    if (this.consumer) {
+      this.consumer.stop();
     }
+
+    this.consumer = Consumer.create({
+      queueUrl: this.queueUrl,
+      sqs: this.sqs,
+      batchSize: 10,
+      handleMessage: async (message: Message) => {
+        try {
+          if (!message.Body) {
+            // Return undefined or message to satisfy the type signature
+            return message;
+          }
+
+          const body = JSON.parse(message.Body);
+          const job = {
+            id: message.MessageAttributes?.jobId?.StringValue || message.MessageId,
+            data: body.data,
+            attemptsMade: 0,
+          };
+
+          await handler(job);
+
+          this.logger.log(`Job ${job.id} completed`);
+
+          // FIX: Explicitly return the message to satisfy TypeScript
+          return message;
+        } catch (error) {
+          this.logger.error(
+            `❌ Job processing failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          );
+          throw error;
+        }
+      },
+    });
+
+    this.consumer.on('error', (err) => {
+      this.logger.error(`[SQS Error] ${err.message}`);
+    });
+
+    this.consumer.on('processing_error', (err) => {
+      this.logger.error(`[SQS Processing Error] ${err.message}`);
+    });
+
+    this.consumer.on('timeout_error', (err) => {
+      this.logger.error(`[SQS Timeout Error] ${err.message}`);
+    });
+
+    this.consumer.start();
+    this.logger.log('🚀 SQS Consumer started polling');
   }
 
   async getMetrics() {
@@ -134,6 +131,8 @@ export class SqsQueueAdapter implements QueueAdapter {
   }
 
   async close(): Promise<void> {
-    this.isProcessing = false;
+    if (this.consumer) {
+      this.consumer.stop();
+    }
   }
 }

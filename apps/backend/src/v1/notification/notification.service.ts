@@ -69,7 +69,7 @@ export class V1NotificationService {
         `Notification created: ${notification.id} for user ${data.userId} (type: ${data.type})`,
       );
 
-      // ✅ Send real-time notification (non-blocking)
+      // Send real-time notification (non-blocking)
       setImmediate(async () => {
         try {
           if (this.notificationGateway.isUserConnected(data.userId)) {
@@ -183,7 +183,7 @@ export class V1NotificationService {
         throw new NotFoundException('Notification not found');
       }
 
-      // ✅ Update unread count in real-time
+      // Update unread count in real-time
       setImmediate(async () => {
         try {
           if (this.notificationGateway.isUserConnected(userId)) {
@@ -222,7 +222,7 @@ export class V1NotificationService {
         data: { isRead: true, readAt: new Date() },
       });
 
-      // ✅ Update unread count in real-time
+      // Update unread count in real-time
       setImmediate(async () => {
         try {
           if (this.notificationGateway.isUserConnected(userId)) {
@@ -256,7 +256,7 @@ export class V1NotificationService {
         data: { isRead: true, readAt: new Date() },
       });
 
-      // ✅ Update unread count in real-time
+      // Update unread count in real-time
       setImmediate(async () => {
         try {
           if (this.notificationGateway.isUserConnected(userId)) {
@@ -295,7 +295,7 @@ export class V1NotificationService {
         throw new NotFoundException('Notification not found');
       }
 
-      // ✅ Update unread count if deleted notification was unread
+      // Update unread count if deleted notification was unread
       if (notification && !notification.isRead) {
         setImmediate(async () => {
           try {

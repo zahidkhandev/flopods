@@ -103,7 +103,7 @@ export class V1WorkspaceService {
         );
       }
 
-      this.logger.log('✅ Encryption key validated successfully');
+      this.logger.log('Encryption key validated successfully');
       return keyBuffer;
     } catch (error) {
       this.logger.error('Failed to initialize encryption:', error);
@@ -276,7 +276,7 @@ export class V1WorkspaceService {
    */
   async createWorkspace(userId: string, dto: WorkspaceCreateDto): Promise<any> {
     try {
-      // ✅ Use transaction to create workspace + subscription atomically
+      // Use transaction to create workspace + subscription atomically
       const workspace = await this.prisma.$transaction(async (tx) => {
         // 1. Create workspace with owner
         const newWorkspace = await tx.workspace.create({
@@ -373,7 +373,7 @@ export class V1WorkspaceService {
         data: { name: dto.name },
       });
 
-      this.logger.log(`✅ Workspace updated: ${workspaceId} by user ${userId}`);
+      this.logger.log(`Workspace updated: ${workspaceId} by user ${userId}`);
       return workspace;
     } catch (error) {
       if (error instanceof ForbiddenException || error instanceof NotFoundException) throw error;
@@ -410,7 +410,7 @@ export class V1WorkspaceService {
         where: { id: workspaceId },
       });
 
-      this.logger.log(`✅ Workspace deleted: ${workspaceId} by user ${userId}`);
+      this.logger.log(`Workspace deleted: ${workspaceId} by user ${userId}`);
       return { message: 'Workspace deleted successfully' };
     } catch (error) {
       if (
@@ -465,7 +465,7 @@ export class V1WorkspaceService {
         }),
       ]);
 
-      this.logger.log(`✅ Ownership transferred: ${currentOwnerId} → ${newOwnerId}`);
+      this.logger.log(`Ownership transferred: ${currentOwnerId} → ${newOwnerId}`);
       return { message: 'Ownership transferred successfully' };
     } catch (error) {
       if (error instanceof ForbiddenException || error instanceof NotFoundException) throw error;
@@ -588,7 +588,7 @@ export class V1WorkspaceService {
         },
       });
 
-      this.logger.log(`✅ Member updated: ${targetUserId} in workspace ${workspaceId}`);
+      this.logger.log(`Member updated: ${targetUserId} in workspace ${workspaceId}`);
       return updatedMember as WorkspaceMemberResponse;
     } catch (error) {
       if (error instanceof ForbiddenException || error instanceof NotFoundException) throw error;
@@ -628,7 +628,7 @@ export class V1WorkspaceService {
       // Auto-switch workspace type
       await this.autoSwitchWorkspaceType(workspaceId);
 
-      this.logger.log(`✅ Member removed: ${targetUserId} from workspace ${workspaceId}`);
+      this.logger.log(`Member removed: ${targetUserId} from workspace ${workspaceId}`);
       return { message: 'Member removed successfully' };
     } catch (error) {
       if (error instanceof ForbiddenException || error instanceof NotFoundException) throw error;
@@ -730,7 +730,7 @@ export class V1WorkspaceService {
         ),
       });
 
-      this.logger.log(`✅ Invitation sent to ${dto.email} for workspace ${workspaceId}`);
+      this.logger.log(`Invitation sent to ${dto.email} for workspace ${workspaceId}`);
       return {
         ...(invitation as InvitationResponse),
         message: 'Invitation sent successfully',
@@ -873,7 +873,7 @@ export class V1WorkspaceService {
         });
       }
 
-      this.logger.log(`✅ Invitation accepted: ${token} by user ${userId}`);
+      this.logger.log(`Invitation accepted: ${token} by user ${userId}`);
       return {
         workspace: invitation.workspace,
         member,
@@ -947,7 +947,7 @@ export class V1WorkspaceService {
         data: { status: InvitationStatus.REVOKED },
       });
 
-      this.logger.log(`✅ Invitation revoked: ${invitationId}`);
+      this.logger.log(`Invitation revoked: ${invitationId}`);
       return { message: 'Invitation revoked successfully' };
     } catch (error) {
       if (error instanceof NotFoundException || error instanceof ForbiddenException) throw error;
@@ -960,7 +960,7 @@ export class V1WorkspaceService {
   // ==========================================
 
   /**
-   * ✅ Get all API keys for workspace
+   * Get all API keys for workspace
    */
   async getApiKeys(workspaceId: string, userId: string): Promise<ApiKeyResponse[]> {
     try {
@@ -968,7 +968,7 @@ export class V1WorkspaceService {
 
       this.logger.debug(`[WorkspaceService] Listing API keys for workspace: ${workspaceId}`);
 
-      // ✅ Delegate to ApiKeyService
+      // Delegate to ApiKeyService
       return this.apiKeyService.listApiKeys(workspaceId);
     } catch (error) {
       if (error instanceof ForbiddenException) throw error;
@@ -978,7 +978,7 @@ export class V1WorkspaceService {
   }
 
   /**
-   * ✅ Add new API key
+   * Add new API key
    */
   async addApiKey(
     workspaceId: string,
@@ -990,7 +990,7 @@ export class V1WorkspaceService {
 
       this.logger.log(`[WorkspaceService] Adding API key: ${dto.provider}/${dto.displayName}`);
 
-      // ✅ Delegate to ApiKeyService
+      // Delegate to ApiKeyService
       return this.apiKeyService.addApiKey(workspaceId, userId, dto);
     } catch (error) {
       if (
@@ -1006,7 +1006,7 @@ export class V1WorkspaceService {
   }
 
   /**
-   * ✅ Update API key (delegates encryption to ApiKeyService)
+   * Update API key (delegates encryption to ApiKeyService)
    */
   async updateApiKey(
     workspaceId: string,
@@ -1029,7 +1029,7 @@ export class V1WorkspaceService {
         throw new NotFoundException('API key not found');
       }
 
-      // ✅ Build update data
+      // Build update data
       const updateData: any = {};
 
       if (dto.displayName !== undefined) {
@@ -1040,7 +1040,7 @@ export class V1WorkspaceService {
         updateData.isActive = dto.isActive;
       }
 
-      // ✅ If new key provided, use EncryptionService to encrypt it
+      // If new key provided, use EncryptionService to encrypt it
       if (dto.apiKey) {
         updateData.keyHash = this.apiKeyService['encryptionService'].encrypt(dto.apiKey);
       }
@@ -1062,7 +1062,7 @@ export class V1WorkspaceService {
 
       this.logger.log(`[WorkspaceService] API key updated: ${keyId}`);
 
-      // ✅ Format response
+      // Format response
       return this.apiKeyService['formatApiKeyResponse'](updated);
     } catch (error) {
       if (error instanceof ForbiddenException || error instanceof NotFoundException) {
@@ -1074,7 +1074,7 @@ export class V1WorkspaceService {
   }
 
   /**
-   * ✅ Delete API key
+   * Delete API key
    */
   async deleteApiKey(
     workspaceId: string,
@@ -1086,7 +1086,7 @@ export class V1WorkspaceService {
 
       this.logger.log(`[WorkspaceService] Deleting API key: ${keyId}`);
 
-      // ✅ Delegate to ApiKeyService
+      // Delegate to ApiKeyService
       await this.apiKeyService.deleteApiKey(workspaceId, keyId);
 
       return { message: 'API key deleted successfully' };
@@ -1098,7 +1098,7 @@ export class V1WorkspaceService {
   }
 
   /**
-   * ✅ Get API key usage statistics
+   * Get API key usage statistics
    */
   async getApiKeyUsageStats(workspaceId: string, userId: string): Promise<ApiKeyUsageStats> {
     try {
@@ -1119,7 +1119,7 @@ export class V1WorkspaceService {
       const activeKeys = apiKeys.filter((k) => k.isActive).length;
       const inactiveKeys = totalKeys - activeKeys;
 
-      // ✅ Provider breakdown
+      // Provider breakdown
       const providerBreakdown = apiKeys.reduce(
         (acc, key) => {
           acc[String(key.provider)] = (acc[String(key.provider)] || 0) + 1;
@@ -1154,7 +1154,7 @@ export class V1WorkspaceService {
   }
 
   /**
-   * ✅ Get daily usage metrics for API key
+   * Get daily usage metrics for API key
    */
   async getUsageMetrics(
     workspaceId: string,
@@ -1176,7 +1176,7 @@ export class V1WorkspaceService {
         throw new NotFoundException('API key not found');
       }
 
-      // ✅ Build where clause
+      // Build where clause
       const whereClause: any = { keyId };
 
       if (startDate || endDate) {
@@ -1191,7 +1191,7 @@ export class V1WorkspaceService {
         take: 30,
       });
 
-      // ✅ Format response
+      // Format response
       return metrics.map((m) => ({
         id: m.id,
         date: m.date.toISOString().split('T')[0],
@@ -1213,11 +1213,11 @@ export class V1WorkspaceService {
   }
 
   /**
-   * ✅ Get decrypted API key (internal use only)
+   * Get decrypted API key (internal use only)
    */
   async getDecryptedApiKey(keyId: string, workspaceId: string): Promise<string> {
     try {
-      // ✅ Delegate to ApiKeyService
+      // Delegate to ApiKeyService
       return this.apiKeyService.getDecryptedKey(workspaceId, keyId);
     } catch (error) {
       if (error instanceof NotFoundException) throw error;

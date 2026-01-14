@@ -22,7 +22,7 @@ export class V1DocumentCostTrackingService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  // ✅ Profit summary derived from recorded costs + centralized revenue rule
+  // Profit summary derived from recorded costs + centralized revenue rule
   async getWorkspaceProfitSummary(workspaceId: string, startDate?: Date, endDate?: Date) {
     this.logger.log(`[Cost Tracking] Getting PROFIT summary for workspace: ${workspaceId}`);
 

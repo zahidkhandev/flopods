@@ -81,11 +81,11 @@ const mapBackendTypeToFrontend = (backendType: string): string => {
   }
 };
 
-// ✅ NEW: Inner component that has access to ReactFlow instance
+// NEW: Inner component that has access to ReactFlow instance
 function CanvasProviderInner({ children }: { children: ReactNode }) {
   const { id: flowId } = useParams<{ id: string }>();
   const { currentWorkspaceId } = useWorkspaces();
-  const reactFlowInstance = useReactFlow(); // ✅ Access to viewport
+  const reactFlowInstance = useReactFlow(); // Access to viewport
 
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
@@ -122,14 +122,14 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
         const loadedNodes: Node[] = (canvas.pods || []).map((pod: any) => ({
           id: pod.id,
           type: mapBackendTypeToFrontend(pod.type),
-          position: pod.position || { x: 0, y: 0 }, // ✅ Use top-level position only!
+          position: pod.position || { x: 0, y: 0 }, // Use top-level position only!
           data: {
             label: pod.content?.label || pod.type,
             config: pod.content?.config || {},
             executionStatus: pod.executionStatus || 'IDLE',
             backendType: pod.type,
             ...pod.content,
-            position: undefined, // ✅ Remove nested position from content
+            position: undefined, // Remove nested position from content
           },
         }));
 
@@ -159,7 +159,7 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
     loadCanvas();
   }, [flowId, currentWorkspaceId]);
 
-  // ✅ FIXED: Save without moving nodes
+  // FIXED: Save without moving nodes
   const save = useCallback(async () => {
     if (!flowId || !currentWorkspaceId) return;
 
@@ -173,7 +173,7 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
 
     const currentNodes = nodesRef.current;
 
-    // ✅ Capture current viewport BEFORE save
+    // Capture current viewport BEFORE save
     const viewport = reactFlowInstance.getViewport();
 
     setIsSaving(true);
@@ -185,7 +185,7 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
             await axiosInstance.patch(
               `/workspaces/${currentWorkspaceId}/flows/${flowId}/canvas/pods/${node.id}`,
               {
-                position: node.position, // ✅ Save exact position
+                position: node.position, // Save exact position
                 config: node.data.config,
                 label: node.data.label,
               }
@@ -194,7 +194,7 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
         })
       );
 
-      // ✅ Restore viewport immediately after save (prevents jumping)
+      // Restore viewport immediately after save (prevents jumping)
       setTimeout(() => {
         reactFlowInstance.setViewport(viewport, { duration: 0 });
       }, 0);
@@ -524,7 +524,7 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
   return <CanvasContext.Provider value={value}>{children}</CanvasContext.Provider>;
 }
 
-// ✅ Wrapper that provides ReactFlow context first
+// Wrapper that provides ReactFlow context first
 export function CanvasProvider({ children }: { children: ReactNode }) {
   return <CanvasProviderInner>{children}</CanvasProviderInner>;
 }

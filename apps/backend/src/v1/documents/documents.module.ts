@@ -69,7 +69,7 @@ import { ApiKeyEncryptionService } from '../../common/services/encryption.servic
     V1EmbeddingsController,
   ],
   providers: [
-    // ✅ Core Services
+    // Core Services
     ApiKeyEncryptionService,
     V1ApiKeyService,
     V1DocumentsService,
@@ -80,19 +80,19 @@ import { ApiKeyEncryptionService } from '../../common/services/encryption.servic
     V1DocumentOrchestratorService,
     V1GeminiVisionService,
 
-    // ✅ YouTube Services (NO DUPLICATE)
+    // YouTube Services (NO DUPLICATE)
     V1YouTubeTranscriptExtractor,
     V1YouTubeProcessorService,
 
-    // ✅ Guards
+    // Guards
     V1WorkspaceOwnershipGuard,
     V1DocumentAccessGuard,
 
-    // ✅ Interceptors
+    // Interceptors
     V1FileSizeLimitInterceptor,
     V1FileTypeValidatorInterceptor,
 
-    // ✅ Queue Services
+    // Queue Services
     V1BullMQDocumentQueueService,
     V1SQSDocumentQueueService,
     V1DocumentQueueProducer,
@@ -120,6 +120,6 @@ export class V1DocumentModule implements OnModuleInit {
   async onModuleInit() {
     this.logger.log('📦 Documents Module: Initializing...');
     // Consumer will auto-start via its own OnModuleInit
-    this.logger.log('✅ Documents Module: Queue consumer started');
+    this.logger.log('Documents Module: Queue consumer started');
   }
 }

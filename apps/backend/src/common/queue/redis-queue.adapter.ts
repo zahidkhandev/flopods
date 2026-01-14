@@ -39,7 +39,7 @@ export class RedisQueueAdapter implements QueueAdapter {
       },
     });
 
-    this.logger.log(`✅ Redis queue initialized: ${queueName}`);
+    this.logger.log(`Redis queue initialized: ${queueName}`);
   }
 
   async add(jobName: string, data: any, options?: any): Promise<string> {
@@ -92,7 +92,7 @@ export class RedisQueueAdapter implements QueueAdapter {
 
   private setupEventHandlers() {
     this.worker.on('completed', (job: Job) => {
-      this.logger.log(`✅ Job ${job.id} completed`);
+      this.logger.log(`Job ${job.id} completed`);
     });
 
     this.worker.on('failed', (job: Job | undefined, err: Error) => {

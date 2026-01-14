@@ -85,7 +85,7 @@ export class V1NotificationController {
     return { count };
   }
 
-  // ✅ REMOVED ParseUUIDPipe - CUID IDs are not UUIDs
+  // REMOVED ParseUUIDPipe - CUID IDs are not UUIDs
   @Patch(':id/read')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
@@ -157,7 +157,7 @@ export class V1NotificationController {
     };
   }
 
-  // ✅ REMOVED ParseUUIDPipe
+  // REMOVED ParseUUIDPipe
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({

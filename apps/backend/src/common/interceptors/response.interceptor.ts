@@ -44,12 +44,12 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, ApiResponse<T>
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest();
 
-    // ✅ CRITICAL: Skip if headers already sent (streaming, OAuth redirects)
+    // CRITICAL: Skip if headers already sent (streaming, OAuth redirects)
     if (response.headersSent) {
       return next.handle();
     }
 
-    // ✅ CRITICAL: Check for SSE/streaming content type
+    // CRITICAL: Check for SSE/streaming content type
     const contentType = response.getHeader('Content-Type');
     if (contentType && contentType.toString().includes('text/event-stream')) {
       return next.handle(); // Skip wrapping for SSE streams
@@ -62,12 +62,12 @@ export class ResponseInterceptor<T> implements NestInterceptor<T, ApiResponse<T>
 
     return next.handle().pipe(
       map((data: any) => {
-        // ✅ Double-check after handler execution
+        // Double-check after handler execution
         if (response.headersSent) {
           return data;
         }
 
-        // ✅ Check again for streaming content
+        // Check again for streaming content
         const updatedContentType = response.getHeader('Content-Type');
         if (updatedContentType && updatedContentType.toString().includes('text/event-stream')) {
           return data;

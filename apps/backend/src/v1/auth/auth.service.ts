@@ -132,7 +132,7 @@ export class V1AuthService {
         },
       });
 
-      // ✅ CREATE FREE SUBSCRIPTION
+      // CREATE FREE SUBSCRIPTION
       await this.createFreeSubscription(tx, workspace.id);
 
       return newUser;
@@ -531,7 +531,7 @@ export class V1AuthService {
           },
         });
 
-        // ✅ CREATE FREE SUBSCRIPTION
+        // CREATE FREE SUBSCRIPTION
         await this.createFreeSubscription(tx, workspace.id);
 
         this.logger.log(`New user created via Google: ${newUser.email} with FREE subscription`);
@@ -598,7 +598,7 @@ export class V1AuthService {
           },
         });
 
-        // ✅ CREATE FREE SUBSCRIPTION
+        // CREATE FREE SUBSCRIPTION
         await this.createFreeSubscription(tx, workspace.id);
 
         this.logger.log(`New user created via GitHub: ${newUser.email} with FREE subscription`);

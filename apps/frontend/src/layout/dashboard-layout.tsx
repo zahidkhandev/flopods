@@ -68,7 +68,7 @@ export function DashboardLayout() {
             </BreadcrumbList>
           </Breadcrumb>
           <div className="ml-auto flex items-center gap-2">
-            {/* ✅ Only show Users button on flow editor */}
+            {/* Only show Users button on flow editor */}
             {isFlowEditor && (
               <Button variant="ghost" size="icon">
                 <Users className="h-4 w-4" />

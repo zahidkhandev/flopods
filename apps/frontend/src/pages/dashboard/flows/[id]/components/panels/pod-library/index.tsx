@@ -5,7 +5,7 @@ import { Upload, Sparkles } from 'lucide-react';
 import PodLibraryItem from './pod-library-item';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-// ✅ ONLY 2 POD TYPES - Simple & Clean
+// ONLY 2 POD TYPES - Simple & Clean
 const POD_TYPES = [
   {
     type: 'SOURCE',

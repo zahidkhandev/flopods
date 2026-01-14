@@ -40,7 +40,7 @@ interface VisionAnalysisResponse {
   [key: string]: any;
 }
 
-// ✅ Valid media types for Claude
+// Valid media types for Claude
 type ValidMediaType = 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
 
 const VALID_MEDIA_TYPES: Record<string, ValidMediaType> = {
@@ -61,7 +61,7 @@ export class V1ClaudeVisionService {
     private readonly configService: ConfigService,
   ) {}
 
-  // ✅ Get Claude vision pricing from DB
+  // Get Claude vision pricing from DB
   private async getVisionPricing() {
     const pricing = await this.prisma.modelPricingTier.findFirst({
       where: {
@@ -81,7 +81,7 @@ export class V1ClaudeVisionService {
     return pricing;
   }
 
-  // ✅ Validate and normalize mime type
+  // Validate and normalize mime type
   private validateMediaType(mimeType: string): ValidMediaType {
     const normalized = VALID_MEDIA_TYPES[mimeType.toLowerCase()];
     if (!normalized) {
@@ -116,14 +116,14 @@ export class V1ClaudeVisionService {
         throw new BadRequestException('Anthropic API key not configured');
       }
 
-      // ✅ Get pricing from DB
+      // Get pricing from DB
       const visionPricing = await this.getVisionPricing();
       const validMediaType = this.validateMediaType(mimeType);
 
       const client = new Anthropic({ apiKey });
       const base64Image = imageBuffer.toString('base64');
 
-      // ✅ Use model from DB
+      // Use model from DB
       const response = await client.messages.create({
         model: visionPricing.modelId,
         max_tokens: visionPricing.maxOutputTokens || 1024,
@@ -135,7 +135,7 @@ export class V1ClaudeVisionService {
                 type: 'image',
                 source: {
                   type: 'base64',
-                  media_type: validMediaType, // ✅ Type-safe media type
+                  media_type: validMediaType, // Type-safe media type
                   data: base64Image,
                 },
               },
@@ -198,13 +198,13 @@ Respond in JSON format:
       outputTokens = response.usage?.output_tokens || 0;
       totalTokens = inputTokens + outputTokens;
 
-      // ✅ Calculate actual cost from DB pricing
+      // Calculate actual cost from DB pricing
       const inputCost = (inputTokens / 1_000_000) * Number(visionPricing.inputTokenCost);
       const outputCost = (outputTokens / 1_000_000) * Number(visionPricing.outputTokenCost);
       const totalCostUsd = inputCost + outputCost;
       actualCostUsd = new Decimal(totalCostUsd);
 
-      // ✅ Calculate profit using global multiplier
+      // Calculate profit using global multiplier
       profitData = calculateProfitData(totalCostUsd);
       creditsToCharge = calculateCreditsFromCharge(profitData.userChargeUsd);
 
@@ -214,7 +214,7 @@ Respond in JSON format:
           `Profit: $${profitData.profitUsd.toFixed(6)} (${profitData.profitMarginPercentage.toFixed(2)}%)`,
       );
 
-      // ✅ Get subscription for credit tracking
+      // Get subscription for credit tracking
       const subscription = await this.prisma.subscription.findUnique({
         where: { workspaceId },
         select: { id: true, isByokMode: true },
@@ -224,7 +224,7 @@ Respond in JSON format:
         throw new BadRequestException('No active subscription found');
       }
 
-      // ✅ Use model from DB in DB record
+      // Use model from DB in DB record
       const visionAnalysis = await this.prisma.documentVisionAnalysis.create({
         data: {
           documentId,
@@ -289,7 +289,7 @@ Respond in JSON format:
       );
 
       this.logger.log(
-        `[Claude Vision] ✅ Completed: ${documentId} (${processingTimeMs}ms, ${totalTokens} tokens) | ` +
+        `[Claude Vision] Completed: ${documentId} (${processingTimeMs}ms, ${totalTokens} tokens) | ` +
           `Profit: $${profitData.profitUsd.toFixed(6)} 💰`,
       );
 
@@ -350,14 +350,14 @@ Respond in JSON format:
     extractionType: VisionExtractionType,
     extractedData: string,
     confidence: number,
-    modelId: string, // ✅ From DB
+    modelId: string, // From DB
   ): Promise<void> {
     await this.prisma.visionExtractionSnapshot.create({
       data: {
         documentId,
         workspaceId,
         provider: LLMProvider.ANTHROPIC,
-        modelId, // ✅ Use DB model
+        modelId, // Use DB model
         extractionType,
         extractedData,
         confidence,
@@ -380,8 +380,8 @@ Respond in JSON format:
     profitUsd: Decimal,
     isByokMode: boolean,
     success: boolean,
-    modelId: string, // ✅ From DB
-    modelName: string, // ✅ From DB
+    modelId: string, // From DB
+    modelName: string, // From DB
     errorMessage?: string,
   ): Promise<void> {
     await this.prisma.documentAPILog.create({
@@ -389,7 +389,7 @@ Respond in JSON format:
         workspaceId,
         documentId: documentId || undefined,
         provider: LLMProvider.ANTHROPIC,
-        modelId, // ✅ Use DB model
+        modelId, // Use DB model
         requestType: APIRequestType.IMAGE_ANALYSIS,
         inputTokens,
         outputTokens,
@@ -421,8 +421,8 @@ Respond in JSON format:
         balanceBefore: 0,
         balanceAfter: 0,
         provider: LLMProvider.ANTHROPIC,
-        modelId, // ✅ Use DB model
-        modelName, // ✅ Use DB display name
+        modelId, // Use DB model
+        modelName, // Use DB display name
       },
     });
   }

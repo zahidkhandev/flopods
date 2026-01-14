@@ -7,10 +7,10 @@ import { DocumentMessagePriority } from '../types';
 
 /**
  * BullMQ queue service for document processing
- * ✅ Redis persistence with AOF + RDB
- * ✅ Exponential backoff retries
- * ✅ Job state tracking
- * ✅ Delayed execution support
+ * Redis persistence with AOF + RDB
+ * Exponential backoff retries
+ * Job state tracking
+ * Delayed execution support
  */
 @Injectable()
 export class V1BullMQDocumentQueueService implements IDocumentQueueService, OnModuleDestroy {
@@ -24,18 +24,18 @@ export class V1BullMQDocumentQueueService implements IDocumentQueueService, OnMo
     const redisPort = this.configService.get<number>('REDIS_PORT', 6379);
     const redisPassword = this.configService.get<string>('REDIS_PASSWORD');
 
-    // ✅ REDIS PERSISTENCE CONFIG
+    // REDIS PERSISTENCE CONFIG
     this.queue = new Queue(this.queueName, {
       connection: {
         host: redisHost,
         port: redisPort,
         password: redisPassword || undefined,
-        maxRetriesPerRequest: null, // ✅ Critical for background jobs
+        maxRetriesPerRequest: null, // Critical for background jobs
         enableReadyCheck: false,
-        enableOfflineQueue: true, // ✅ Queue commands when Redis down
+        enableOfflineQueue: true, // Queue commands when Redis down
       },
       defaultJobOptions: {
-        attempts: 3, // ✅ Retry 3 times with backoff
+        attempts: 3, // Retry 3 times with backoff
         backoff: {
           type: 'exponential',
           delay: 2000,
@@ -47,7 +47,7 @@ export class V1BullMQDocumentQueueService implements IDocumentQueueService, OnMo
         removeOnFail: {
           age: 604800, // Keep failed jobs for 7 days
         },
-        // ✅ REMOVED: timeout is not in BullMQ DefaultJobOptions
+        // REMOVED: timeout is not in BullMQ DefaultJobOptions
         // Use job settings instead if needed
       },
     });
@@ -107,7 +107,7 @@ export class V1BullMQDocumentQueueService implements IDocumentQueueService, OnMo
   }
 
   /**
-   * ✅ Send message with delay (for embeddings backoff)
+   * Send message with delay (for embeddings backoff)
    */
   async sendDocumentMessageWithDelay(
     message: DocumentQueueMessage,
@@ -123,7 +123,7 @@ export class V1BullMQDocumentQueueService implements IDocumentQueueService, OnMo
       const job = await this.queue.add('process-document', message, {
         jobId: message.messageId,
         priority,
-        delay: delayMs, // ✅ BullMQ saves delayed jobs to Redis
+        delay: delayMs, // BullMQ saves delayed jobs to Redis
       });
 
       this.logger.debug(`[BullMQ] ⏰ Delayed message sent: ${job.id} (${delayMs}ms)`);
@@ -162,12 +162,12 @@ export class V1BullMQDocumentQueueService implements IDocumentQueueService, OnMo
           enableReadyCheck: false,
           enableOfflineQueue: true,
         },
-        concurrency: 10, // ✅ Process 10 jobs simultaneously
+        concurrency: 10, // Process 10 jobs simultaneously
       },
     );
 
     this.worker.on('completed', (job) => {
-      this.logger.log(`[BullMQ] ✅ Completed: ${job.id}`);
+      this.logger.log(`[BullMQ] Completed: ${job.id}`);
     });
 
     this.worker.on('failed', (job, error) => {

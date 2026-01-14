@@ -23,7 +23,7 @@ export function GeneralSettings({ workspace }: GeneralSettingsProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  // ✅ Handle both workspace list format (role) and workspace details format (currentUserRole)
+  // Handle both workspace list format (role) and workspace details format (currentUserRole)
   const userRole = workspace.currentUserRole || workspace.role;
   const isOwner = userRole === 'OWNER';
 
@@ -182,7 +182,7 @@ export function GeneralSettings({ workspace }: GeneralSettingsProps) {
         </div>
       </div>
 
-      {/* ✅ DANGER ZONE - ONLY SHOWS FOR OWNER OF TEAM WORKSPACES */}
+      {/* DANGER ZONE - ONLY SHOWS FOR OWNER OF TEAM WORKSPACES */}
       {isOwner && workspace.type === 'TEAM' && (
         <>
           <Separator />

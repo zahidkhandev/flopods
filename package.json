@@ -99,12 +99,12 @@
   },
   "devDependencies": {
     "@flopods/eslint-config": "*",
-    "@types/node": "^24.10.0",
-    "prettier": "^3.6.2",
-    "rimraf": "^6.1.0",
-    "turbo": "^2.6.0",
+    "@types/node": "^25.0.8",
+    "prettier": "^3.7.4",
+    "rimraf": "^6.1.2",
+    "turbo": "^2.7.4",
     "typescript": "^5.9.3",
-    "vite": "^7.1.12"
+    "vite": "^7.3.1"
   },
   "packageManager": "yarn@4.10.3",
   "engines": {
@@ -112,7 +112,7 @@
     "yarn": ">=4.0.0"
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.1.16",
-    "tailwindcss": "^4.1.16"
+    "@tailwindcss/vite": "^4.1.18",
+    "tailwindcss": "^4.1.18"
   }
 }

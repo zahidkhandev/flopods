@@ -3,7 +3,7 @@ name: flopods
 
 services:
   redis:
-    image: ${IMAGE_REGISTRY:-docker.io/library/}redis:7-alpine
+    image: ${IMAGE_REGISTRY:-docker.io/}library/redis:8-alpine
     pull_policy: ${PULL_POLICY:-missing}
     container_name: flopods-redis
     ports:

@@ -12,7 +12,7 @@ export interface IDocumentQueueService {
   sendDocumentMessageBatch(messages: DocumentQueueMessage[]): Promise<string[]>;
 
   /**
-   * ✅ Send message with delay (for backoff)
+   * Send message with delay (for backoff)
    */
   sendDocumentMessageWithDelay(message: DocumentQueueMessage, delayMs: number): Promise<string>;
 

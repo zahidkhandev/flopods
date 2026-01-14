@@ -34,7 +34,7 @@ export class V1DocumentQueueProducer {
       metadata: {
         fileType: params.fileType,
         sourceType: params.sourceType as any,
-        externalUrl: params.externalUrl, // ✅ NOW DEFINED IN DocumentMetadata
+        externalUrl: params.externalUrl, // NOW DEFINED IN DocumentMetadata
         estimatedTokens: params.estimatedTokens,
       },
       timestamp: new Date().toISOString(),
@@ -45,7 +45,7 @@ export class V1DocumentQueueProducer {
       this.logger.log(`[Producer] Document processing job queued: ${params.documentId}`);
       return messageId;
     } catch (error) {
-      const _errorMessage = error instanceof Error ? error.message : 'Unknown error'; // ✅ FIXED: Prefixed with _ for unused variable
+      const _errorMessage = error instanceof Error ? error.message : 'Unknown error'; // FIXED: Prefixed with _ for unused variable
       this.logger.error(`[Producer] Failed to queue: ${params.documentId} - ${_errorMessage}`);
       throw error;
     }
@@ -78,7 +78,7 @@ export class V1DocumentQueueProducer {
     try {
       this.logger.log(`[Producer] ▶️ Queueing embeddings NOW for ${documentId}`);
       const messageId = await this.queueService.sendDocumentMessage(message);
-      this.logger.log(`[Producer] ✅ Embeddings queued now: ${documentId}`);
+      this.logger.log(`[Producer] Embeddings queued now: ${documentId}`);
       return messageId;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -88,7 +88,7 @@ export class V1DocumentQueueProducer {
   }
 
   /**
-   * ✅ Queue embeddings with exponential backoff
+   * Queue embeddings with exponential backoff
    */
   async queueEmbeddingGenerationWithBackoff(payload: {
     documentId: string;
@@ -99,7 +99,7 @@ export class V1DocumentQueueProducer {
   }): Promise<string> {
     const { documentId, workspaceId, userId, extractedText, retryCount } = payload;
 
-    // ✅ Exponential backoff delays in milliseconds
+    // Exponential backoff delays in milliseconds
     const backoffDelays = [
       5 * 60 * 1000, // 5 minutes
       15 * 60 * 1000, // 15 minutes
@@ -124,7 +124,7 @@ export class V1DocumentQueueProducer {
         fileType: '',
         sourceType: '' as any,
         retryCount,
-        extractedText, // ✅ Include text for embeddings
+        extractedText, // Include text for embeddings
       },
       timestamp: new Date().toISOString(),
     };
@@ -136,7 +136,7 @@ export class V1DocumentQueueProducer {
 
       const messageId = await this.queueService.sendDocumentMessageWithDelay(message, delayMs);
 
-      this.logger.log(`[Producer] ✅ Embeddings queued with backoff: ${documentId}`);
+      this.logger.log(`[Producer] Embeddings queued with backoff: ${documentId}`);
       return messageId;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

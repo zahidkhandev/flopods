@@ -11,7 +11,7 @@ interface BreadcrumbItem {
 export function useSetBreadcrumbs(breadcrumbs: BreadcrumbItem[] | null) {
   const { setCustomBreadcrumbs } = useBreadcrumbs();
 
-  // ✅ Memoize breadcrumbs to prevent unnecessary re-renders
+  // Memoize breadcrumbs to prevent unnecessary re-renders
   const memoizedBreadcrumbs = useMemo(() => {
     return breadcrumbs ? JSON.stringify(breadcrumbs) : null;
   }, [breadcrumbs]);
@@ -26,6 +26,6 @@ export function useSetBreadcrumbs(breadcrumbs: BreadcrumbItem[] | null) {
     return () => {
       setCustomBreadcrumbs(null);
     };
-    // ✅ Only depend on stringified version
+    // Only depend on stringified version
   }, [memoizedBreadcrumbs, setCustomBreadcrumbs]);
 }

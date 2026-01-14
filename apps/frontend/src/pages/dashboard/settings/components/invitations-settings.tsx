@@ -40,7 +40,7 @@ export function InvitationsSettings({ workspaceId }: { workspaceId: string }) {
 
   const handleSendSuccess = () => {
     setIsInviteDialogOpen(false);
-    refetch(); // ✅ Refresh invitations list
+    refetch(); // Refresh invitations list
   };
 
   const copyInvitationLink = (token: string) => {
@@ -310,7 +310,7 @@ export function InvitationsSettings({ workspaceId }: { workspaceId: string }) {
             setIsInviteDialogOpen(false);
           }
         }}
-        onSuccess={handleSendSuccess} // ✅ Pass success handler
+        onSuccess={handleSendSuccess} // Pass success handler
       />
 
       <AlertDialog open={!!revokeId} onOpenChange={() => setRevokeId(null)}>

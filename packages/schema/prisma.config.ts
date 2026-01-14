@@ -1,16 +1,20 @@
-import path from 'path';
-require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
+import { defineConfig } from '@prisma/config';
+import { resolve } from 'path';
+import { config } from 'dotenv';
 
-// Set proxy only if configured in .env
+// 1. Force load .env from monorepo root
+config({ path: resolve(__dirname, '../../.env') });
+
+// 2. Proxy Setup
 if (process.env.HTTP_PROXY) {
-  process.env.HTTP_PROXY = process.env.HTTP_PROXY;
-  process.env.HTTPS_PROXY = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
-  process.env.http_proxy = process.env.HTTP_PROXY;
   process.env.https_proxy = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;
+  process.env.http_proxy = process.env.HTTP_PROXY;
 }
 
-import { defineConfig } from 'prisma/config';
-
 export default defineConfig({
-  schema: './prisma',
+  schema: 'prisma',
+
+  datasource: {
+    url: process.env.DATABASE_URL,
+  },
 });

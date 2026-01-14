@@ -83,7 +83,7 @@ function FlowEditor() {
     isSaving,
   } = useCanvas();
 
-  // ✅ Keyboard shortcuts
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       // Don't trigger if user is typing in an input/textarea
@@ -115,12 +115,12 @@ function FlowEditor() {
   );
   const [hasInitialFitView, setHasInitialFitView] = useState(false);
 
-  // ✅ Handle double-click to open config panel
+  // Handle double-click to open config panel
   const handleNodeDoubleClick = useCallback((_event: React.MouseEvent, node: Node) => {
     setSelectedPodId(node.id);
   }, []);
 
-  // ✅ Track selection without opening panel (only close if deselected)
+  // Track selection without opening panel (only close if deselected)
   useEffect(() => {
     const selectedNode = nodes.find((n) => n.selected);
     // Only close panel if no node is selected

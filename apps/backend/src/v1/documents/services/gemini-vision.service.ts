@@ -52,7 +52,7 @@ export class V1GeminiVisionService {
     private readonly apiKeyService: V1ApiKeyService,
   ) {}
 
-  // ✅ Get vision pricing from DB
+  // Get vision pricing from DB
   private async getVisionPricing() {
     const pricing = await this.prisma.modelPricingTier.findFirst({
       where: {
@@ -352,7 +352,7 @@ Respond in JSON format:
       );
 
       this.logger.log(
-        `[Vision] ✅ Completed: ${documentId} (${processingTimeMs}ms, ${totalTokens} tokens) | Profit: $${profitData.profitUsd.toFixed(6)} 💰`,
+        `[Vision] Completed: ${documentId} (${processingTimeMs}ms, ${totalTokens} tokens) | Profit: $${profitData.profitUsd.toFixed(6)} 💰`,
       );
 
       return visionAnalysis;

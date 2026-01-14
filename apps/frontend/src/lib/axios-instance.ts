@@ -7,7 +7,7 @@ import { AuthTokens } from '@/types/auth';
 
 interface CustomAxiosRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
-  showErrorToast?: boolean; // ✅ NEW: Optional flag to show error toast
+  showErrorToast?: boolean; // NEW: Optional flag to show error toast
 }
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
@@ -110,7 +110,7 @@ axiosInstance.interceptors.request.use(
 // ==========================================
 
 axiosInstance.interceptors.response.use(
-  // ✅ SUCCESS
+  // SUCCESS
   (response: AxiosResponse): AxiosResponse => {
     if (window.location.pathname.includes('/errors/offline')) {
       redirectFromOfflineIfNeeded();
@@ -120,7 +120,7 @@ axiosInstance.interceptors.response.use(
 
   async (error: AxiosError): Promise<any> => {
     const originalRequest = error.config as CustomAxiosRequestConfig;
-    const showErrorToast = originalRequest?.showErrorToast === true; // ✅ Default true
+    const showErrorToast = originalRequest?.showErrorToast === true; // Default true
 
     // ==========================================
     // NETWORK ERROR (No Internet)

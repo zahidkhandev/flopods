@@ -8,7 +8,7 @@ export class V1YouTubeProcessorService {
   private readonly logger = new Logger(V1YouTubeProcessorService.name);
 
   constructor(private readonly extractor: V1YouTubeTranscriptExtractor) {
-    this.logger.log('[Processor] ✅ YouTube Processor initialized');
+    this.logger.log('[Processor] YouTube Processor initialized');
   }
 
   /**
@@ -28,7 +28,7 @@ export class V1YouTubeProcessorService {
 
       if (result.hasTranscript) {
         this.logger.log(
-          `[Processor] ✅ Successfully extracted: ${result.videoTitle} (${result.characterCount} chars)`,
+          `[Processor] Successfully extracted: ${result.videoTitle} (${result.characterCount} chars)`,
         );
       } else {
         this.logger.warn(`[Processor] ⚠️ No transcript available: ${result.videoTitle}`);
@@ -69,7 +69,7 @@ export class V1YouTubeProcessorService {
   async healthCheck(): Promise<{ status: string; message: string }> {
     return {
       status: 'healthy',
-      message: '✅ YouTube Transcript Service ready',
+      message: 'YouTube Transcript Service ready',
     };
   }
 }
