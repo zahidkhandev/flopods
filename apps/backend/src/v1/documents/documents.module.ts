@@ -84,11 +84,15 @@ import { ApiKeyEncryptionService } from '../../common/services/encryption.servic
     V1YouTubeTranscriptExtractor,
     V1YouTubeProcessorService,
 
-    // Guards
+    // ✅ YouTube Services (NO DUPLICATE)
+    V1YouTubeTranscriptExtractor,
+    V1YouTubeProcessorService,
+
+    // ✅ Guards
     V1WorkspaceOwnershipGuard,
     V1DocumentAccessGuard,
 
-    // Interceptors
+    // ✅ Interceptors
     V1FileSizeLimitInterceptor,
     V1FileTypeValidatorInterceptor,
 

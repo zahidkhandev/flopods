@@ -9820,6 +9820,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"cuid@npm:^3.0.0":
+  version: 3.0.0
+  resolution: "cuid@npm:3.0.0"
+  checksum: 10c0/e1cac04b8df3222fa612ac23f5ad1839f31ec58778a1cfcb23231224f3fe63cc0bb1747188f349bc93f87a74f574ace31ddcb3e60f5eb4543ff5c9e9458a0168
+  languageName: node
+  linkType: hard
+
 "d3-color@npm:1 - 3":
   version: 3.1.0
   resolution: "d3-color@npm:3.1.0"

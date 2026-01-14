@@ -97,6 +97,7 @@ model CreditUsageLog {
   @@schema("billing")
 }
 
+// ✅ FIXED: Decimal(14, 10) handles tiny values like 0.00000015 perfectly
 model ModelPricingTier {
   id       String        @id @default(cuid())
   provider LLMProvider

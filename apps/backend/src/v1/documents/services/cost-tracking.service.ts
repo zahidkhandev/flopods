@@ -20,6 +20,9 @@ import { PROFIT_CONFIG } from '../../../common/config/profit.config';
 export class V1DocumentCostTrackingService {
   private readonly logger = new Logger(V1DocumentCostTrackingService.name);
 
+  // Centralized monetization rule (revenue = cost * MARKUP_MULTIPLIER)
+  private readonly MARKUP_MULTIPLIER = 2;
+
   constructor(private readonly prisma: PrismaService) {}
 
   // Profit summary derived from recorded costs + centralized revenue rule

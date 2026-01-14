@@ -1,5 +1,3 @@
-// File: apps/backend/src/v1/execution/execution.service.ts
-
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { DynamoDbService } from '../../common/aws/dynamodb/dynamodb.service';
@@ -11,16 +9,12 @@ import { LLMPromptPodContent, PodContextMapping } from '../pods/types/pod-conten
 import { LLMStreamChunk } from './types/llm-provider.types';
 import { nanoid } from 'nanoid';
 import { V1FlowGateway } from '../flow/flow.gateway';
-
-// Unified cost/profit/credits utilities
 import {
-  calculateTokenCosts,
-  applyMarkup,
-  settleCreditsCharge,
+  calculateLLMExecutionCost,
   formatCostBreakdown,
   formatProfitBreakdown,
-} from '../../common/utils/profit-and-credits';
-import { QueueFactory } from '../../common/queue/queue.factory';
+} from './utils/execution-cost-calculator.util';
+import { PROFIT_CONFIG } from '../../common/config/profit.config';
 
 type LLMMessage = {
   role: 'system' | 'user' | 'assistant';
@@ -30,7 +24,6 @@ type LLMMessage = {
 @Injectable()
 export class V1ExecutionService {
   private readonly logger = new Logger(V1ExecutionService.name);
-  private backgroundQueue: any;
 
   private readonly DEFAULT_SYSTEM_PROMPTS = {
     general: 'You are a helpful AI assistant. Provide clear, accurate, and concise responses.',
@@ -45,13 +38,11 @@ export class V1ExecutionService {
     private readonly providerFactory: ProviderFactory,
     private readonly contextResolution: V1ContextResolutionService,
     private readonly flowGateway: V1FlowGateway,
-    private readonly queueFactory: QueueFactory,
-  ) {
-    this.backgroundQueue = this.queueFactory.createQueue('background-tasks');
-  }
+  ) {}
 
   /**
-   * INSTANT STREAMING with CONVERSATION HISTORY + PROFIT/CREDITS TRACKING
+   * INSTANT STREAMING with CONVERSATION HISTORY
+   * Each pod maintains its own conversation thread (last 20 turns)
    */
   async *executePod(params: {
     podId: string;
@@ -70,13 +61,13 @@ export class V1ExecutionService {
     responseFormat?: 'text' | 'json_object' | 'json';
     contextMappings?: PodContextMapping[];
   }): AsyncGenerator<LLMStreamChunk, void, unknown> {
-    const { podId, workspaceId, userId, messages } = params;
+    const { podId, workspaceId, messages } = params;
     const executionId = `exec_${nanoid(16)}`;
     const startTime = Date.now();
-    let _podFlowId: string | null = null;
+    let podFlowId: string | null = null;
 
     try {
-      // Pod validations and config fetch
+      // Get pod info
       const pod = await this.prisma.pod.findFirst({
         where: { id: podId, flow: { workspaceId } },
         select: {
@@ -87,25 +78,30 @@ export class V1ExecutionService {
           dynamoSortKey: true,
         },
       });
+
       if (!pod) {
         yield { type: 'error', error: `Pod ${podId} not found` };
         return;
       }
-      _podFlowId = pod.flowId;
+      podFlowId = pod.flowId;
+
       if (pod.type !== 'LLM_PROMPT') {
         yield { type: 'error', error: 'Only LLM_PROMPT pods can be executed' };
         return;
       }
+
       const podConfig = await this.getPodConfig(pod.dynamoPartitionKey, pod.dynamoSortKey);
       if (!podConfig) {
         yield { type: 'error', error: 'Pod configuration not found' };
         return;
       }
+
       const llmConfig = podConfig.config;
 
-      // Parameter resolution
+      // Resolve all parameters
       const finalProvider = params.provider ?? llmConfig.provider;
       const finalModel = params.model ?? llmConfig.model;
+      const finalSystemPrompt = params.systemPrompt ?? llmConfig.systemPrompt;
       const finalTemperature = params.temperature ?? llmConfig.temperature;
       const finalMaxTokens = params.maxTokens ?? llmConfig.maxTokens;
       const finalTopP = params.topP ?? llmConfig.topP;
@@ -114,10 +110,11 @@ export class V1ExecutionService {
       const finalThinkingBudget = params.thinkingBudget ?? llmConfig.thinkingBudget;
       const finalResponseFormat = params.responseFormat ?? llmConfig.responseFormat;
 
+      // Extract user input for history
       const userMessage = messages.find((m) => m.role === 'user');
       const userInput = userMessage?.content || '';
 
-      // 3) CREATE EXECUTION RECORD
+      // Create execution record
       await this.prisma.podExecution.create({
         data: {
           id: executionId,
@@ -129,9 +126,11 @@ export class V1ExecutionService {
           modelId: finalModel,
           startedAt: new Date(),
           requestMetadata: {
-            userId,
             userInput,
-            messages: messages.map((m) => ({ role: m.role, content: m.content })),
+            messages: messages.map((m) => ({
+              role: m.role,
+              content: m.content,
+            })),
             temperature: finalTemperature,
             maxTokens: finalMaxTokens,
             provider: finalProvider,
@@ -140,77 +139,81 @@ export class V1ExecutionService {
         },
       });
 
+      // Broadcast execution start
       this.flowGateway.broadcastExecutionStart(pod.flowId, executionId, podId);
 
-      // Context & system prompt assembly
+      this.logger.log(
+        `[Execution] 🚀 Starting execution ${executionId} for pod ${podId} (${finalProvider}/${finalModel})`,
+      );
+
+      // ✅ Get conversation history from THIS pod (last 20 turns)
       const conversationHistory = await this.getPodConversationHistory(podId, 20);
+      this.logger.debug(
+        `[Execution] 📋 Including ${conversationHistory.length} messages from conversation history`,
+      );
+
+      // Resolve upstream context
       const contextChain = await this.contextResolution.resolveFullContext(podId, pod.flowId);
 
-      let systemPrompt = params.systemPrompt ?? this.DEFAULT_SYSTEM_PROMPTS.general;
+      this.logger.debug(
+        `[Execution] 🔗 Resolved context from ${Object.keys(contextChain.variables).length} upstream pods (${Object.values(contextChain.variables).reduce((sum, v) => sum + (typeof v === 'string' ? v.split('\n').length : 0), 0)} messages)`,
+      );
+
+      // Build system prompt with variable interpolation
+      let systemPrompt = finalSystemPrompt ?? this.DEFAULT_SYSTEM_PROMPTS.general;
       systemPrompt = this.contextResolution.interpolateVariables(
         systemPrompt,
         contextChain.variables,
       );
 
+      // ✅ ADD UPSTREAM CONTEXT TO SYSTEM PROMPT
       if (Object.keys(contextChain.variables).length > 0) {
         const contextSection = '\n\n## Context from Connected Pods:\n\n';
         const contextDetails = Object.entries(contextChain.variables)
-          .map(([pid, content]) => `**Pod ${pid} History:**\n${content}`)
+          .map(([podId, content]) => `**Pod ${podId} History:**\n${content}`)
           .join('\n\n');
-        systemPrompt += contextSection + contextDetails;
+
+        systemPrompt = systemPrompt + contextSection + contextDetails;
       }
 
-      // Inject user profile & workspace info
-      const userProfile = await this.prisma.user.findUnique({
-        where: { id: userId },
-        select: { name: true, email: true },
+      // Interpolate messages
+      const interpolatedMessages = messages.map((msg) => {
+        if (msg.role === 'user' && typeof msg.content === 'string') {
+          return {
+            ...msg,
+            content: this.contextResolution.interpolateVariables(
+              msg.content,
+              contextChain.variables,
+            ),
+          };
+        }
+        return msg;
       });
-      const workspaceUser = await this.prisma.workspaceUser.findUnique({
-        where: { userId_workspaceId: { userId, workspaceId } },
-        select: { role: true },
-      });
-      const userRole = workspaceUser?.role ?? 'Unknown';
-      if (userProfile) {
-        systemPrompt += `\n\n## User Profile:\nName: ${userProfile.name ?? 'Unknown'}\nEmail: ${userProfile.email ?? 'Unknown'}\nRole: ${userRole}`;
-      }
-      const workspace = await this.prisma.workspace.findUnique({
-        where: { id: workspaceId },
-        select: { name: true, type: true },
-      });
-      if (workspace) {
-        systemPrompt += `\n\n## Workspace Info:\nName: ${workspace.name ?? 'Unknown'}\nType: ${workspace.type}`;
-      }
-      systemPrompt += `\n\n## Instructions:\nPlease provide concise, accurate, and helpful responses considering user profile and workspace context.`;
 
-      this.logger.debug(`System prompt:\n${systemPrompt}`);
-
-      const interpolatedMessages = messages.map((msg) =>
-        msg.role === 'user' && typeof msg.content === 'string'
-          ? {
-              ...msg,
-              content: this.contextResolution.interpolateVariables(
-                msg.content,
-                contextChain.variables,
-              ),
-            }
-          : msg,
-      );
-
+      // ✅ Combine conversation history + new messages
       const allMessages = [...conversationHistory, ...interpolatedMessages];
+
       const finalMessages = this.buildMessagesWithSystemPrompt(
         allMessages,
         systemPrompt,
-        /* _userProvidedSystemPrompt */ params.systemPrompt !== undefined,
+        params.systemPrompt !== undefined,
       );
 
-      // Provider and streaming setup
+      this.logger.debug(
+        `[Execution] 📨 Final message count: ${finalMessages.length} (${conversationHistory.length} history + ${interpolatedMessages.length} new)`,
+      );
+
+      // Get API key
       const workspaceKey = await this.providerFactory.getWorkspaceApiKey(
         workspaceId,
         finalProvider,
       );
       if (!workspaceKey) {
         const errorMsg = `No ${finalProvider} API key configured for this workspace`;
-        yield { type: 'error', error: errorMsg };
+        yield {
+          type: 'error',
+          error: errorMsg,
+        };
         await this.prisma.podExecution.update({
           where: { id: executionId },
           data: {
@@ -224,12 +227,19 @@ export class V1ExecutionService {
       }
 
       const { apiKey, keyId, customEndpoint } = workspaceKey;
+
+      // Get provider
       const llmProvider = this.providerFactory.getProvider(finalProvider);
+
       if (!llmProvider.executeStream) {
-        yield { type: 'error', error: `Provider ${finalProvider} does not support streaming` };
+        yield {
+          type: 'error',
+          error: `Provider ${finalProvider} does not support streaming yet`,
+        };
         return;
       }
 
+      // Build request
       const llmRequest: any = {
         provider: finalProvider,
         model: finalModel,
@@ -239,98 +249,149 @@ export class V1ExecutionService {
         apiKeyId: keyId,
         workspaceId,
         stream: true,
-        temperature: finalTemperature,
-        maxTokens: finalMaxTokens,
-        topP: finalTopP,
-        presencePenalty: finalPresencePenalty,
-        frequencyPenalty: finalFrequencyPenalty,
-        thinkingBudget: finalThinkingBudget,
-        responseFormat: finalResponseFormat,
       };
 
+      if (finalTemperature !== undefined) llmRequest.temperature = finalTemperature;
+      if (finalMaxTokens !== undefined) llmRequest.maxTokens = finalMaxTokens;
+      if (finalTopP !== undefined) llmRequest.topP = finalTopP;
+      if (finalPresencePenalty !== undefined) llmRequest.presencePenalty = finalPresencePenalty;
+      if (finalFrequencyPenalty !== undefined) llmRequest.frequencyPenalty = finalFrequencyPenalty;
+      if (finalThinkingBudget !== undefined) llmRequest.thinkingBudget = finalThinkingBudget;
+      if (finalResponseFormat !== undefined) llmRequest.responseFormat = finalResponseFormat;
+
+      this.logger.debug(
+        `[Execution] 📡 Streaming request: ${finalProvider}/${finalModel} | Temp=${finalTemperature} | MaxTokens=${finalMaxTokens}`,
+      );
+
+      // Send start event with executionId
       yield { type: 'start', executionId };
 
+      // Stream response
       let fullContent = '';
       let finalUsage: any = null;
       let finishReason = 'stop';
+      let result: any = null;
 
-      // Streaming tokens from LLM provider
       for await (const chunk of llmProvider.executeStream(llmRequest)) {
         yield chunk;
-        if (chunk.type === 'token' && chunk.content) fullContent += chunk.content;
+
+        if (chunk.type === 'token' && chunk.content) {
+          fullContent += chunk.content;
+        }
+
         if (chunk.type === 'done') {
           finalUsage = chunk.usage;
           finishReason = chunk.finishReason || 'stop';
         }
       }
 
-      // Calculate cost/profit/credits for main LLM call
+      // ✅ Save execution results with PROPER COST CALCULATION
       if (finalUsage) {
-        const pricing = await this.prisma.modelPricingTier.findFirst({
-          where: { provider: finalProvider, modelId: finalModel, isActive: true },
-          orderBy: { effectiveFrom: 'desc' },
-        });
-
-        if (pricing) {
-          const cost = calculateTokenCosts(
-            {
-              promptTokens: finalUsage.promptTokens,
-              completionTokens: finalUsage.completionTokens,
-              reasoningTokens: finalUsage.reasoningTokens,
+        try {
+          const pricing = await this.prisma.modelPricingTier.findFirst({
+            where: {
+              provider: finalProvider,
+              modelId: finalModel,
+              isActive: true,
             },
-            {
-              inputTokenCost: pricing.inputTokenCost,
-              outputTokenCost: pricing.outputTokenCost,
-              reasoningTokenCost: pricing.reasoningTokenCost,
-            },
-          );
+            orderBy: { effectiveFrom: 'desc' },
+          });
 
-          const markup = applyMarkup(cost.totalCostDecimal);
-          const credits = settleCreditsCharge({ userChargeUsd: markup.userCharge });
-
-          this.logger.log(
-            `[Execution] 💰 COST DETAILS\n${formatCostBreakdown(cost, finalUsage)}\n${formatProfitBreakdown(
+          if (!pricing) {
+            this.logger.warn(`[Execution] ⚠️ No pricing found for ${finalProvider}/${finalModel}`);
+          } else {
+            // ✅ Use proper cost calculator (handles scientific notation)
+            const costBreakdown = calculateLLMExecutionCost(
               {
-                actual: markup.actual,
-                userCharge: markup.userCharge,
-                profit: markup.userCharge - markup.actual,
-                marginPct: ((markup.userCharge - markup.actual) / markup.userCharge) * 100,
-                roiPct: ((markup.userCharge - markup.actual) / markup.actual) * 100,
-                credits,
+                promptTokens: finalUsage.promptTokens,
+                completionTokens: finalUsage.completionTokens,
+                reasoningTokens: finalUsage.reasoningTokens,
               },
-            )}`,
+              {
+                inputTokenCost: pricing.inputTokenCost,
+                outputTokenCost: pricing.outputTokenCost,
+                reasoningTokenCost: pricing.reasoningTokenCost,
+              },
+            );
+
+            const multiplier = PROFIT_CONFIG.MARKUP_MULTIPLIER;
+            const userChargeUsd = costBreakdown.totalCost * multiplier;
+            const profitUsd = userChargeUsd - costBreakdown.totalCost;
+            const profitMarginPercentage =
+              costBreakdown.totalCost > 0 ? (profitUsd / userChargeUsd) * 100 : 0;
+            const roi =
+              costBreakdown.totalCost > 0 ? (profitUsd / costBreakdown.totalCost) * 100 : 0;
+
+            result = {
+              content: fullContent,
+              usage: finalUsage,
+              cost: costBreakdown.totalCost,
+              runtime: Date.now() - startTime,
+            };
+
+            await this.prisma.podExecution.update({
+              where: { id: executionId },
+              data: {
+                status: PodExecutionStatus.COMPLETED,
+                finishedAt: new Date(),
+                runtimeInMs: Date.now() - startTime,
+                apiKeyId: keyId,
+                inputTokens: finalUsage.promptTokens,
+                outputTokens: finalUsage.completionTokens,
+                reasoningTokens: finalUsage.reasoningTokens || 0,
+                costInUsd: costBreakdown.totalCost,
+                modelName: finalModel,
+                responseMetadata: {
+                  content: fullContent,
+                  finishReason,
+                  candidates: [
+                    {
+                      content: {
+                        parts: [{ text: fullContent }],
+                      },
+                    },
+                  ],
+                },
+              },
+            });
+
+            await this.providerFactory.trackApiKeyUsage(
+              keyId,
+              {
+                input: finalUsage.promptTokens,
+                output: finalUsage.completionTokens,
+                reasoning: finalUsage.reasoningTokens,
+              },
+              costBreakdown.totalCost,
+              true,
+            );
+
+            // ✅ DETAILED LOGGING
+            this.logger.log(
+              `[Execution] 💰 Cost Breakdown:\n${formatCostBreakdown(costBreakdown, {
+                promptTokens: finalUsage.promptTokens,
+                completionTokens: finalUsage.completionTokens,
+                reasoningTokens: finalUsage.reasoningTokens,
+              })}\n${formatProfitBreakdown(
+                costBreakdown.totalCost,
+                userChargeUsd,
+                profitUsd,
+                profitMarginPercentage,
+                roi,
+                costBreakdown.creditsCharged,
+              )}`,
+            );
+
+            this.logger.log(
+              `[Execution] ✅ Completed ${executionId}: ${finalUsage.totalTokens} tokens in ${Date.now() - startTime}ms | Profit: $${profitUsd.toFixed(6)} 💰`,
+            );
+          }
+        } catch (costError) {
+          this.logger.error(
+            `[Execution] ❌ Cost calculation failed: ${costError instanceof Error ? costError.message : String(costError)}`,
           );
 
-          await this.prisma.podExecution.update({
-            where: { id: executionId },
-            data: {
-              status: PodExecutionStatus.COMPLETED,
-              finishedAt: new Date(),
-              runtimeInMs: Date.now() - startTime,
-              apiKeyId: keyId,
-              inputTokens: finalUsage.promptTokens,
-              outputTokens: finalUsage.completionTokens,
-              reasoningTokens: finalUsage.reasoningTokens || 0,
-              costInUsd: cost.totalCost,
-              modelName: finalModel,
-              responseMetadata: {
-                content: fullContent,
-                finishReason,
-                profit: markup,
-                creditsCharged: credits,
-              },
-            },
-          });
-
-          this.flowGateway.broadcastExecutionComplete(pod.flowId, executionId, podId, {
-            content: fullContent,
-            usage: finalUsage,
-            profit: markup,
-            creditsCharged: credits,
-            runtime: Date.now() - startTime,
-          });
-        } else {
-          // No pricing, still finalize record minimally
+          // Still save execution with fallback
           await this.prisma.podExecution.update({
             where: { id: executionId },
             data: {
@@ -347,14 +408,13 @@ export class V1ExecutionService {
                 finishReason,
               },
             },
-          });
-          this.flowGateway.broadcastExecutionComplete(pod.flowId, executionId, podId, {
-            content: fullContent,
-            usage: finalUsage,
-            runtime: Date.now() - startTime,
           });
         }
       } else {
+        this.logger.warn(
+          `[Execution] ⚠️ No usage data for execution ${executionId}, marking as completed with partial data`,
+        );
+
         await this.prisma.podExecution.update({
           where: { id: executionId },
           data: {
@@ -368,38 +428,8 @@ export class V1ExecutionService {
             },
           },
         });
-        this.flowGateway.broadcastExecutionComplete(pod.flowId, executionId, podId, {
-          content: fullContent || 'Empty response',
-          runtime: Date.now() - startTime,
-        });
       }
 
-      // Generate embedding of combined user + assistant chat and save it
-      try {
-        const combinedTextForEmbedding = `User: ${userInput}\nAssistant: ${fullContent}`;
-
-        this.backgroundQueue
-          .add('generate-embedding', {
-            workspaceId,
-            userId,
-            podId,
-            executionId,
-            text: combinedTextForEmbedding,
-          })
-          .catch((err: any) => {
-            this.logger.error('Failed to enqueue embedding job', err);
-          });
-
-        this.logger.debug(`[Execution] Enqueued embedding generation for ${executionId}`);
-      } catch (embeddingError) {
-        this.logger.warn(
-          `[Execution] Embedding generation/saving failed: ${
-            embeddingError instanceof Error ? embeddingError.message : embeddingError
-          }`,
-        );
-      }
-
-      // Update pod final status
       await this.prisma.pod.update({
         where: { id: podId },
         data: {
@@ -407,6 +437,8 @@ export class V1ExecutionService {
           lastExecutionId: executionId,
         },
       });
+
+      this.flowGateway.broadcastExecutionComplete(pod.flowId, executionId, podId, result);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown streaming error';
       await this.prisma.podExecution.update({
@@ -415,17 +447,26 @@ export class V1ExecutionService {
           status: PodExecutionStatus.ERROR,
           finishedAt: new Date(),
           runtimeInMs: Date.now() - startTime,
-          errorMessage,
+          errorMessage: errorMessage,
         },
       });
-      this.logger.error(`[Execution] ❌ ${executionId} failed: ${errorMessage}`, error);
-      if (_podFlowId) {
-        this.flowGateway.broadcastExecutionError(_podFlowId, executionId, podId, errorMessage);
+
+      this.logger.error(`[Execution] ❌ Execution ${executionId} failed:`, error);
+
+      if (podFlowId) {
+        this.flowGateway.broadcastExecutionError(podFlowId, executionId, podId, errorMessage);
       }
-      yield { type: 'error', error: errorMessage };
+
+      yield {
+        type: 'error',
+        error: errorMessage,
+      };
     }
   }
 
+  /**
+   * ✅ Get conversation history for current pod (last 20 turns)
+   */
   private async getPodConversationHistory(
     podId: string,
     limit: number = 20,
@@ -445,6 +486,7 @@ export class V1ExecutionService {
 
     const conversationHistory: LLMMessage[] = [];
 
+    // Reverse to chronological order
     for (const exec of previousExecutions.reverse()) {
       const userInput = (exec.requestMetadata as any)?.userInput;
       const assistantOutput = this.extractOutputFromResponse(exec.responseMetadata);
@@ -453,13 +495,19 @@ export class V1ExecutionService {
         conversationHistory.push({ role: 'user', content: userInput });
       }
       if (assistantOutput) {
-        conversationHistory.push({ role: 'assistant', content: assistantOutput });
+        conversationHistory.push({
+          role: 'assistant',
+          content: assistantOutput,
+        });
       }
     }
 
     return conversationHistory;
   }
 
+  /**
+   * Extract output from response metadata
+   */
   private extractOutputFromResponse(responseMetadata: any): string | null {
     try {
       // Streaming content format
@@ -485,8 +533,8 @@ export class V1ExecutionService {
       }
 
       return null;
-    } catch (err) {
-      this.logger.error('Failed to extract output from response', err);
+    } catch (error) {
+      this.logger.error('Failed to extract output from response', error);
       return null;
     }
   }
@@ -494,10 +542,13 @@ export class V1ExecutionService {
   private async getPodConfig(pk: string, sk: string): Promise<LLMPromptPodContent | null> {
     try {
       const tableName = this.dynamoDb.getTableNames().pods;
-      const item = (await this.dynamoDb.getItem(tableName, { pk, sk })) as any | null;
+      const item = (await this.dynamoDb.getItem(tableName, {
+        pk,
+        sk,
+      })) as any | null;
       return item?.content?.type === 'LLM_PROMPT' ? (item.content as LLMPromptPodContent) : null;
-    } catch (err) {
-      this.logger.error('Failed to fetch pod config from DynamoDB', err);
+    } catch (error) {
+      this.logger.error('Failed to fetch pod config from DynamoDB', error);
       return null;
     }
   }
@@ -505,12 +556,19 @@ export class V1ExecutionService {
   private buildMessagesWithSystemPrompt(
     messages: LLMMessage[],
     systemPrompt: string,
-    _userProvidedSystemPrompt: boolean = false, // underscore to satisfy no-unused-vars
+    userProvidedSystemPrompt: boolean = false,
   ): LLMMessage[] {
     const hasSystemMessage = messages.some((m) => m.role === 'system');
+
     if (hasSystemMessage) {
+      this.logger.debug('Using system message from messages array');
       return messages;
     }
+
+    this.logger.debug(
+      `Using ${userProvidedSystemPrompt ? 'user-provided' : 'configured'} system prompt: "${systemPrompt.substring(0, 50)}..."`,
+    );
+
     return [{ role: 'system', content: systemPrompt }, ...messages];
   }
 
