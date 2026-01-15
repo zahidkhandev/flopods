@@ -131,7 +131,7 @@
     },
     "db:generate": {
       "cache": true,
-      "outputs": ["node_modules/.prisma/**", "node_modules/@prisma/**"],
+      "outputs": ["node_modules/.prisma/**", "node_modules/@prisma/**", "client/**"],
       "env": ["DATABASE_URL"],
       "persistent": false
     },

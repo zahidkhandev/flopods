@@ -8,8 +8,7 @@ import {
   NotFoundException,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { LLMProvider } from '@flopods/schema'; // Import enum
-import { Decimal } from '@prisma/client/runtime/library'; // Import Decimal
+import { LLMProvider, Decimal } from '@flopods/schema';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { ApiKeyEncryptionService } from '../../../common/services/encryption.service';
 
@@ -124,7 +123,7 @@ export class V1ApiKeyService {
           createdBy: {
             select: {
               id: true,
-              name: true,
+              firstName: true,
               email: true,
             },
           },
@@ -230,7 +229,7 @@ export class V1ApiKeyService {
         createdBy: {
           select: {
             id: true,
-            name: true,
+            firstName: true,
             email: true,
           },
         },

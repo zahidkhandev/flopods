@@ -16,7 +16,8 @@ export class V1UserService {
       select: {
         id: true,
         email: true,
-        name: true,
+        firstName: true,
+        lastName: true,
         image: true,
         createdAt: true,
         updatedAt: true,

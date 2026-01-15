@@ -2506,7 +2506,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@flopods/frontend@workspace:apps/frontend":
+"@flopods/frontend@workspace:^, @flopods/frontend@workspace:apps/frontend":
   version: 0.0.0-use.local
   resolution: "@flopods/frontend@workspace:apps/frontend"
   dependencies:
@@ -8887,7 +8887,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"baseline-browser-mapping@npm:^2.9.0":
+"baseline-browser-mapping@npm:^2.9.0, baseline-browser-mapping@npm:^2.9.14":
   version: 2.9.14
   resolution: "baseline-browser-mapping@npm:2.9.14"
   bin:
@@ -9810,13 +9810,6 @@ __metadata:
   version: 3.2.3
   resolution: "csstype@npm:3.2.3"
   checksum: 10c0/cd29c51e70fa822f1cecd8641a1445bed7063697469d35633b516e60fe8c1bde04b08f6c5b6022136bb669b64c63d4173af54864510fbb4ee23281801841a3ce
-  languageName: node
-  linkType: hard
-
-"cuid@npm:^3.0.0":
-  version: 3.0.0
-  resolution: "cuid@npm:3.0.0"
-  checksum: 10c0/e1cac04b8df3222fa612ac23f5ad1839f31ec58778a1cfcb23231224f3fe63cc0bb1747188f349bc93f87a74f574ace31ddcb3e60f5eb4543ff5c9e9458a0168
   languageName: node
   linkType: hard
 
@@ -11475,14 +11468,17 @@ __metadata:
   resolution: "flopods@workspace:."
   dependencies:
     "@flopods/eslint-config": "npm:*"
+    "@flopods/frontend": "workspace:^"
     "@tailwindcss/vite": "npm:^4.1.18"
     "@types/node": "npm:^25.0.8"
+    baseline-browser-mapping: "npm:^2.9.14"
     prettier: "npm:^3.7.4"
     rimraf: "npm:^6.1.2"
     tailwindcss: "npm:^4.1.18"
     turbo: "npm:^2.7.4"
     typescript: "npm:^5.9.3"
     vite: "npm:^7.3.1"
+    workspace: "npm:^0.0.1-preview.2"
   languageName: unknown
   linkType: soft
 
@@ -19568,6 +19564,13 @@ __metadata:
   version: 1.0.0
   resolution: "wordwrap@npm:1.0.0"
   checksum: 10c0/7ed2e44f3c33c5c3e3771134d2b0aee4314c9e49c749e37f464bf69f2bcdf0cbf9419ca638098e2717cff4875c47f56a007532f6111c3319f557a2ca91278e92
+  languageName: node
+  linkType: hard
+
+"workspace@npm:^0.0.1-preview.2":
+  version: 0.0.1-preview.2
+  resolution: "workspace@npm:0.0.1-preview.2"
+  checksum: 10c0/6465af7cb50b9f7618034b3766c7a4fa20c1b3e43e843dd9e5e9ff16db39d8f7012a8f12814a4b7bafb0dc8c725644b9c3101d6b14154b0f190e1e6ae0330d50
   languageName: node
   linkType: hard
 

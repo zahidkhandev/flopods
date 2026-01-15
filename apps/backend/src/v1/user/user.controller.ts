@@ -24,7 +24,7 @@ export class V1UserController {
       data: {
         userId: user.id,
         email: user.email,
-        name: user.name,
+        name: user.firstName,
         image: user.image,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,

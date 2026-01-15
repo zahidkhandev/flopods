@@ -79,7 +79,6 @@ model Document {
   @@index([status, updatedAt])
   @@index([fileType, workspaceId])
   @@index([externalProvider, externalFileId])
-  @@unique([dynamoPartitionKey, dynamoSortKey])
   @@schema("documents")
 }
 

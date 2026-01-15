@@ -130,10 +130,10 @@ export function MembersSettings({ workspaceId }: { workspaceId: string }) {
                   <Avatar className="h-10 w-10">
                     <AvatarImage
                       src={member.user.image || undefined}
-                      alt={member.user.name || member.user.email || 'User'}
+                      alt={member.user.firstName || member.user.email || 'User'}
                     />
                     <AvatarFallback className="bg-primary/10 text-primary">
-                      {getInitials(member.user.name, member.user.email)}
+                      {getInitials(member.user.firstName, member.user.email)}
                     </AvatarFallback>
                   </Avatar>
 
@@ -141,7 +141,9 @@ export function MembersSettings({ workspaceId }: { workspaceId: string }) {
                   <div className="min-w-0 flex-1 space-y-2">
                     {/* Name & Email */}
                     <div>
-                      <p className="font-semibold">{member.user.name || 'Unnamed User'}</p>
+                      <p className="font-semibold">
+                        {member.user.firstName + ' ' + member.user.lastName || 'Unnamed User'}
+                      </p>
                       <p className="text-muted-foreground text-sm">{member.user.email}</p>
                     </div>
 

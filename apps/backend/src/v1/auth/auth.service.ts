@@ -79,7 +79,8 @@ export class V1AuthService {
 
   async register(
     email: string,
-    name: string,
+    firstName: string,
+    lastName: string,
     password: string,
   ): Promise<{ message: string; userId: string }> {
     const normalizedEmail = email.toLowerCase().trim();
@@ -99,7 +100,7 @@ export class V1AuthService {
 
     const user = await this.prisma.$transaction(async (tx) => {
       const newUser = await tx.user.create({
-        data: { email: normalizedEmail, name, hash },
+        data: { email: normalizedEmail, firstName, lastName, hash },
       });
 
       await tx.account.create({
@@ -115,7 +116,7 @@ export class V1AuthService {
       // Create workspace
       const workspace = await tx.workspace.create({
         data: {
-          name: `${name}'s Workspace`,
+          name: `${firstName}'s Workspace`,
           type: 'PERSONAL',
           members: {
             create: {
@@ -142,7 +143,7 @@ export class V1AuthService {
     await this.emailService.sendEmail({
       to: user.email,
       subject: 'Verify your Flopods account',
-      bodyHtml: verifyEmailTemplate(user.name || 'there', verificationUrl),
+      bodyHtml: verifyEmailTemplate(user.firstName || 'there', verificationUrl),
     });
 
     this.logger.log(`User registered: ${user.email} with FREE subscription`);
@@ -177,7 +178,7 @@ export class V1AuthService {
     await this.emailService.sendEmail({
       to: account.user.email,
       subject: 'Welcome to Flopods!',
-      bodyHtml: welcomeEmailTemplate(account.user.name || 'there'),
+      bodyHtml: welcomeEmailTemplate(account.user.firstName || 'there'),
     });
 
     this.logger.log(`Email verified: ${account.user.email}`);
@@ -236,7 +237,7 @@ export class V1AuthService {
     await this.emailService.sendEmail({
       to: user.email,
       subject: 'Verify your Flopods account',
-      bodyHtml: verifyEmailTemplate(user.name || 'there', verificationUrl),
+      bodyHtml: verifyEmailTemplate(user.firstName || 'there', verificationUrl),
     });
 
     this.logger.log(`Verification email resent to: ${user.email}`);
@@ -323,7 +324,7 @@ export class V1AuthService {
     await this.emailService.sendEmail({
       to: user.email,
       subject: 'Reset your Flopods password',
-      bodyHtml: resetPasswordTemplate(user.name || 'there', resetUrl),
+      bodyHtml: resetPasswordTemplate(user.firstName || 'there', resetUrl),
     });
 
     this.logger.log(`Password reset requested: ${user.email}`);
@@ -430,7 +431,7 @@ export class V1AuthService {
       to: user.email,
       subject: '🔐 Sign in to Flopods',
       bodyHtml: magicLinkTemplate(
-        user.name || 'there',
+        user.firstName || 'there',
         magicUrl,
         '15 minutes',
         ipAddress,
@@ -506,7 +507,8 @@ export class V1AuthService {
         const newUser = await tx.user.create({
           data: {
             email: email.toLowerCase(),
-            name: `${firstName} ${lastName}`.trim(),
+            firstName: `${firstName}`.trim(),
+            lastName: `${lastName}`.trim(),
             image: picture,
             hash: null,
           },
@@ -514,7 +516,7 @@ export class V1AuthService {
 
         const workspace = await tx.workspace.create({
           data: {
-            name: `${newUser.name}'s Workspace`,
+            name: `${newUser.firstName}'s Workspace`,
             type: 'PERSONAL',
             members: {
               create: {
@@ -573,7 +575,7 @@ export class V1AuthService {
         const newUser = await tx.user.create({
           data: {
             email: email.toLowerCase(),
-            name,
+            firstName: name,
             image: avatarUrl,
             hash: null,
           },
@@ -581,7 +583,7 @@ export class V1AuthService {
 
         const workspace = await tx.workspace.create({
           data: {
-            name: `${newUser.name}'s Workspace`,
+            name: `${newUser.firstName}'s Workspace`,
             type: 'PERSONAL',
             members: {
               create: {

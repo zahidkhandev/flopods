@@ -8,6 +8,7 @@ import {
   VisionAnalysisStatus,
   VisionExtractionType,
   Prisma,
+  Decimal,
 } from '@flopods/schema';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { S3Service } from '../../../common/aws/s3/s3.service';
@@ -16,7 +17,6 @@ import {
   calculateCreditsFromCharge,
   PROFIT_CONFIG,
 } from '../../../common/config/profit.config';
-import { Decimal } from '@prisma/client/runtime/library';
 import Anthropic from '@anthropic-ai/sdk';
 
 interface VisionAnalysisResponse {

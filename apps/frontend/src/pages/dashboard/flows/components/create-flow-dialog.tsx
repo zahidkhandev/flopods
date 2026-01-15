@@ -65,7 +65,7 @@ export function CreateFlowDialog({ open, onOpenChange }: CreateFlowDialogProps) 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-[500px]"
+        className="sm:max-w-125"
         onPointerDownOutside={(e) => {
           // Prevent closing when clicking outside
           if (isLoading) e.preventDefault();

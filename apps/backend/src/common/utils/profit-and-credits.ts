@@ -1,5 +1,5 @@
 // apps/backend/src/common/utils/profit-and-credits.ts
-import { Prisma } from '@flopods/schema';
+import { Decimal } from '@flopods/schema';
 import { PROFIT_CONFIG } from '../config/profit.config';
 
 /**
@@ -13,57 +13,57 @@ import { PROFIT_CONFIG } from '../config/profit.config';
  */
 
 /** Robust coercion to Decimal (handles number | bigint | string | Decimal | obj.toString) */
-export const D = (v: unknown): Prisma.Decimal => {
-  if (v === null || v === undefined) return new Prisma.Decimal(0);
+export const D = (v: unknown): Decimal => {
+  if (v === null || v === undefined) return new Decimal(0);
 
-  if (v instanceof Prisma.Decimal) return v;
+  if (v instanceof Decimal) return v;
 
   const t = typeof v;
 
   if (t === 'number') {
     // Cast to any to satisfy Decimal constructor typing in @flopods/schema
-    return new Prisma.Decimal(v as any);
+    return new Decimal(v as any);
   }
 
   if (t === 'bigint') {
-    return new Prisma.Decimal((v as bigint).toString());
+    return new Decimal((v as bigint).toString());
   }
 
   if (t === 'string') {
     const s = (v as string).trim();
-    if (!s) return new Prisma.Decimal(0);
+    if (!s) return new Decimal(0);
     try {
-      return new Prisma.Decimal(s as any);
+      return new Decimal(s as any);
     } catch {
-      return new Prisma.Decimal(0);
+      return new Decimal(0);
     }
   }
 
   try {
     const s = (v as any).toString?.();
     if (typeof s === 'string' && s && s !== '[object Object]') {
-      return new Prisma.Decimal(s as any);
+      return new Decimal(s as any);
     }
   } catch {
     /* ignore */
   }
 
-  return new Prisma.Decimal(0);
+  return new Decimal(0);
 };
 
-const MILLION = new Prisma.Decimal(1_000_000);
-const EIGHT_DP = new Prisma.Decimal(100_000_000); // round display to 8dp
-export const CREDIT_VALUE_USD = new Prisma.Decimal('0.0001');
+const MILLION = new Decimal(1_000_000);
+const EIGHT_DP = new Decimal(100_000_000); // round display to 8dp
+export const CREDIT_VALUE_USD = new Decimal('0.0001');
 
-const ceilDecimal = (x: Prisma.Decimal) => {
+const ceilDecimal = (x: Decimal) => {
   const i = x.trunc();
   return x.eq(i) ? i : i.add(1);
 };
 
 export type TokenPricing = {
-  inputTokenCost: Prisma.Decimal | string | number;
-  outputTokenCost: Prisma.Decimal | string | number;
-  reasoningTokenCost?: Prisma.Decimal | string | number;
+  inputTokenCost: Decimal | string | number;
+  outputTokenCost: Decimal | string | number;
+  reasoningTokenCost?: Decimal | string | number;
 };
 
 export type TokenUsage = {
@@ -77,7 +77,7 @@ export type CostBreakdown = {
   outputCost: number; // rounded to 8dp for display
   reasoningCost: number; // rounded to 8dp for display
   totalCost: number; // rounded to 8dp for display
-  totalCostDecimal: Prisma.Decimal; // exact Decimal (rounded to 8dp for billing)
+  totalCostDecimal: Decimal; // exact Decimal (rounded to 8dp for billing)
   creditsCharged: number; // filled via settleCreditsCharge()
 };
 
@@ -103,7 +103,7 @@ export function calculateTokenCosts(
   const totalCostDec = inputCostDec.add(outputCostDec).add(reasoningCostDec);
 
   // Round to 8dp for billing display
-  const r = (x: Prisma.Decimal) => x.mul(EIGHT_DP).round().div(EIGHT_DP);
+  const r = (x: Decimal) => x.mul(EIGHT_DP).round().div(EIGHT_DP);
 
   const inputCostRounded = r(inputCostDec);
   const outputCostRounded = r(outputCostDec);
@@ -124,7 +124,7 @@ export function calculateTokenCosts(
  * Apply global markup to an actual USD cost. Reads multiplier from PROFIT_CONFIG.
  * This is a small indirection to avoid circular imports (config imports this util).
  */
-export function applyMarkup(actualCostUsd: number | Prisma.Decimal) {
+export function applyMarkup(actualCostUsd: number | Decimal) {
   // Lazy import to avoid circular dep
 
   const actual = D(actualCostUsd);
@@ -140,7 +140,7 @@ export function applyMarkup(actualCostUsd: number | Prisma.Decimal) {
 }
 
 /** Credits from a user charge in USD: ceil(charge / $0.0001) with MIN = 1 */
-export function creditsFromCharge(chargeUsd: number | Prisma.Decimal): number {
+export function creditsFromCharge(chargeUsd: number | Decimal): number {
   const charge = D(chargeUsd);
   if (charge.lte(0)) return 0; // for completeness; final enforcement below
   const raw = ceilDecimal(charge.div(CREDIT_VALUE_USD));
@@ -154,7 +154,7 @@ export function creditsFromCharge(chargeUsd: number | Prisma.Decimal): number {
  *  - ensure >= priorSuggested (if provided and > 0)
  */
 export function settleCreditsCharge(args: {
-  userChargeUsd: number | Prisma.Decimal;
+  userChargeUsd: number | Decimal;
   priorSuggestedCredits?: number; // optional legacy hint
 }): number {
   const base = creditsFromCharge(args.userChargeUsd);
