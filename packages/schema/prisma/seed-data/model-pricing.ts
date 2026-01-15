@@ -5,39 +5,76 @@ import { PrismaClient, LLMProvider, ModelCategory, Prisma } from '@flopods/schem
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 
-// Create PostgreSQL pool matching your DATABASE_URL
 const pool = new Pool({ connectionString: process.env.DATABASE_URL! });
 const adapter = new PrismaPg(pool);
 
 const prisma = new PrismaClient({
-  adapter, // Required for engineType: "library"
+  adapter,
   log: ['error'],
 });
 
 /**
- * Model Pricing Data - November 2025 (PRODUCTION READY)
- * Prices are PER 1M TOKENS, multiplied by 1M (Decimal USD).
- * Sources:
- * - OpenAI: https://openai.com/gpt-5/ and model docs for o3/o3-pro
- * - Anthropic: Haiku 4.5 ($1/$5), Sonnet 4.5 ($3/$15)
- * - Google Gemini: 2.5 Pro (≤200k tokens tier), Flash, Flash-Lite, Flash Vision, Embedding
+ * Model Pricing Data - January 2026 (PRODUCTION READY)
+ * Updated with latest OpenAI GPT-5.2, Sora 2, GPT Image 1.5, and Anthropic Claude 4.5
  */
 export const MODEL_PRICING_DATA = [
   // ==========================================
-  // OPENAI - LATEST ONLY (GPT-5 + O3)
+  // OPENAI - GPT-5.2 SERIES
   // ==========================================
   {
     provider: 'OPENAI' as LLMProvider,
-    modelId: 'gpt-5',
+    modelId: 'gpt-5.2',
     category: 'POWERHOUSE' as ModelCategory,
-    displayName: 'GPT-5',
-    description: 'Best model for coding and agentic tasks',
+    displayName: 'GPT-5.2',
+    description: 'Best model for coding and agentic tasks across industries',
+    inputTokenCost: new Prisma.Decimal('1.75'),
+    outputTokenCost: new Prisma.Decimal('14'),
+    reasoningTokenCost: new Prisma.Decimal('0'),
+    creditsPerMillionInputTokens: BigInt(17500),
+    creditsPerMillionOutputTokens: BigInt(140000),
+    creditsPerMillionReasoningTokens: BigInt(0),
+    maxTokens: 400000,
+    maxOutputTokens: 128000,
+    supportsStreaming: true,
+    supportsVision: true,
+    supportsAudio: true,
+    supportsFunctions: true,
+    supportsJsonMode: true,
+    supportsSystemPrompt: true,
+  },
+  {
+    provider: 'OPENAI' as LLMProvider,
+    modelId: 'gpt-5.2-pro',
+    category: 'POWERHOUSE' as ModelCategory,
+    displayName: 'GPT-5.2 Pro',
+    description: 'Smartest and most precise model',
+    inputTokenCost: new Prisma.Decimal('21'),
+    outputTokenCost: new Prisma.Decimal('168'),
+    reasoningTokenCost: new Prisma.Decimal('0'),
+    creditsPerMillionInputTokens: BigInt(210000),
+    creditsPerMillionOutputTokens: BigInt(1680000),
+    creditsPerMillionReasoningTokens: BigInt(0),
+    maxTokens: 256000,
+    maxOutputTokens: 64000,
+    supportsStreaming: true,
+    supportsVision: true,
+    supportsAudio: true,
+    supportsFunctions: true,
+    supportsJsonMode: true,
+    supportsSystemPrompt: true,
+  },
+  {
+    provider: 'OPENAI' as LLMProvider,
+    modelId: 'gpt-5.1',
+    category: 'POWERHOUSE' as ModelCategory,
+    displayName: 'GPT-5.1',
+    description: 'Intelligent reasoning model with configurable effort',
     inputTokenCost: new Prisma.Decimal('1.25'),
     outputTokenCost: new Prisma.Decimal('10'),
     reasoningTokenCost: new Prisma.Decimal('0'),
-    creditsPerMillionInputTokens: 12500,
-    creditsPerMillionOutputTokens: 100000,
-    creditsPerMillionReasoningTokens: 0,
+    creditsPerMillionInputTokens: BigInt(12500),
+    creditsPerMillionOutputTokens: BigInt(100000),
+    creditsPerMillionReasoningTokens: BigInt(0),
     maxTokens: 400000,
     maxOutputTokens: 128000,
     supportsStreaming: true,
@@ -52,13 +89,13 @@ export const MODEL_PRICING_DATA = [
     modelId: 'gpt-5-mini',
     category: 'WORKHORSE' as ModelCategory,
     displayName: 'GPT-5 Mini',
-    description: 'Fast & affordable variant of GPT-5',
+    description: 'Fast & cost-efficient version of GPT-5',
     inputTokenCost: new Prisma.Decimal('0.25'),
     outputTokenCost: new Prisma.Decimal('2'),
     reasoningTokenCost: new Prisma.Decimal('0'),
-    creditsPerMillionInputTokens: 2500,
-    creditsPerMillionOutputTokens: 20000,
-    creditsPerMillionReasoningTokens: 0,
+    creditsPerMillionInputTokens: BigInt(2500),
+    creditsPerMillionOutputTokens: BigInt(20000),
+    creditsPerMillionReasoningTokens: BigInt(0),
     maxTokens: 400000,
     maxOutputTokens: 128000,
     supportsStreaming: true,
@@ -69,38 +106,40 @@ export const MODEL_PRICING_DATA = [
   },
   {
     provider: 'OPENAI' as LLMProvider,
-    modelId: 'gpt-5-pro',
-    category: 'POWERHOUSE' as ModelCategory,
-    displayName: 'GPT-5 Pro',
-    description: 'Smartest & most precise model',
-    inputTokenCost: new Prisma.Decimal('15'),
-    outputTokenCost: new Prisma.Decimal('120'),
+    modelId: 'gpt-5-nano',
+    category: 'WORKHORSE' as ModelCategory,
+    displayName: 'GPT-5 Nano',
+    description: 'Fastest, most cost-efficient version of GPT-5',
+    inputTokenCost: new Prisma.Decimal('0.10'),
+    outputTokenCost: new Prisma.Decimal('0.40'),
     reasoningTokenCost: new Prisma.Decimal('0'),
-    creditsPerMillionInputTokens: 150000,
-    creditsPerMillionOutputTokens: 1200000,
-    creditsPerMillionReasoningTokens: 0,
-    maxTokens: 256000,
-    maxOutputTokens: 64000,
+    creditsPerMillionInputTokens: BigInt(1000),
+    creditsPerMillionOutputTokens: BigInt(4000),
+    creditsPerMillionReasoningTokens: BigInt(0),
+    maxTokens: 400000,
+    maxOutputTokens: 128000,
     supportsStreaming: true,
     supportsVision: true,
-    supportsAudio: true,
     supportsFunctions: true,
     supportsJsonMode: true,
     supportsSystemPrompt: true,
   },
+
+  // ==========================================
+  // OPENAI - O-SERIES (REASONING)
+  // ==========================================
   {
     provider: 'OPENAI' as LLMProvider,
     modelId: 'o3',
     category: 'REASONING' as ModelCategory,
     displayName: 'O3',
     description: 'Advanced reasoning model',
-    // OpenAI lists only input/output; “thinking” tokens are included in output.
     inputTokenCost: new Prisma.Decimal('2'),
     outputTokenCost: new Prisma.Decimal('8'),
     reasoningTokenCost: new Prisma.Decimal('0'),
-    creditsPerMillionInputTokens: 20000,
-    creditsPerMillionOutputTokens: 80000,
-    creditsPerMillionReasoningTokens: 0,
+    creditsPerMillionInputTokens: BigInt(20000),
+    creditsPerMillionOutputTokens: BigInt(80000),
+    creditsPerMillionReasoningTokens: BigInt(0),
     maxTokens: 200000,
     maxOutputTokens: 100000,
     supportsStreaming: true,
@@ -117,9 +156,47 @@ export const MODEL_PRICING_DATA = [
     inputTokenCost: new Prisma.Decimal('20'),
     outputTokenCost: new Prisma.Decimal('80'),
     reasoningTokenCost: new Prisma.Decimal('0'),
-    creditsPerMillionInputTokens: 200000,
-    creditsPerMillionOutputTokens: 800000,
-    creditsPerMillionReasoningTokens: 0,
+    creditsPerMillionInputTokens: BigInt(200000),
+    creditsPerMillionOutputTokens: BigInt(800000),
+    creditsPerMillionReasoningTokens: BigInt(0),
+    maxTokens: 200000,
+    maxOutputTokens: 100000,
+    supportsStreaming: true,
+    supportsFunctions: false,
+    supportsJsonMode: false,
+    supportsSystemPrompt: true,
+  },
+  {
+    provider: 'OPENAI' as LLMProvider,
+    modelId: 'o3-deep-research',
+    category: 'REASONING' as ModelCategory,
+    displayName: 'O3 Deep Research',
+    description: 'Most powerful deep research model',
+    inputTokenCost: new Prisma.Decimal('10'),
+    outputTokenCost: new Prisma.Decimal('40'),
+    reasoningTokenCost: new Prisma.Decimal('0'),
+    creditsPerMillionInputTokens: BigInt(100000),
+    creditsPerMillionOutputTokens: BigInt(400000),
+    creditsPerMillionReasoningTokens: BigInt(0),
+    maxTokens: 200000,
+    maxOutputTokens: 100000,
+    supportsStreaming: true,
+    supportsFunctions: false,
+    supportsJsonMode: false,
+    supportsSystemPrompt: true,
+  },
+  {
+    provider: 'OPENAI' as LLMProvider,
+    modelId: 'o4-mini-deep-research',
+    category: 'REASONING' as ModelCategory,
+    displayName: 'O4 Mini Deep Research',
+    description: 'Faster, more affordable deep research',
+    inputTokenCost: new Prisma.Decimal('5'),
+    outputTokenCost: new Prisma.Decimal('20'),
+    reasoningTokenCost: new Prisma.Decimal('0'),
+    creditsPerMillionInputTokens: BigInt(50000),
+    creditsPerMillionOutputTokens: BigInt(200000),
+    creditsPerMillionReasoningTokens: BigInt(0),
     maxTokens: 200000,
     maxOutputTokens: 100000,
     supportsStreaming: true,
@@ -129,20 +206,169 @@ export const MODEL_PRICING_DATA = [
   },
 
   // ==========================================
-  // ANTHROPIC - LATEST ONLY (Claude 4.5)
+  // OPENAI - GPT-4.1 SERIES
+  // ==========================================
+  {
+    provider: 'OPENAI' as LLMProvider,
+    modelId: 'gpt-4.1',
+    category: 'POWERHOUSE' as ModelCategory,
+    displayName: 'GPT-4.1',
+    description: 'Smartest non-reasoning model',
+    inputTokenCost: new Prisma.Decimal('2.50'),
+    outputTokenCost: new Prisma.Decimal('10'),
+    reasoningTokenCost: new Prisma.Decimal('0'),
+    creditsPerMillionInputTokens: BigInt(25000),
+    creditsPerMillionOutputTokens: BigInt(100000),
+    creditsPerMillionReasoningTokens: BigInt(0),
+    maxTokens: 128000,
+    maxOutputTokens: 16384,
+    supportsStreaming: true,
+    supportsVision: true,
+    supportsAudio: true,
+    supportsFunctions: true,
+    supportsJsonMode: true,
+    supportsSystemPrompt: true,
+  },
+
+  // ==========================================
+  // OPENAI - IMAGE GENERATION
+  // ==========================================
+  {
+    provider: 'OPENAI' as LLMProvider,
+    modelId: 'gpt-image-1.5',
+    category: 'IMAGE_GEN' as ModelCategory,
+    displayName: 'GPT Image 1.5',
+    description: 'State-of-the-art image generation',
+    inputTokenCost: new Prisma.Decimal('8'),
+    outputTokenCost: new Prisma.Decimal('32'),
+    reasoningTokenCost: new Prisma.Decimal('0'),
+    creditsPerMillionInputTokens: BigInt(80000),
+    creditsPerMillionOutputTokens: BigInt(320000),
+    creditsPerMillionReasoningTokens: BigInt(0),
+    maxTokens: 65536,
+    maxOutputTokens: 4096,
+    supportsStreaming: false,
+    supportsVision: true,
+    supportsFunctions: false,
+    supportsJsonMode: false,
+    supportsSystemPrompt: true,
+    providerConfig: JSON.stringify({
+      textInput: 5.0,
+      imageOutput: 32.0,
+      cachedInput: 2.0,
+    }),
+  },
+
+  // ==========================================
+  // OPENAI - VIDEO GENERATION
+  // ==========================================
+  {
+    provider: 'OPENAI' as LLMProvider,
+    modelId: 'sora-2',
+    category: 'VIDEO_GEN' as ModelCategory,
+    displayName: 'Sora 2',
+    description: 'Flagship video generation with synced audio',
+    inputTokenCost: new Prisma.Decimal('0'),
+    outputTokenCost: new Prisma.Decimal('100000'),
+    reasoningTokenCost: new Prisma.Decimal('0'),
+    creditsPerMillionInputTokens: BigInt(0),
+    creditsPerMillionOutputTokens: BigInt(1000000000),
+    creditsPerMillionReasoningTokens: BigInt(0),
+    maxTokens: 65536,
+    maxOutputTokens: 1024,
+    supportsStreaming: false,
+    supportsVision: false,
+    supportsAudio: true,
+    supportsFunctions: false,
+    supportsJsonMode: false,
+    supportsSystemPrompt: false,
+    providerConfig: JSON.stringify({
+      pricePerSecond: 0.1,
+      resolution: '720p',
+    }),
+  },
+  {
+    provider: 'OPENAI' as LLMProvider,
+    modelId: 'sora-2-pro',
+    category: 'VIDEO_GEN' as ModelCategory,
+    displayName: 'Sora 2 Pro',
+    description: 'Most advanced synced-audio video generation',
+    inputTokenCost: new Prisma.Decimal('0'),
+    outputTokenCost: new Prisma.Decimal('300000'),
+    reasoningTokenCost: new Prisma.Decimal('0'),
+    creditsPerMillionInputTokens: BigInt(0),
+    creditsPerMillionOutputTokens: BigInt(3000000000),
+    creditsPerMillionReasoningTokens: BigInt(0),
+    maxTokens: 65536,
+    maxOutputTokens: 1024,
+    supportsStreaming: false,
+    supportsVision: false,
+    supportsAudio: true,
+    supportsFunctions: false,
+    supportsJsonMode: false,
+    supportsSystemPrompt: false,
+    providerConfig: JSON.stringify({
+      pricePerSecond: 0.3,
+      resolution: '720p',
+      quality: 'pro',
+    }),
+  },
+
+  // ==========================================
+  // ANTHROPIC - CLAUDE 4.5 SERIES
   // ==========================================
   {
     provider: 'ANTHROPIC' as LLMProvider,
-    modelId: 'claude-sonnet-4-5-20250929',
+    modelId: 'claude-opus-4-5',
+    category: 'POWERHOUSE' as ModelCategory,
+    displayName: 'Claude Opus 4.5',
+    description: 'Smartest Claude model',
+    inputTokenCost: new Prisma.Decimal('5'),
+    outputTokenCost: new Prisma.Decimal('25'),
+    reasoningTokenCost: new Prisma.Decimal('0'),
+    creditsPerMillionInputTokens: BigInt(50000),
+    creditsPerMillionOutputTokens: BigInt(250000),
+    creditsPerMillionReasoningTokens: BigInt(0),
+    maxTokens: 200000,
+    maxOutputTokens: 64000,
+    supportsStreaming: true,
+    supportsVision: true,
+    supportsFunctions: true,
+    supportsJsonMode: false,
+    supportsSystemPrompt: true,
+  },
+  {
+    provider: 'ANTHROPIC' as LLMProvider,
+    modelId: 'claude-opus-4-1',
+    category: 'POWERHOUSE' as ModelCategory,
+    displayName: 'Claude Opus 4.1',
+    description: 'Exceptional for specialized reasoning',
+    inputTokenCost: new Prisma.Decimal('15'),
+    outputTokenCost: new Prisma.Decimal('75'),
+    reasoningTokenCost: new Prisma.Decimal('0'),
+    creditsPerMillionInputTokens: BigInt(150000),
+    creditsPerMillionOutputTokens: BigInt(750000),
+    creditsPerMillionReasoningTokens: BigInt(0),
+    maxTokens: 200000,
+    maxOutputTokens: 32000,
+    supportsStreaming: true,
+    supportsVision: true,
+    supportsFunctions: true,
+    supportsJsonMode: false,
+    supportsSystemPrompt: true,
+  },
+  {
+    provider: 'ANTHROPIC' as LLMProvider,
+    modelId: 'claude-sonnet-4-5',
     category: 'POWERHOUSE' as ModelCategory,
     displayName: 'Claude Sonnet 4.5',
-    description: 'Smartest for complex agents & coding',
+    description: 'Best for complex agents & coding',
     inputTokenCost: new Prisma.Decimal('3'),
     outputTokenCost: new Prisma.Decimal('15'),
     reasoningTokenCost: new Prisma.Decimal('0'),
-    creditsPerMillionInputTokens: 30000,
-    creditsPerMillionOutputTokens: 150000,
-    creditsPerMillionReasoningTokens: 0,
+    creditsPerMillionInputTokens: BigInt(30000),
+    creditsPerMillionOutputTokens: BigInt(150000),
+    creditsPerMillionReasoningTokens: BigInt(0),
     maxTokens: 1000000,
     maxOutputTokens: 64000,
     supportsStreaming: true,
@@ -153,16 +379,16 @@ export const MODEL_PRICING_DATA = [
   },
   {
     provider: 'ANTHROPIC' as LLMProvider,
-    modelId: 'claude-haiku-4-5-20250929',
+    modelId: 'claude-haiku-4-5',
     category: 'WORKHORSE' as ModelCategory,
     displayName: 'Claude Haiku 4.5',
     description: 'Fastest with near-frontier intelligence',
     inputTokenCost: new Prisma.Decimal('1'),
     outputTokenCost: new Prisma.Decimal('5'),
     reasoningTokenCost: new Prisma.Decimal('0'),
-    creditsPerMillionInputTokens: 10000,
-    creditsPerMillionOutputTokens: 50000,
-    creditsPerMillionReasoningTokens: 0,
+    creditsPerMillionInputTokens: BigInt(10000),
+    creditsPerMillionOutputTokens: BigInt(50000),
+    creditsPerMillionReasoningTokens: BigInt(0),
     maxTokens: 200000,
     maxOutputTokens: 10000,
     supportsStreaming: true,
@@ -171,45 +397,72 @@ export const MODEL_PRICING_DATA = [
     supportsJsonMode: false,
     supportsSystemPrompt: true,
   },
+
+  // ==========================================
+  // GOOGLE GEMINI - 3 SERIES
+  // ==========================================
   {
-    provider: 'ANTHROPIC' as LLMProvider,
-    modelId: 'claude-opus-4-1-20250808',
+    provider: 'GOOGLE_GEMINI' as LLMProvider,
+    modelId: 'gemini-3-pro-preview',
     category: 'POWERHOUSE' as ModelCategory,
-    displayName: 'Claude Opus 4.1',
-    description: 'Exceptional for specialized reasoning',
-    inputTokenCost: new Prisma.Decimal('15'),
-    outputTokenCost: new Prisma.Decimal('75'),
+    displayName: 'Gemini 3 Pro',
+    description: 'Most intelligent multimodal model',
+    inputTokenCost: new Prisma.Decimal('2'),
+    outputTokenCost: new Prisma.Decimal('10'),
     reasoningTokenCost: new Prisma.Decimal('0'),
-    creditsPerMillionInputTokens: 150000,
-    creditsPerMillionOutputTokens: 750000,
-    creditsPerMillionReasoningTokens: 0,
-    maxTokens: 200000,
-    maxOutputTokens: 32000,
+    creditsPerMillionInputTokens: BigInt(20000),
+    creditsPerMillionOutputTokens: BigInt(100000),
+    creditsPerMillionReasoningTokens: BigInt(0),
+    maxTokens: 1048576,
+    maxOutputTokens: 65536,
     supportsStreaming: true,
     supportsVision: true,
+    supportsAudio: true,
+    supportsVideo: true,
     supportsFunctions: true,
-    supportsJsonMode: false,
+    supportsJsonMode: true,
+    supportsSystemPrompt: true,
+  },
+  {
+    provider: 'GOOGLE_GEMINI' as LLMProvider,
+    modelId: 'gemini-3-flash-preview',
+    category: 'WORKHORSE' as ModelCategory,
+    displayName: 'Gemini 3 Flash',
+    description: 'Balanced for speed & scale',
+    inputTokenCost: new Prisma.Decimal('0.50'),
+    outputTokenCost: new Prisma.Decimal('3'),
+    reasoningTokenCost: new Prisma.Decimal('0'),
+    creditsPerMillionInputTokens: BigInt(5000),
+    creditsPerMillionOutputTokens: BigInt(30000),
+    creditsPerMillionReasoningTokens: BigInt(0),
+    maxTokens: 1048576,
+    maxOutputTokens: 65536,
+    supportsStreaming: true,
+    supportsVision: true,
+    supportsAudio: true,
+    supportsVideo: true,
+    supportsFunctions: true,
+    supportsJsonMode: true,
     supportsSystemPrompt: true,
   },
 
   // ==========================================
-  // GOOGLE GEMINI - LATEST ONLY (2.5 Series)
+  // GOOGLE GEMINI - 2.5 SERIES
   // ==========================================
   {
     provider: 'GOOGLE_GEMINI' as LLMProvider,
     modelId: 'gemini-2.5-pro',
     category: 'POWERHOUSE' as ModelCategory,
     displayName: 'Gemini 2.5 Pro',
-    description: 'State-of-the-art for complex reasoning (priced at ≤200k prompt tier)',
-    // NOTE: Google prices Pro differently for prompts >200k (1.25/7.50).
+    description: 'State-of-the-art thinking model',
     inputTokenCost: new Prisma.Decimal('0.625'),
     outputTokenCost: new Prisma.Decimal('5'),
     reasoningTokenCost: new Prisma.Decimal('0'),
-    creditsPerMillionInputTokens: 6250,
-    creditsPerMillionOutputTokens: 50000,
-    creditsPerMillionReasoningTokens: 0,
-    maxTokens: 2000000,
-    maxOutputTokens: 65535,
+    creditsPerMillionInputTokens: BigInt(6250),
+    creditsPerMillionOutputTokens: BigInt(50000),
+    creditsPerMillionReasoningTokens: BigInt(0),
+    maxTokens: 1048576,
+    maxOutputTokens: 65536,
     supportsStreaming: true,
     supportsVision: true,
     supportsAudio: true,
@@ -223,39 +476,19 @@ export const MODEL_PRICING_DATA = [
     modelId: 'gemini-2.5-flash',
     category: 'WORKHORSE' as ModelCategory,
     displayName: 'Gemini 2.5 Flash',
-    description: 'Hybrid reasoning; strong price-performance',
+    description: 'Best price-performance',
     inputTokenCost: new Prisma.Decimal('0.30'),
     outputTokenCost: new Prisma.Decimal('2.50'),
     reasoningTokenCost: new Prisma.Decimal('0'),
-    creditsPerMillionInputTokens: 3000,
-    creditsPerMillionOutputTokens: 25000,
-    creditsPerMillionReasoningTokens: 0,
-    maxTokens: 1000000,
-    maxOutputTokens: 65535,
+    creditsPerMillionInputTokens: BigInt(3000),
+    creditsPerMillionOutputTokens: BigInt(25000),
+    creditsPerMillionReasoningTokens: BigInt(0),
+    maxTokens: 1048576,
+    maxOutputTokens: 65536,
     supportsStreaming: true,
     supportsVision: true,
     supportsAudio: true,
     supportsFunctions: true,
-    supportsJsonMode: true,
-    supportsSystemPrompt: true,
-  },
-  {
-    provider: 'GOOGLE_GEMINI' as LLMProvider,
-    modelId: 'gemini-2.5-flash-vision',
-    category: 'SPECIALIST' as ModelCategory,
-    displayName: 'Gemini 2.5 Flash Vision',
-    description: 'Optimized for image analysis & OCR (same pricing as Flash)',
-    inputTokenCost: new Prisma.Decimal('0.30'),
-    outputTokenCost: new Prisma.Decimal('2.50'),
-    reasoningTokenCost: new Prisma.Decimal('0'),
-    creditsPerMillionInputTokens: 3000,
-    creditsPerMillionOutputTokens: 25000,
-    creditsPerMillionReasoningTokens: 0,
-    maxTokens: 1000000,
-    maxOutputTokens: 32768,
-    supportsStreaming: false,
-    supportsVision: true,
-    supportsFunctions: false,
     supportsJsonMode: true,
     supportsSystemPrompt: true,
   },
@@ -268,11 +501,11 @@ export const MODEL_PRICING_DATA = [
     inputTokenCost: new Prisma.Decimal('0.10'),
     outputTokenCost: new Prisma.Decimal('0.40'),
     reasoningTokenCost: new Prisma.Decimal('0'),
-    creditsPerMillionInputTokens: 1000,
-    creditsPerMillionOutputTokens: 4000,
-    creditsPerMillionReasoningTokens: 0,
-    maxTokens: 1000000,
-    maxOutputTokens: 65535,
+    creditsPerMillionInputTokens: BigInt(1000),
+    creditsPerMillionOutputTokens: BigInt(4000),
+    creditsPerMillionReasoningTokens: BigInt(0),
+    maxTokens: 1048576,
+    maxOutputTokens: 65536,
     supportsStreaming: true,
     supportsVision: true,
     supportsFunctions: true,
@@ -281,20 +514,99 @@ export const MODEL_PRICING_DATA = [
   },
 
   // ==========================================
-  // GOOGLE GEMINI - EMBEDDINGS
+  // GOOGLE GEMINI - IMAGE GENERATION
+  // ==========================================
+  {
+    provider: 'GOOGLE_GEMINI' as LLMProvider,
+    modelId: 'gemini-2.5-flash-image',
+    category: 'IMAGE_GEN' as ModelCategory,
+    displayName: 'Gemini 2.5 Flash Image',
+    description: 'Image generation & editing',
+    inputTokenCost: new Prisma.Decimal('0.30'),
+    outputTokenCost: new Prisma.Decimal('30'),
+    reasoningTokenCost: new Prisma.Decimal('0'),
+    creditsPerMillionInputTokens: BigInt(3000),
+    creditsPerMillionOutputTokens: BigInt(300000),
+    creditsPerMillionReasoningTokens: BigInt(0),
+    maxTokens: 65536,
+    maxOutputTokens: 32768,
+    supportsStreaming: false,
+    supportsVision: true,
+    supportsFunctions: false,
+    supportsJsonMode: true,
+    supportsSystemPrompt: true,
+    providerConfig: JSON.stringify({
+      costPerImage: 0.039,
+    }),
+  },
+
+  // ==========================================
+  // GOOGLE GEMINI - VIDEO GENERATION
+  // ==========================================
+  {
+    provider: 'GOOGLE_GEMINI' as LLMProvider,
+    modelId: 'veo-3-fast',
+    category: 'VIDEO_GEN' as ModelCategory,
+    displayName: 'Veo 3 Fast',
+    description: 'Fast video generation (8s clips)',
+    inputTokenCost: new Prisma.Decimal('0'),
+    outputTokenCost: new Prisma.Decimal('50000'),
+    reasoningTokenCost: new Prisma.Decimal('0'),
+    creditsPerMillionInputTokens: BigInt(0),
+    creditsPerMillionOutputTokens: BigInt(500000000),
+    creditsPerMillionReasoningTokens: BigInt(0),
+    maxTokens: 65536,
+    maxOutputTokens: 1024,
+    supportsStreaming: false,
+    supportsVision: false,
+    supportsAudio: true,
+    supportsFunctions: false,
+    supportsJsonMode: false,
+    supportsSystemPrompt: false,
+    providerConfig: JSON.stringify({
+      costPer8SecVideo: 0.4,
+    }),
+  },
+  {
+    provider: 'GOOGLE_GEMINI' as LLMProvider,
+    modelId: 'veo-3-quality',
+    category: 'VIDEO_GEN' as ModelCategory,
+    displayName: 'Veo 3 Quality',
+    description: 'High-quality video (8s clips)',
+    inputTokenCost: new Prisma.Decimal('0'),
+    outputTokenCost: new Prisma.Decimal('250000'),
+    reasoningTokenCost: new Prisma.Decimal('0'),
+    creditsPerMillionInputTokens: BigInt(0),
+    creditsPerMillionOutputTokens: BigInt(2500000000),
+    creditsPerMillionReasoningTokens: BigInt(0),
+    maxTokens: 65536,
+    maxOutputTokens: 1024,
+    supportsStreaming: false,
+    supportsVision: false,
+    supportsAudio: true,
+    supportsFunctions: false,
+    supportsJsonMode: false,
+    supportsSystemPrompt: false,
+    providerConfig: JSON.stringify({
+      costPer8SecVideo: 2.0,
+    }),
+  },
+
+  // ==========================================
+  // EMBEDDINGS
   // ==========================================
   {
     provider: 'GOOGLE_GEMINI' as LLMProvider,
     modelId: 'embedding-001',
     category: 'EMBEDDING' as ModelCategory,
     displayName: 'Gemini Embedding',
-    description: 'Document & text embeddings - 768d',
+    description: 'Text embeddings - 768d',
     inputTokenCost: new Prisma.Decimal('0.15'),
     outputTokenCost: new Prisma.Decimal('0'),
     reasoningTokenCost: new Prisma.Decimal('0'),
-    creditsPerMillionInputTokens: 1500,
-    creditsPerMillionOutputTokens: 0,
-    creditsPerMillionReasoningTokens: 0,
+    creditsPerMillionInputTokens: BigInt(1500),
+    creditsPerMillionOutputTokens: BigInt(0),
+    creditsPerMillionReasoningTokens: BigInt(0),
     maxTokens: 65536,
     maxOutputTokens: 768,
     supportsStreaming: false,
@@ -304,25 +616,22 @@ export const MODEL_PRICING_DATA = [
     supportsSystemPrompt: false,
     providerConfig: JSON.stringify({
       dimensions: 768,
-      model: 'embedding-001',
-      batchSize: 10,
     }),
   },
-
   {
     provider: 'HUGGING_FACE' as LLMProvider,
     modelId: 'BAAI/bge-base-en-v1.5',
     category: 'EMBEDDING' as ModelCategory,
     displayName: 'BGE Base English v1.5',
-    description: 'Hugging Face BGE embedding model with 768 dimension embeddings',
-    inputTokenCost: new Prisma.Decimal('0.0008'), // $0.0008 per million tokens input, approximate market cost
+    description: 'HuggingFace BGE - 768d',
+    inputTokenCost: new Prisma.Decimal('0.0008'),
     outputTokenCost: new Prisma.Decimal('0'),
     reasoningTokenCost: new Prisma.Decimal('0'),
-    creditsPerMillionInputTokens: 80, // estimated credits per million input tokens
-    creditsPerMillionOutputTokens: 0,
-    creditsPerMillionReasoningTokens: 0,
-    maxTokens: 512, // max input tokens per inference
-    maxOutputTokens: 768, // embedding output vector dimensionality
+    creditsPerMillionInputTokens: BigInt(80),
+    creditsPerMillionOutputTokens: BigInt(0),
+    creditsPerMillionReasoningTokens: BigInt(0),
+    maxTokens: 512,
+    maxOutputTokens: 768,
     supportsStreaming: false,
     supportsVision: false,
     supportsFunctions: false,
@@ -330,19 +639,14 @@ export const MODEL_PRICING_DATA = [
     supportsSystemPrompt: false,
     providerConfig: JSON.stringify({
       dimensions: 768,
-      model: 'BAAI/bge-base-en-v1.5',
-      batchSize: 10,
     }),
   },
 ];
 
-/**
- * Seeds ONLY latest & valid models (deprecated removed)
- */
 async function seedModelPricing() {
-  console.log('🌱 Seeding LATEST model pricing (Nov 2025 - PRODUCTION)...\n');
+  console.log('🌱 Seeding LATEST model pricing (Jan 2026 - PRODUCTION)...\n');
 
-  const effectiveFrom = new Date('2025-11-01');
+  const effectiveFrom = new Date('2026-01-01');
   let count = 0;
 
   const batchSize = 3;
@@ -373,20 +677,20 @@ async function seedModelPricing() {
     console.log(`  ✓ ${count}/${MODEL_PRICING_DATA.length} models seeded...`);
   }
 
-  console.log(`\nSeeded ${MODEL_PRICING_DATA.length} LATEST models only`);
+  console.log(`\n✅ Seeded ${MODEL_PRICING_DATA.length} models`);
   console.log('\n📊 Active Models:');
-  console.log('  🟠 OpenAI:    5 models (GPT-5 series + O3)');
-  console.log('  🔴 Anthropic: 3 models (Claude 4.5 latest)');
-  console.log('  🟡 Google:    5 models (Gemini 2.5 + embedding)');
-  console.log('\n💰 Pricing multiplied by 1M (per 1M tokens)');
-  console.log('Ready for production');
+  console.log('  🟠 OpenAI:      12 models (GPT-5.2, O3, Sora 2, GPT Image)');
+  console.log('  🔴 Anthropic:   4 models (Claude 4.5 series)');
+  console.log('  🟡 Google:      8 models (Gemini 2.5/3 + Veo)');
+  console.log('  🔵 HuggingFace: 1 model');
+  console.log('\n💰 Ready for production');
 }
 
 seedModelPricing()
   .then(async () => {
     await prisma.$disconnect();
-    await pool.end(); // Clean up PG pool
-    console.log('\nSeed completed successfully');
+    await pool.end();
+    console.log('\n✅ Seed completed');
     process.exit(0);
   })
   .catch(async (error) => {
@@ -397,13 +701,8 @@ seedModelPricing()
   });
 
 setTimeout(async () => {
-  console.error('\n⏱️  Seed timeout after 30s');
+  console.error('\n⏱️ Timeout');
   await prisma.$disconnect();
   await pool.end();
-  process.exit(1);
-}, 30000);
-
-setTimeout(() => {
-  console.error('\n⏱️  Seed timeout after 30s');
   process.exit(1);
 }, 30000);

@@ -435,7 +435,7 @@ function FlowEditor() {
 
         {contextMenuPosition && (
           <div
-            className="bg-popover text-popover-foreground animate-in fade-in-80 fixed z-50 min-w-[200px] overflow-hidden rounded-md border p-1 shadow-md"
+            className="bg-popover text-popover-foreground animate-in fade-in-80 fixed z-50 min-w-50 overflow-hidden rounded-md border p-1 shadow-md"
             style={{
               left: contextMenuPosition.x,
               top: contextMenuPosition.y,

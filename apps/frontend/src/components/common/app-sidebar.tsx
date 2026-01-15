@@ -67,12 +67,10 @@ export function AppSidebar() {
   const location = useLocation();
   const { state, isMobile } = useSidebar();
 
-  // Determine if we should use "collapsed" behavior
   const isCollapsedMode = !isMobile && state === 'collapsed';
 
   return (
     <Sidebar variant="floating" collapsible="icon">
-      {/* ==================== HEADER: WORKSPACE SELECTOR ==================== */}
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -117,7 +115,7 @@ export function AppSidebar() {
               <DropdownMenuContent
                 className={cn(
                   'cursor-pointer rounded-lg',
-                  isCollapsedMode ? 'w-56' : 'w-[var(--radix-dropdown-menu-trigger-width)]'
+                  isCollapsedMode ? 'w-56' : 'w-(--radix-dropdown-menu-trigger-width)'
                 )}
                 side={isCollapsedMode ? 'right' : 'bottom'}
                 align="start"
@@ -128,7 +126,7 @@ export function AppSidebar() {
                   Workspaces
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <div className="max-h-[300px] overflow-y-auto">
+                <div className="max-h-75 overflow-y-auto">
                   {workspaces.map((workspace) => (
                     <DropdownMenuItem
                       key={workspace.id}
@@ -174,7 +172,6 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarHeader>
 
-      {/* ==================== NAVIGATION MENU ==================== */}
       <SidebarContent className="overflow-y-auto">
         {navData.map((section) => (
           <SidebarGroup key={section.title}>
@@ -200,7 +197,6 @@ export function AppSidebar() {
         ))}
       </SidebarContent>
 
-      {/* ==================== FOOTER: USER MENU ==================== */}
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -232,7 +228,7 @@ export function AppSidebar() {
               <DropdownMenuContent
                 className={cn(
                   'rounded-lg',
-                  isCollapsedMode ? 'w-56' : 'w-[var(--radix-dropdown-menu-trigger-width)]'
+                  isCollapsedMode ? 'w-56' : 'w-(--radix-dropdown-menu-trigger-width)'
                 )}
                 side={isCollapsedMode ? 'right' : 'top'}
                 align="end"

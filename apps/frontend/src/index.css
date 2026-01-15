@@ -63,7 +63,7 @@
 :root {
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary: oklch(0.606 0.25 292.717);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
@@ -98,7 +98,7 @@
 .dark {
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary: oklch(0.541 0.281 293.009);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
@@ -122,7 +122,7 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.541 0.281 293.009);
-  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-1: oklch(0.541 0.281 293.009);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
@@ -176,6 +176,8 @@
    ======================================== */
 
 .react-flow__node {
+  -webkit-user-select: none;
+  -moz-user-select: none;
   user-select: none;
   cursor: grab;
 }
@@ -242,6 +244,7 @@
 
 .react-flow__controls {
   background: hsl(var(--card) / 0.8) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
   backdrop-filter: blur(12px) !important;
   border: 1px solid hsl(var(--border) / 0.5) !important;
   border-radius: 12px !important;
@@ -260,6 +263,7 @@
 
 .react-flow__minimap {
   background: hsl(var(--card) / 0.6) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
   backdrop-filter: blur(12px) !important;
   border: 1px solid hsl(var(--border) / 0.5) !important;
   border-radius: 12px !important;
@@ -273,7 +277,7 @@
 
 .react-flow__selection {
   background: oklch(0.606 0.25 292.717 / 0.05) !important;
-  border: 1px solid oklch(0.606 0.25 292.717 / 0.3) !important;
+  border: 1px solid hsl(var(--primary) / 0.3) !important;
 }
 
 .react-flow__node,
@@ -293,8 +297,8 @@ pre code.hljs {
   font-size: 0.875rem;
   line-height: 1.6;
   font-family: 'Fira Code', 'Consolas', 'Monaco', 'Courier New', monospace;
-  max-width: 100%; /* ✅ ADD: Prevent overflow */
-  word-wrap: break-word; /* ✅ ADD: Wrap long words */
+  max-width: 100%;
+  word-wrap: break-word;
 }
 
 /* ✅ Light mode code blocks */
@@ -405,6 +409,8 @@ pre code.hljs {
 
 .select-text,
 .select-text * {
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
   user-select: text !important;
   cursor: text !important;
 }
@@ -412,6 +418,8 @@ pre code.hljs {
 input,
 textarea,
 [contenteditable] {
+  -webkit-user-select: text;
+  -moz-user-select: text;
   user-select: text;
   cursor: text;
 }
@@ -422,6 +430,8 @@ textarea,
 
 .react-flow__node .nodrag {
   cursor: default !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
   user-select: text !important;
 }
 

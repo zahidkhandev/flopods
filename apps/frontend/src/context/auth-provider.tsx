@@ -19,7 +19,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const response = await axiosInstance.get<UserMeResponse>('/users/me');
+      const response = await axiosInstance.get<UserMeResponse>('/users/me', {
+        showErrorToast: false, // Disable error toast on initial load
+      } as any);
 
       setUser({
         userId: response.data.data.userId,
@@ -32,6 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error: any) {
       console.error('Failed to fetch user:', error);
 
+      // Only clear tokens if it's actually a 401 (not network error)
       if (error.response?.status === 401) {
         clearAuthTokens();
         setUser(null);

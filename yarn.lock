@@ -2535,6 +2535,7 @@ __metadata:
     "@tanstack/react-query-devtools": "npm:^5.91.2"
     "@tanstack/react-table": "npm:^8.21.3"
     "@types/crypto-js": "npm:^4.2.2"
+    "@types/dagre": "npm:^0.7.53"
     "@types/js-cookie": "npm:^3.0.6"
     "@types/react": "npm:^19.2.8"
     "@types/react-dom": "npm:^19.2.3"
@@ -2546,6 +2547,7 @@ __metadata:
     class-variance-authority: "npm:^0.7.1"
     clsx: "npm:^2.1.1"
     crypto-js: "npm:^4.2.0"
+    dagre: "npm:^0.8.5"
     date-fns: "npm:^4.1.0"
     dompurify: "npm:^3.3.1"
     eslint: "npm:^9.39.2"
@@ -7236,6 +7238,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/dagre@npm:^0.7.53":
+  version: 0.7.53
+  resolution: "@types/dagre@npm:0.7.53"
+  checksum: 10c0/c2311e2c6f819e0c15531d265bde6359b131ca9788e323b4cf80feb03ecf4cdd442698a1dac35eed5bb43c5fffd575eb28fc2d3c5163936756dac5183ff3af43
+  languageName: node
+  linkType: hard
+
 "@types/debug@npm:^4.0.0":
   version: 4.1.12
   resolution: "@types/debug@npm:4.1.12"
@@ -9902,6 +9911,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"dagre@npm:^0.8.5":
+  version: 0.8.5
+  resolution: "dagre@npm:0.8.5"
+  dependencies:
+    graphlib: "npm:^2.1.8"
+    lodash: "npm:^4.17.15"
+  checksum: 10c0/1c021b66961aa9a700bb6ec51747bcc214720a661ad6cb1878eab7316ecb550a759664a6754081a315b37d0355e3c19ff162813b36f20cbeb2e37f7440364d62
+  languageName: node
+  linkType: hard
+
 "data-uri-to-buffer@npm:^4.0.0":
   version: 4.0.1
   resolution: "data-uri-to-buffer@npm:4.0.1"
@@ -12031,6 +12050,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"graphlib@npm:^2.1.8":
+  version: 2.1.8
+  resolution: "graphlib@npm:2.1.8"
+  dependencies:
+    lodash: "npm:^4.17.15"
+  checksum: 10c0/41c525e4d91a6d8b4e8da1883bf4e85689a547e908557ccc53f64db9141bdfb351b9162a79f13cae81c5b3a410027f59e4fc1edc1ea442234ec08e629859b188
+  languageName: node
+  linkType: hard
+
 "gtoken@npm:^8.0.0":
   version: 8.0.0
   resolution: "gtoken@npm:8.0.0"
@@ -13984,7 +14012,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lodash@npm:4.17.21, lodash@npm:^4.17.21":
+"lodash@npm:4.17.21, lodash@npm:^4.17.15, lodash@npm:^4.17.21":
   version: 4.17.21
   resolution: "lodash@npm:4.17.21"
   checksum: 10c0/d8cbea072bb08655bb4c989da418994b073a608dffa608b09ac04b43a791b12aeae7cd7ad919aa4c925f33b48490b5cfe6c1f71d827956071dae2e7bb3a6b74c
