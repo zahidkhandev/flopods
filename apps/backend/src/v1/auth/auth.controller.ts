@@ -44,7 +44,7 @@ export class V1AuthController {
   @ApiResponse({ status: 409, description: 'Email already exists' })
   @ApiResponse({ status: 400, description: 'Invalid input data' })
   async register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto.email, dto.name, dto.password);
+    return this.authService.register(dto.email, dto.firstName, dto.lastName, dto.password);
   }
 
   @Public()

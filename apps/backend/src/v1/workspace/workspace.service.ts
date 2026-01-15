@@ -223,7 +223,8 @@ export class V1WorkspaceService {
                 select: {
                   id: true,
                   email: true,
-                  name: true,
+                  firstName: true,
+                  lastName: true,
                   image: true,
                 },
               },
@@ -303,7 +304,7 @@ export class V1WorkspaceService {
                   select: {
                     id: true,
                     email: true,
-                    name: true,
+                    firstName: true,
                     image: true,
                   },
                 },
@@ -530,7 +531,8 @@ export class V1WorkspaceService {
             select: {
               id: true,
               email: true,
-              name: true,
+              firstName: true,
+              lastName: true,
               image: true,
             },
           },
@@ -581,7 +583,8 @@ export class V1WorkspaceService {
             select: {
               id: true,
               email: true,
-              name: true,
+              firstName: true,
+              lastName: true,
               image: true,
             },
           },
@@ -860,13 +863,13 @@ export class V1WorkspaceService {
           userId: admin.userId,
           type: NotificationType.WORKSPACE_MEMBER_JOINED,
           title: 'New Member Joined',
-          body: `${user.name || user.email} has joined ${invitation.workspace.name}`,
+          body: `${user.firstName || user.email} has joined ${invitation.workspace.name}`,
           entityType: 'workspace',
           entityId: invitation.workspaceId,
           metadata: {
             workspaceId: invitation.workspaceId,
             newMemberEmail: user.email,
-            newMemberName: user.name,
+            newMemberName: user.firstName,
             role: invitation.role,
           },
           actionUrl: `/settings?tab=members`,
@@ -1053,7 +1056,7 @@ export class V1WorkspaceService {
           createdBy: {
             select: {
               id: true,
-              name: true,
+              firstName: true,
               email: true,
             },
           },

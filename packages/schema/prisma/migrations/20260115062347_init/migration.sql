@@ -585,7 +585,8 @@ CREATE TABLE "canvas"."ChatEmbedding" (
 CREATE TABLE "core"."User" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
-    "name" TEXT,
+    "firstName" TEXT,
+    "lastName" TEXT,
     "image" TEXT,
     "hash" VARCHAR(255),
     "createdAt" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,

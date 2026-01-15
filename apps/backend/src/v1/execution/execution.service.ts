@@ -117,7 +117,7 @@ export class V1ExecutionService {
       const userMessage = messages.find((m) => m.role === 'user');
       const userInput = userMessage?.content || '';
 
-      // 3) CREATE EXECUTION RECORD
+      // CREATE EXECUTION RECORD
       await this.prisma.podExecution.create({
         data: {
           id: executionId,
@@ -142,28 +142,67 @@ export class V1ExecutionService {
 
       this.flowGateway.broadcastExecutionStart(pod.flowId, executionId, podId);
 
-      // Context & system prompt assembly
-      const conversationHistory = await this.getPodConversationHistory(podId, 20);
-      const contextChain = await this.contextResolution.resolveFullContext(podId, pod.flowId);
+      // Log upstream connections
+      const upstreamEdgesCount = await this.prisma.edge.count({
+        where: { flowId: pod.flowId, targetPodId: podId },
+      });
 
-      let systemPrompt = params.systemPrompt ?? this.DEFAULT_SYSTEM_PROMPTS.general;
-      systemPrompt = this.contextResolution.interpolateVariables(
-        systemPrompt,
-        contextChain.variables,
+      this.logger.debug(`Executing pod ${podId} with ${upstreamEdgesCount} upstream connections`);
+
+      // PRIORITY 1: Same pod conversation history (up to 100 messages = 50 exchanges)
+      const conversationHistory = await this.getPodConversationHistory(podId, 100);
+
+      // Get model's max tokens to calculate safe context limit
+      const modelMaxTokens = finalMaxTokens || 8192; // Default fallback
+      const safeContextLimit = Math.floor(modelMaxTokens * 0.6); // Use 60% for context, 40% for response
+
+      this.logger.debug(
+        `Model max tokens: ${modelMaxTokens} | Safe context limit: ${safeContextLimit}`,
       );
 
+      // PRIORITY 2: Upstream pod context (RECURSIVE with token limit)
+      const contextChain = await this.contextResolution.resolveFullContext(
+        podId,
+        pod.flowId,
+        undefined,
+        safeContextLimit,
+      );
+
+      this.logger.debug(
+        `Conversation history loaded: ${conversationHistory.length} messages from SAME pod`,
+      );
+      this.logger.debug(
+        `Context resolved: ${contextChain.context.length} history items from ${Object.keys(contextChain.variables).length} UPSTREAM pods`,
+      );
+
+      // Build system prompt with PRIORITY ordering
+      let systemPrompt = params.systemPrompt ?? this.DEFAULT_SYSTEM_PROMPTS.general;
+
+      // Add upstream pod context FIRST (lower priority in context window)
       if (Object.keys(contextChain.variables).length > 0) {
-        const contextSection = '\n\n## Context from Connected Pods:\n\n';
-        const contextDetails = Object.entries(contextChain.variables)
-          .map(([pid, content]) => `**Pod ${pid} History:**\n${content}`)
+        const upstreamContextSection = '\n\n## Context from Connected Upstream Pods:\n\n';
+        const upstreamContextDetails = Object.entries(contextChain.variables)
+          .map(([pid, content]) => `**Upstream Pod ${pid}:**\n${content}`)
           .join('\n\n');
-        systemPrompt += contextSection + contextDetails;
+        systemPrompt += upstreamContextSection + upstreamContextDetails;
+
+        this.logger.debug(
+          `Added context from ${Object.keys(contextChain.variables).length} upstream pods to system prompt`,
+        );
+      } else if (upstreamEdgesCount > 0) {
+        this.logger.warn(
+          `No context variables found despite ${upstreamEdgesCount} upstream connections - upstream pods may not be executed yet`,
+        );
       }
 
-      // Inject user profile & workspace info
+      this.logger.log(
+        `[DEBUG CONTEXT] Upstream: ${upstreamEdgesCount} | Same Pod History: ${conversationHistory.length} msgs | Upstream Variables: ${Object.keys(contextChain.variables).length}`,
+      );
+
+      // Add user profile & workspace info
       const userProfile = await this.prisma.user.findUnique({
         where: { id: userId },
-        select: { name: true, email: true },
+        select: { firstName: true, email: true },
       });
       const workspaceUser = await this.prisma.workspaceUser.findUnique({
         where: { userId_workspaceId: { userId, workspaceId } },
@@ -171,7 +210,7 @@ export class V1ExecutionService {
       });
       const userRole = workspaceUser?.role ?? 'Unknown';
       if (userProfile) {
-        systemPrompt += `\n\n## User Profile:\nName: ${userProfile.name ?? 'Unknown'}\nEmail: ${userProfile.email ?? 'Unknown'}\nRole: ${userRole}`;
+        systemPrompt += `\n\n## User Profile:\nName: ${userProfile.firstName ?? 'Unknown'}\nEmail: ${userProfile.email ?? 'Unknown'}\nRole: ${userRole}`;
       }
       const workspace = await this.prisma.workspace.findUnique({
         where: { id: workspaceId },
@@ -184,6 +223,7 @@ export class V1ExecutionService {
 
       this.logger.debug(`System prompt:\n${systemPrompt}`);
 
+      // Interpolate variables in current user messages
       const interpolatedMessages = messages.map((msg) =>
         msg.role === 'user' && typeof msg.content === 'string'
           ? {
@@ -196,11 +236,16 @@ export class V1ExecutionService {
           : msg,
       );
 
+      // PRIORITY ORDER: System Prompt (with Upstream Context) → Same Pod History → Current Message
       const allMessages = [...conversationHistory, ...interpolatedMessages];
       const finalMessages = this.buildMessagesWithSystemPrompt(
         allMessages,
         systemPrompt,
-        /* _userProvidedSystemPrompt */ params.systemPrompt !== undefined,
+        params.systemPrompt !== undefined,
+      );
+
+      this.logger.debug(
+        `Final message chain: ${finalMessages.length} messages (1 system + ${conversationHistory.length} history + ${interpolatedMessages.length} current)`,
       );
 
       // Provider and streaming setup
@@ -330,7 +375,6 @@ export class V1ExecutionService {
             runtime: Date.now() - startTime,
           });
         } else {
-          // No pricing, still finalize record minimally
           await this.prisma.podExecution.update({
             where: { id: executionId },
             data: {
@@ -374,7 +418,7 @@ export class V1ExecutionService {
         });
       }
 
-      // Generate embedding of combined user + assistant chat and save it
+      // Generate embedding
       try {
         const combinedTextForEmbedding = `User: ${userInput}\nAssistant: ${fullContent}`;
 
@@ -418,17 +462,16 @@ export class V1ExecutionService {
           errorMessage,
         },
       });
-      this.logger.error(`[Execution] ❌ ${executionId} failed: ${errorMessage}`, error);
+      this.logger.error(`[Execution] ${executionId} failed: ${errorMessage}`, error);
       if (_podFlowId) {
         this.flowGateway.broadcastExecutionError(_podFlowId, executionId, podId, errorMessage);
       }
       yield { type: 'error', error: errorMessage };
     }
   }
-
   private async getPodConversationHistory(
     podId: string,
-    limit: number = 20,
+    limit: number = 100,
   ): Promise<LLMMessage[]> {
     const previousExecutions = await this.prisma.podExecution.findMany({
       where: {

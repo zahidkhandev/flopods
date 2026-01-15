@@ -1,7 +1,7 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ConfigService } from '@nestjs/config';
-import { LLMProvider } from '@flopods/schema';
+import { LLMProvider, Decimal } from '@flopods/schema';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { DocumentVectorSearchResult } from '../types';
 import type { DocumentEmbeddingProvider } from '../types';
@@ -10,7 +10,6 @@ import {
   calculateCreditsFromCharge,
   PROFIT_CONFIG,
 } from '../../../common/config/profit.config';
-import { Decimal } from '@prisma/client/runtime/library';
 import { createDecipheriv } from 'crypto';
 
 @Injectable()

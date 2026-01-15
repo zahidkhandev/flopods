@@ -5,9 +5,15 @@ import { V1EdgeService } from './edge.service';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { AwsModule } from '../../common/aws/aws.module';
 import { V1FlowModule } from '../flow/flow.module';
+import { V1ExecutionModule } from '../execution/execution.module';
 
 @Module({
-  imports: [PrismaModule, AwsModule, forwardRef(() => V1FlowModule)],
+  imports: [
+    PrismaModule,
+    AwsModule,
+    forwardRef(() => V1FlowModule),
+    forwardRef(() => V1ExecutionModule),
+  ],
   controllers: [V1PodController],
   providers: [V1PodService, V1EdgeService],
   exports: [V1PodService, V1EdgeService],

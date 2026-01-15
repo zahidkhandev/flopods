@@ -40,6 +40,19 @@ export class V1ContextResolutionService {
     private readonly encryptionService: ApiKeyEncryptionService,
   ) {}
 
+  async invalidatePodContext(podId: string, flowId: string): Promise<void> {
+    this.logger.debug(`Invalidating context cache for pod ${podId}`);
+
+    // Mark the pod as requiring context refresh
+    await this.prisma.pod.update({
+      where: { id: podId },
+      data: {
+        executionStatus: 'IDLE', // Reset execution status
+        lastExecutionId: null, // Clear last execution reference
+      },
+    });
+  }
+
   /**
    * OPTIMIZED: Resolve FULL conversation context (Batched Queries)
    * 1. Groups IDs.
@@ -53,6 +66,7 @@ export class V1ContextResolutionService {
       sourcePodId: string;
       pinnedExecutionId: string | null;
     }>,
+    maxTokens: number = 100000, // Default safe limit
   ): Promise<ContextChain> {
     const pod = await this.prisma.pod.findUnique({
       where: { id: podId },
@@ -63,14 +77,19 @@ export class V1ContextResolutionService {
       throw new NotFoundException(`Pod ${podId} not found`);
     }
 
-    const upstreamPodIds = await this.getUpstreamPods(podId, flowId);
+    // Get ALL ancestor pods recursively
+    const allAncestorPods = await this.getRecursiveUpstreamPods(podId, flowId);
 
-    if (upstreamPodIds.length === 0) {
+    this.logger.debug(
+      `Pod ${podId} has ${allAncestorPods.length} total ancestor pods (recursive): [${allAncestorPods.join(', ')}]`,
+    );
+
+    if (allAncestorPods.length === 0) {
       return { pod, context: [], variables: {} };
     }
 
-    // --- 1. PREPARE IDs ---
-    const pinnedMap = new Map<string, string>(); // podId -> executionId
+    // --- PREPARE IDs ---
+    const pinnedMap = new Map<string, string>();
     const defaultPodIds: string[] = [];
 
     if (contextMappings) {
@@ -81,15 +100,16 @@ export class V1ContextResolutionService {
       }
     }
 
-    upstreamPodIds.forEach((upid) => {
+    allAncestorPods.forEach((upid) => {
       if (!pinnedMap.has(upid)) {
         defaultPodIds.push(upid);
       }
     });
 
     const contextResults: ResolvedContext[] = [];
+    let totalTokensUsed = 0;
 
-    // --- 2. BATCH FETCH PINNED (1 Query) ---
+    // --- BATCH FETCH PINNED ---
     if (pinnedMap.size > 0) {
       const pinnedExecutions = await this.prisma.podExecution.findMany({
         where: {
@@ -99,6 +119,7 @@ export class V1ContextResolutionService {
         select: {
           id: true,
           podId: true,
+          requestMetadata: true,
           responseMetadata: true,
           finishedAt: true,
         },
@@ -106,28 +127,38 @@ export class V1ContextResolutionService {
 
       for (const exec of pinnedExecutions) {
         const output = this.extractOutputFromResponse(exec.responseMetadata);
+        const userInput = (exec.requestMetadata as any)?.userInput || '';
+
         if (output) {
-          contextResults.push({
-            podId: exec.podId,
-            output,
-            executionId: exec.id,
-            timestamp: exec.finishedAt!,
-          });
+          const turnData = {
+            user: userInput,
+            assistant: output,
+          };
+          const turnText = JSON.stringify(turnData);
+          const turnTokens = this.estimateTokens(turnText);
+
+          if (totalTokensUsed + turnTokens <= maxTokens) {
+            contextResults.push({
+              podId: exec.podId,
+              output: turnText,
+              executionId: exec.id,
+              timestamp: exec.finishedAt!,
+            });
+            totalTokensUsed += turnTokens;
+          }
         }
       }
     }
 
-    // --- 3. BATCH FETCH HISTORY (1 Query) ---
+    // --- BATCH FETCH ALL ANCESTOR HISTORY ---
     if (defaultPodIds.length > 0) {
-      // Optimization: Fetch a pool of latest executions for these pods
-      // We assume 50 items per pod is sufficient history context
-      const historyPool = await this.prisma.podExecution.findMany({
+      // Fetch ALL executions from ALL ancestor pods
+      const allExecutions = await this.prisma.podExecution.findMany({
         where: {
           podId: { in: defaultPodIds },
           status: 'COMPLETED',
         },
         orderBy: { finishedAt: 'desc' },
-        take: defaultPodIds.length * 50,
         select: {
           id: true,
           podId: true,
@@ -137,18 +168,24 @@ export class V1ContextResolutionService {
         },
       });
 
-      // Group by podId in memory
-      const grouped = new Map<string, typeof historyPool>();
-      historyPool.forEach((h) => {
-        if (!grouped.has(h.podId)) grouped.set(h.podId, []);
-        if (grouped.get(h.podId)!.length < 50) {
-          grouped.get(h.podId)!.push(h);
-        }
+      this.logger.debug(
+        `Fetched ${allExecutions.length} total executions from ${defaultPodIds.length} ancestor pods`,
+      );
+
+      // Group by podId
+      const grouped = new Map<string, typeof allExecutions>();
+      allExecutions.forEach((exec) => {
+        if (!grouped.has(exec.podId)) grouped.set(exec.podId, []);
+        grouped.get(exec.podId)!.push(exec);
       });
 
-      // Process groups
+      this.logger.debug(`Grouped into ${grouped.size} ancestor pods with execution history`);
+
+      // Process each ancestor pod's history (most recent first)
       for (const [pId, execs] of grouped.entries()) {
-        const sorted = execs.sort((a, b) => a.finishedAt!.getTime() - b.finishedAt!.getTime());
+        const sorted = execs.sort((a, b) => b.finishedAt!.getTime() - a.finishedAt!.getTime());
+
+        this.logger.debug(`Processing ${sorted.length} executions from ancestor pod ${pId}`);
 
         for (const exec of sorted) {
           const output = this.extractOutputFromResponse(exec.responseMetadata);
@@ -159,25 +196,88 @@ export class V1ContextResolutionService {
               user: userInput,
               assistant: output,
             };
+            const turnText = JSON.stringify(turnData);
+            const turnTokens = this.estimateTokens(turnText);
+
+            // Stop if we'd exceed token limit
+            if (totalTokensUsed + turnTokens > maxTokens) {
+              this.logger.warn(
+                `⚠️  Reached token limit (${totalTokensUsed}/${maxTokens}). Stopping context collection.`,
+              );
+              break;
+            }
+
             contextResults.push({
               podId: pId,
-              output: JSON.stringify(turnData),
+              output: turnText,
               executionId: exec.id,
               timestamp: exec.finishedAt!,
             });
+            totalTokensUsed += turnTokens;
           }
         }
+
+        // Break outer loop if limit reached
+        if (totalTokensUsed >= maxTokens) break;
       }
     }
 
-    // --- 4. FORMAT VARIABLES ---
+    // --- FORMAT VARIABLES ---
     const variables = this.buildVariablesFromContext(contextResults);
 
-    this.logger.debug(
-      `Resolved context for pod ${podId}: ${contextResults.length} items (Batched)`,
+    this.logger.log(
+      `✅ Resolved ${contextResults.length} context items from ${Object.keys(variables).length} ancestor pods | Tokens used: ${totalTokensUsed}/${maxTokens}`,
     );
 
     return { pod, context: contextResults, variables };
+  }
+
+  /**
+   * RECURSIVE: Get ALL upstream pods (direct + ancestors)
+   */
+  private async getRecursiveUpstreamPods(
+    podId: string,
+    flowId: string,
+    visited: Set<string> = new Set(),
+  ): Promise<string[]> {
+    // Prevent infinite loops
+    if (visited.has(podId)) return [];
+    visited.add(podId);
+
+    // Get direct upstream pods
+    const edges = await this.prisma.edge.findMany({
+      where: { flowId, targetPodId: podId },
+      select: { sourcePodId: true },
+    });
+
+    const directUpstream = edges.map((e) => e.sourcePodId);
+
+    if (directUpstream.length === 0) {
+      return [];
+    }
+
+    // Recursively get upstream of upstream
+    const allAncestors = [...directUpstream];
+
+    for (const upstreamPodId of directUpstream) {
+      const ancestorsOfUpstream = await this.getRecursiveUpstreamPods(
+        upstreamPodId,
+        flowId,
+        visited,
+      );
+      allAncestors.push(...ancestorsOfUpstream);
+    }
+
+    // Remove duplicates
+    return Array.from(new Set(allAncestors));
+  }
+
+  /**
+   * Estimate tokens from text (4 chars ≈ 1 token)
+   */
+  private estimateTokens(text: string): number {
+    if (!text) return 0;
+    return Math.ceil(text.length / 4);
   }
 
   /**
@@ -309,9 +409,16 @@ export class V1ContextResolutionService {
   private async getUpstreamPods(podId: string, flowId: string): Promise<string[]> {
     const upstreamEdges = await this.prisma.edge.findMany({
       where: { flowId, targetPodId: podId },
-      select: { sourcePodId: true },
+      select: { sourcePodId: true, id: true },
     });
-    return upstreamEdges.map((e) => e.sourcePodId);
+
+    const upstreamPodIds = upstreamEdges.map((e) => e.sourcePodId);
+
+    this.logger.debug(
+      `Pod ${podId} has ${upstreamPodIds.length} upstream connections: [${upstreamPodIds.join(', ')}]`,
+    );
+
+    return upstreamPodIds;
   }
 
   private extractOutputFromResponse(responseMetadata: any): string | null {

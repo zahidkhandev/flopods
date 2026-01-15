@@ -1,3 +1,4 @@
+// RegisterForm.tsx - COMPLETE FIXED VERSION
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -17,7 +18,8 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -33,7 +35,14 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
+    // Validate all fields
+    if (
+      !formData.firstName.trim() ||
+      !formData.lastName.trim() ||
+      !formData.email ||
+      !formData.password ||
+      !formData.confirmPassword
+    ) {
       toast.error('Please fill in all fields');
       return;
     }
@@ -50,12 +59,14 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
 
     setLoading(true);
     try {
-      // Pass name, email, and password
+      // Send firstName, lastName, email, password to backend ✅
       await register({
-        name: formData.name,
-        email: formData.email,
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        email: formData.email.trim(),
         password: formData.password,
       });
+
       toast.success('Account created successfully!');
       navigate('/dashboard');
     } catch (error: any) {
@@ -83,17 +94,32 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
       </CardHeader>
       <CardContent>
         <form onSubmit={handleRegister} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Full Name</Label>
-            <Input
-              id="name"
-              type="text"
-              placeholder="John Doe"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              disabled={loading}
-            />
+          {/* First + Last Name SIDE-BY-SIDE */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">First Name</Label>
+              <Input
+                id="firstName"
+                type="text"
+                placeholder="John"
+                value={formData.firstName}
+                onChange={handleChange}
+                required
+                disabled={loading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Last Name</Label>
+              <Input
+                id="lastName"
+                type="text"
+                placeholder="Doe"
+                value={formData.lastName}
+                onChange={handleChange}
+                required
+                disabled={loading}
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -101,7 +127,7 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
             <Input
               id="email"
               type="email"
-              placeholder="m@example.com"
+              placeholder="john.doe@example.com"
               value={formData.email}
               onChange={handleChange}
               required
@@ -155,12 +181,7 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
 
           <div className="grid grid-cols-2 gap-4">
             <Button variant="outline" type="button" onClick={handleGoogleSignup} disabled={loading}>
-              <svg
-                className="mr-2 h-4 w-4"
-                viewBox="0 0 30 30"
-                fill="currentColor"
-                xmlns="http://www.w3.org/2000/svg"
-              >
+              <svg className="mr-2 h-4 w-4" viewBox="0 0 30 30" fill="currentColor">
                 <path d="M 15.003906 3 C 8.3749062 3 3 8.373 3 15 C 3 21.627 8.3749062 27 15.003906 27 C 25.013906 27 27.269078 17.707 26.330078 13 L 25 13 L 22.732422 13 L 15 13 L 15 17 L 22.738281 17 C 21.848702 20.448251 18.725955 23 15 23 C 10.582 23 7 19.418 7 15 C 7 10.582 10.582 7 15 7 C 17.009 7 18.839141 7.74575 20.244141 8.96875 L 23.085938 6.1289062 C 20.951937 4.1849063 18.116906 3 15.003906 3 z" />
               </svg>
               Google

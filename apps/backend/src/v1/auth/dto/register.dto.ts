@@ -13,12 +13,21 @@ export class RegisterDto {
 
   @ApiProperty({
     example: 'John Doe',
-    description: 'Full name',
+    description: 'First name',
     required: true,
   })
   @IsString({ message: 'Name must be a string' })
   @IsNotEmpty({ message: 'Name is required' })
-  name!: string;
+  firstName!: string;
+
+  @ApiProperty({
+    example: 'John Doe',
+    description: 'Last name',
+    required: true,
+  })
+  @IsString({ message: 'Name must be a string' })
+  @IsNotEmpty({ message: 'Name is required' })
+  lastName!: string;
 
   @ApiProperty({
     example: 'Password123!',

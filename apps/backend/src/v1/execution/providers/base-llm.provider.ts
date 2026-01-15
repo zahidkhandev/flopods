@@ -3,9 +3,8 @@
 import { Logger } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { ILLMProvider, LLMRequest, LLMResponse } from '../types/llm-provider.types';
-import { LLMProvider, APIRequestType, ModelPricingTier } from '@flopods/schema'; // Add APIRequestType
+import { LLMProvider, APIRequestType, ModelPricingTier, Decimal } from '@flopods/schema'; // Add APIRequestType
 import { PROFIT_CONFIG } from '../../../common/config/profit.config';
-import { Decimal } from '@prisma/client/runtime/library';
 
 export abstract class BaseLLMProvider implements ILLMProvider {
   protected readonly logger: Logger;

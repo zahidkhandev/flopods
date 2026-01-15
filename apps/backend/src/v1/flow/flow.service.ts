@@ -325,7 +325,7 @@ export class V1FlowService {
           user: {
             select: {
               id: true,
-              name: true,
+              firstName: true,
               email: true,
               image: true,
             },
@@ -399,7 +399,7 @@ export class V1FlowService {
           user: {
             select: {
               id: true,
-              name: true,
+              firstName: true,
               email: true,
               image: true,
             },
@@ -448,7 +448,7 @@ export class V1FlowService {
           user: {
             select: {
               id: true,
-              name: true,
+              firstName: true,
               email: true,
               image: true,
             },
@@ -528,7 +528,7 @@ export class V1FlowService {
       const userIds = activities.map((a) => a.userId).filter((id): id is string => id !== null);
       const users = await this.prisma.user.findMany({
         where: { id: { in: userIds } },
-        select: { id: true, name: true, email: true },
+        select: { id: true, firstName: true, email: true },
       });
 
       const userMap = new Map(users.map((u) => [u.id, u]));
