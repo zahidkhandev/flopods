@@ -100,9 +100,9 @@
   "devDependencies": {
     "@flopods/eslint-config": "*",
     "@flopods/frontend": "workspace:^",
-    "@types/node": "^25.0.8",
+    "@types/node": "^25.0.9",
     "baseline-browser-mapping": "^2.9.14",
-    "prettier": "^3.7.4",
+    "prettier": "^3.8.0",
     "rimraf": "^6.1.2",
     "turbo": "^2.7.4",
     "typescript": "^5.9.3",

@@ -10,10 +10,13 @@ import {
 } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationError } from 'class-validator';
+import helmet from 'helmet';
+import compression from 'compression';
 
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/exception.filters';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { PrismaService } from './prisma/prisma.service';
 import { config } from 'dotenv';
 import { join } from 'path';
@@ -65,7 +68,11 @@ async function bootstrap() {
     rawBody: true,
   });
 
+  app.use(helmet());
+  app.use(compression());
+
   app.setGlobalPrefix('api');
+  app.enableShutdownHooks();
 
   app.enableCors({
     origin: [
@@ -117,6 +124,7 @@ async function bootstrap() {
   );
 
   const reflector = app.get(Reflector);
+  app.useGlobalInterceptors(new LoggingInterceptor());
   app.useGlobalInterceptors(new ResponseInterceptor(reflector));
   app.useGlobalInterceptors(new ClassSerializerInterceptor(reflector));
   app.useGlobalFilters(new AllExceptionsFilter());
@@ -125,6 +133,9 @@ async function bootstrap() {
     .setTitle('Flopods API v1')
     .setDescription('AI Workflow Canvas - Multi-LLM Node-Based Platform')
     .setVersion('1.0')
+    .setContact('Flopods', 'https://flopods.com', 'support@flopods.com')
+    .addServer('http://localhost:8000', 'Local')
+    .addServer('https://api.flopods.com', 'Production')
     .addBearerAuth({
       type: 'http',
       scheme: 'bearer',
@@ -135,7 +146,7 @@ async function bootstrap() {
     })
     .build();
 
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  const document = SwaggerModule.createDocument(app, swaggerConfig, { deepScanRoutes: true });
   SwaggerModule.setup('api/v1/docs', app, document, {
     customSiteTitle: 'Flopods API v1 Docs',
     swaggerOptions: {

@@ -1,5 +1,5 @@
 import path from 'path';
-require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
+require('dotenv').config({ path: path.resolve(__dirname, '../../../../.env') });
 
 import { PrismaClient, LLMProvider, ModelCategory, Prisma } from '@flopods/schema';
 import { PrismaPg } from '@prisma/adapter-pg';
