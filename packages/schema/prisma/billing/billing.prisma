@@ -97,7 +97,6 @@ model CreditUsageLog {
   @@schema("billing")
 }
 
-// FIXED: Decimal(14, 10) handles tiny values like 0.00000015 perfectly
 model ModelPricingTier {
   id       String        @id @default(cuid())
   provider LLMProvider
@@ -107,15 +106,15 @@ model ModelPricingTier {
   displayName String  @db.VarChar(255)
   description String? @db.VarChar(500)
 
-  // CHANGED: Decimal(14, 10) can store 0.00000015 with full precision
-  // Format: (total_digits, decimal_places) = can store up to 9999.9999999999
-  inputTokenCost     Decimal @db.Decimal(14, 10)
-  outputTokenCost    Decimal @db.Decimal(14, 10)
-  reasoningTokenCost Decimal @default(0) @db.Decimal(14, 10)
+  // CHANGED: Decimal(18, 10) allows up to 99,999,999.9999999999
+  // Handles video generation costs like $50,000 per 1M tokens
+  inputTokenCost     Decimal @db.Decimal(18, 10)
+  outputTokenCost    Decimal @db.Decimal(18, 10)
+  reasoningTokenCost Decimal @default(0) @db.Decimal(18, 10)
 
-  creditsPerMillionInputTokens     Int
-  creditsPerMillionOutputTokens    Int
-  creditsPerMillionReasoningTokens Int @default(0)
+  creditsPerMillionInputTokens     BigInt
+  creditsPerMillionOutputTokens    BigInt
+  creditsPerMillionReasoningTokens BigInt @default(0)
 
   maxTokens            Int?
   maxOutputTokens      Int?
@@ -143,6 +142,8 @@ model ModelPricingTier {
   @@index([category, isActive])
   @@schema("billing")
 }
+
+
 
 enum SubscriptionTier {
   HOBBYIST // FREE

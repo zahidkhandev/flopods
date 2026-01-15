@@ -1,5 +1,5 @@
-// RegisterForm.tsx - COMPLETE FIXED VERSION
-import { useState } from 'react';
+// RegisterForm.tsx - WITH PROPER ICONS
+import { useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/use-auth';
@@ -8,15 +8,51 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Github, Loader2 } from 'lucide-react';
+import { Github, Loader2, Eye, EyeOff, Check, X } from 'lucide-react';
 import { toast } from '@/lib/toast-utils';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+
+// Password strength calculator (0-3 scale like PostHog)
+const calculatePasswordStrength = (password: string): number => {
+  if (!password) return 0;
+
+  let strength = 0;
+
+  // Length check
+  if (password.length >= 8) strength++;
+  if (password.length >= 12) strength++;
+
+  // Character variety checks
+  const hasLower = /[a-z]/.test(password);
+  const hasUpper = /[A-Z]/.test(password);
+  const hasNumber = /\d/.test(password);
+  const hasSpecial = /[^a-zA-Z0-9]/.test(password);
+
+  const varietyCount = [hasLower, hasUpper, hasNumber, hasSpecial].filter(Boolean).length;
+
+  if (varietyCount >= 2) strength++;
+  if (varietyCount >= 3) strength++;
+
+  return Math.min(strength, 3);
+};
+
+const getStrengthConfig = (strength: number) => {
+  const configs = [
+    { label: 'Weak', color: 'bg-red-500', bars: 1 },
+    { label: 'Fair', color: 'bg-orange-500', bars: 1 },
+    { label: 'Good', color: 'bg-yellow-500', bars: 2 },
+    { label: 'Strong', color: 'bg-green-500', bars: 3 },
+  ];
+  return configs[strength];
+};
 
 export function RegisterForm({ className, ...props }: React.ComponentProps<'div'>) {
   const { register } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -24,6 +60,13 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
     password: '',
     confirmPassword: '',
   });
+
+  const passwordStrength = useMemo(
+    () => calculatePasswordStrength(formData.password),
+    [formData.password]
+  );
+
+  const strengthConfig = getStrengthConfig(passwordStrength);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({
@@ -35,7 +78,6 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate all fields
     if (
       !formData.firstName.trim() ||
       !formData.lastName.trim() ||
@@ -59,7 +101,6 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
 
     setLoading(true);
     try {
-      // Send firstName, lastName, email, password to backend ✅
       await register({
         firstName: formData.firstName.trim(),
         lastName: formData.lastName.trim(),
@@ -94,7 +135,7 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
       </CardHeader>
       <CardContent>
         <form onSubmit={handleRegister} className="space-y-4">
-          {/* First + Last Name SIDE-BY-SIDE */}
+          {/* First + Last Name */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="firstName">First Name</Label>
@@ -122,6 +163,7 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
             </div>
           </div>
 
+          {/* Email */}
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -135,30 +177,96 @@ export function RegisterForm({ className, ...props }: React.ComponentProps<'div'
             />
           </div>
 
+          {/* Password with visibility toggle & strength */}
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              disabled={loading}
-            />
-            <p className="text-muted-foreground text-xs">Must be at least 8 characters long.</p>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={formData.password}
+                onChange={handleChange}
+                required
+                disabled={loading}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2 transition-colors"
+                disabled={loading}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+
+            {/* Password Strength Indicator */}
+            {formData.password && (
+              <div className="space-y-1.5">
+                <div className="flex gap-1">
+                  {[0, 1, 2].map((index) => (
+                    <div
+                      key={index}
+                      className={cn(
+                        'h-1 flex-1 rounded-full transition-all duration-300',
+                        index < strengthConfig.bars ? strengthConfig.color : 'bg-muted'
+                      )}
+                    />
+                  ))}
+                </div>
+                <p className="text-muted-foreground text-xs">
+                  Password strength: <span className="font-medium">{strengthConfig.label}</span>
+                </p>
+              </div>
+            )}
           </div>
 
+          {/* Confirm Password with visibility toggle */}
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              required
-              disabled={loading}
-            />
-            <p className="text-muted-foreground text-xs">Please confirm your password.</p>
+            <div className="relative">
+              <Input
+                id="confirmPassword"
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+                disabled={loading}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2 transition-colors"
+                disabled={loading}
+              >
+                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+
+            {/* Match indicator with proper icons */}
+            {formData.confirmPassword && (
+              <p
+                className={cn(
+                  'flex items-center gap-1 text-xs',
+                  formData.password === formData.confirmPassword
+                    ? 'text-green-600 dark:text-green-500'
+                    : 'text-red-600 dark:text-red-500'
+                )}
+              >
+                {formData.password === formData.confirmPassword ? (
+                  <>
+                    <Check className="h-3 w-3" />
+                    <span>Passwords match</span>
+                  </>
+                ) : (
+                  <>
+                    <X className="h-3 w-3" />
+                    <span>Passwords do not match</span>
+                  </>
+                )}
+              </p>
+            )}
           </div>
 
           <Button type="submit" className="w-full" disabled={loading}>

@@ -14,7 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Github, Mail, Loader2 } from 'lucide-react';
+import { Github, Mail, Loader2, Eye, EyeOff } from 'lucide-react';
 import { toast } from '@/lib/toast-utils';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
@@ -23,6 +23,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
   const { login } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -131,14 +132,25 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
                 Forgot Password?
               </Link>
             </div>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={loading}
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading}
+                className="pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2 transition-colors"
+                disabled={loading}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
           </div>
 
           <Button type="submit" className="mt-2 w-full" disabled={loading}>
@@ -159,7 +171,7 @@ export function LoginForm({ className, ...props }: React.ComponentProps<'div'>) 
 
       <CardFooter className="justify-center">
         <p className="text-muted-foreground text-sm">
-          Don&apos;t have an account?{' '}
+          Don&apos;t have an account?
           <Link to="/auth/register" className="text-primary font-medium hover:underline">
             Sign up
           </Link>
