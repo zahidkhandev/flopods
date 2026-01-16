@@ -590,6 +590,51 @@ export class DynamoDbService implements OnModuleInit {
   }
 
   /**
+   * Batch get items (alias for batchGet with better chunking)
+   */
+  async batchGetItems(tableName: string, keys: Record<string, any>[]): Promise<any[]> {
+    if (!this.isEnabled || !this.dynamoClient) {
+      this.logger.debug(`[DynamoDB LOG] Batch get ${keys.length} items from ${tableName}`);
+      return [];
+    }
+
+    if (keys.length === 0) return [];
+
+    // DynamoDB BatchGetItem has 100 item limit, chunk into batches
+    const chunks: Record<string, any>[][] = [];
+    for (let i = 0; i < keys.length; i += 100) {
+      chunks.push(keys.slice(i, i + 100));
+    }
+
+    try {
+      const results = await Promise.all(
+        chunks.map(async (chunk) => {
+          const command = new BatchGetItemCommand({
+            RequestItems: {
+              [tableName]: {
+                Keys: chunk.map((key) => marshall(key)),
+              },
+            },
+          });
+
+          const response = await this.dynamoClient!.send(command);
+          const items = response.Responses?.[tableName] || [];
+          return items.map((item) => unmarshall(item));
+        }),
+      );
+
+      const flatResults = results.flat();
+      this.logger.debug(
+        `Batch fetched ${flatResults.length}/${keys.length} items from ${tableName}`,
+      );
+      return flatResults;
+    } catch (error: any) {
+      this.logger.error('DynamoDB batch get items error:', error);
+      throw new InternalServerErrorException(`Failed to batch get items: ${error.message}`);
+    }
+  }
+
+  /**
    * Helper: Get all pods in a flow with their context
    */
   async queryPodsByFlow(flowId: string): Promise<Record<string, any>[]> {

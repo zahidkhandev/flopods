@@ -1,5 +1,4 @@
 /* eslint-disable react-refresh/only-export-components */
-// File: apps/frontend/src/pages/dashboard/flows/[id]/context/canvas-context.tsx
 import {
   createContext,
   useContext,
@@ -60,6 +59,11 @@ const CanvasContext = createContext<CanvasContextValue | null>(null);
 const MAX_HISTORY = 50;
 const AUTO_SAVE_DELAY = 60000;
 
+// Constants for Layout
+const NODE_WIDTH = 800; // Includes buffer
+const DEFAULT_LLM_HEIGHT = 1200; // Tall buffer for chat history
+const DEFAULT_SOURCE_HEIGHT = 600;
+
 const mapBackendTypeToFrontend = (backendType: string): string => {
   switch (backendType) {
     case 'TEXT_INPUT':
@@ -84,11 +88,10 @@ const mapBackendTypeToFrontend = (backendType: string): string => {
   }
 };
 
-// NEW: Inner component that has access to ReactFlow instance
 function CanvasProviderInner({ children }: { children: ReactNode }) {
   const { id: flowId } = useParams<{ id: string }>();
   const { currentWorkspaceId } = useWorkspaces();
-  const reactFlowInstance = useReactFlow(); // Access to viewport
+  const reactFlowInstance = useReactFlow();
 
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
@@ -147,6 +150,7 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
             type: 'animated',
             animated: true,
           }))
+          // Deduplicate edges
           .filter((edge: Edge, index: number, self: Edge[]) => {
             return (
               index ===
@@ -190,20 +194,17 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
     if (!changesToSave) return;
 
     const currentNodes = nodesRef.current;
-
-    // Capture current viewport BEFORE save
     const viewport = reactFlowInstance.getViewport();
 
     setIsSaving(true);
     try {
-      // Save all nodes with their current positions
       await Promise.all(
         currentNodes.map(async (node) => {
           if (!node.id.startsWith('temp-')) {
             await axiosInstance.patch(
               `/workspaces/${currentWorkspaceId}/flows/${flowId}/canvas/pods/${node.id}`,
               {
-                position: node.position, // Save exact position
+                position: node.position,
                 config: node.data.config,
                 label: node.data.label,
               }
@@ -212,7 +213,23 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
         })
       );
 
-      // Restore viewport immediately after save (prevents jumping)
+      const response = await axiosInstance.get(
+        `/workspaces/${currentWorkspaceId}/flows/${flowId}/canvas`
+      );
+      const canvas = response.data.data || response.data;
+
+      const syncedEdges: Edge[] = (canvas.edges || []).map((edge: any) => ({
+        id: edge.id,
+        source: edge.sourcePodId,
+        target: edge.targetPodId,
+        sourceHandle: edge.sourceHandle || null,
+        targetHandle: edge.targetHandle || null,
+        type: 'animated',
+        animated: true,
+      }));
+
+      setEdges(syncedEdges);
+
       setTimeout(() => {
         reactFlowInstance.setViewport(viewport, { duration: 0 });
       }, 0);
@@ -250,177 +267,88 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
     [currentIndex, save]
   );
 
-  // Auto-arrange nodes using Dagre layout algorithm
-  // Custom hierarchical layout algorithm
-  // Custom hierarchical layout algorithm with ACTUAL node dimensions
-  // Custom hierarchical layout algorithm with ACTUAL node dimensions
   const autoArrange = useCallback(async () => {
     if (nodes.length === 0) return;
 
     setIsArranging(true);
 
     try {
-      const HORIZONTAL_SPACING = 150;
-      const VERTICAL_SPACING = 80;
-      const DEFAULT_NODE_WIDTH = 280;
-      const DEFAULT_NODE_HEIGHT = 200;
+      const g = new dagre.graphlib.Graph();
 
-      // Get actual node dimensions from ReactFlow's internal store
-      const getNodeDimensions = (nodeId: string) => {
-        try {
-          // Try to get the actual DOM element dimensions
-          const nodeElement = document.querySelector(`[data-id="${nodeId}"]`);
-          if (nodeElement) {
-            const rect = nodeElement.getBoundingClientRect();
-            return {
-              width: rect.width || DEFAULT_NODE_WIDTH,
-              height: rect.height || DEFAULT_NODE_HEIGHT,
-            };
-          }
-        } catch (error) {
-          console.warn(`Could not get dimensions for node ${nodeId}`);
+      // 1. CONFIGURATION: MAXIMAL SPACING (Infinite Canvas)
+      g.setGraph({
+        rankdir: 'LR',
+
+        // Vertical gap between nodes in the same column.
+        // 500px ensures that even if a pod grows significantly, it won't hit the one below.
+        nodesep: 500,
+
+        // Horizontal gap (Length of the edges).
+        // 1500px gives you a very clean, wide view where connections are obvious.
+        ranksep: 1500,
+
+        align: 'UL',
+        marginx: 200,
+        marginy: 200,
+      });
+
+      g.setDefaultEdgeLabel(() => ({}));
+
+      // 2. DIMENSION CALCULATION: AGGRESSIVE SAFETY BUFFERS
+      nodes.forEach((node) => {
+        const nodeElement = document.querySelector(`[data-id="${node.id}"]`);
+
+        // Default "Safety" Dimensions if DOM is missing
+        let width = NODE_WIDTH;
+        let height =
+          node.data?.backendType === 'LLM_PROMPT' ? DEFAULT_LLM_HEIGHT : DEFAULT_SOURCE_HEIGHT;
+
+        if (nodeElement) {
+          const rect = nodeElement.getBoundingClientRect();
+          // If DOM is available, use it but ADD MASSIVE PADDING
+          if (rect.width > 0) width = rect.width + 100;
+          if (rect.height > 0) height = rect.height + 300; // Extra vertical buffer
         }
 
-        // Fallback to default dimensions
-        return { width: DEFAULT_NODE_WIDTH, height: DEFAULT_NODE_HEIGHT };
-      };
+        g.setNode(node.id, { width, height });
+      });
 
-      // Build adjacency list (who connects to whom)
-      const adjacencyList = new Map<string, string[]>();
-      nodes.forEach((node) => adjacencyList.set(node.id, []));
       edges.forEach((edge) => {
-        const targets = adjacencyList.get(edge.source) || [];
-        targets.push(edge.target);
-        adjacencyList.set(edge.source, targets);
+        g.setEdge(edge.source, edge.target);
       });
 
-      // Find root nodes (nodes with no incoming edges)
-      const hasIncoming = new Set<string>();
-      edges.forEach((edge) => hasIncoming.add(edge.target));
-      const roots = nodes.filter((node) => !hasIncoming.has(node.id));
+      dagre.layout(g);
 
-      // If no roots, use all nodes as roots (disconnected graph)
-      const startNodes = roots.length > 0 ? roots : nodes;
+      // 3. APPLY POSITIONS
+      const layoutedNodes = nodes.map((node) => {
+        const nodeWithPosition = g.node(node.id);
 
-      // BFS to assign levels (columns)
-      const levels = new Map<string, number>();
-      const visited = new Set<string>();
-      const queue: Array<{ id: string; level: number }> = [];
+        if (!nodeWithPosition) return node;
 
-      startNodes.forEach((node) => {
-        queue.push({ id: node.id, level: 0 });
-        visited.add(node.id);
+        // Convert Center (Dagre) -> Top-Left (ReactFlow)
+        return {
+          ...node,
+          position: {
+            x: nodeWithPosition.x - nodeWithPosition.width / 2,
+            y: nodeWithPosition.y - nodeWithPosition.height / 2,
+          },
+        };
       });
-
-      while (queue.length > 0) {
-        const { id, level } = queue.shift()!;
-        levels.set(id, level);
-
-        const children = adjacencyList.get(id) || [];
-        children.forEach((childId) => {
-          if (!visited.has(childId)) {
-            visited.add(childId);
-            queue.push({ id: childId, level: level + 1 });
-          }
-        });
-      }
-
-      // Handle disconnected nodes
-      nodes.forEach((node) => {
-        if (!levels.has(node.id)) {
-          levels.set(node.id, 0);
-        }
-      });
-
-      // Group nodes by level
-      const nodesByLevel = new Map<number, string[]>();
-      nodes.forEach((node) => {
-        const level = levels.get(node.id) || 0;
-        if (!nodesByLevel.has(level)) {
-          nodesByLevel.set(level, []);
-        }
-        nodesByLevel.get(level)!.push(node.id);
-      });
-
-      // Calculate X positions for each level based on max width of previous level
-      const levelXPositions = new Map<number, number>();
-      let currentX = 0;
-
-      Array.from(nodesByLevel.keys())
-        .sort((a, b) => a - b)
-        .forEach((level) => {
-          levelXPositions.set(level, currentX);
-
-          // Find max width in this level for next level's X position
-          const nodesInLevel = nodesByLevel.get(level) || [];
-          const maxWidth = Math.max(
-            ...nodesInLevel.map((nodeId) => getNodeDimensions(nodeId).width),
-            DEFAULT_NODE_WIDTH
-          );
-
-          currentX += maxWidth + HORIZONTAL_SPACING;
-        });
-
-      // Calculate positions with actual node heights
-      const positions = new Map<string, { x: number; y: number }>();
-
-      nodesByLevel.forEach((nodeIds, level) => {
-        const x = levelXPositions.get(level) || 0;
-
-        // Calculate total height needed for this column (with actual node heights)
-        let currentY = 0;
-        const nodeHeights: Array<{ id: string; height: number; y: number }> = [];
-
-        nodeIds.forEach((nodeId) => {
-          const { height } = getNodeDimensions(nodeId);
-          nodeHeights.push({ id: nodeId, height, y: currentY });
-          currentY += height + VERTICAL_SPACING;
-        });
-
-        // Total height of this column
-        const totalColumnHeight = currentY - VERTICAL_SPACING;
-
-        // Find the tallest column for centering
-        let maxColumnHeight = totalColumnHeight;
-        nodesByLevel.forEach((ids, lvl) => {
-          if (lvl !== level) {
-            let colHeight = 0;
-            ids.forEach((id) => {
-              colHeight += getNodeDimensions(id).height + VERTICAL_SPACING;
-            });
-            maxColumnHeight = Math.max(maxColumnHeight, colHeight - VERTICAL_SPACING);
-          }
-        });
-
-        // Center this column vertically
-        const offsetY = (maxColumnHeight - totalColumnHeight) / 2;
-
-        // Set positions
-        nodeHeights.forEach(({ id, y }) => {
-          positions.set(id, { x, y: y + offsetY });
-        });
-      });
-
-      // Apply positions to nodes
-      const layoutedNodes = nodes.map((node) => ({
-        ...node,
-        position: positions.get(node.id) || node.position,
-      }));
 
       setNodes(layoutedNodes);
       saveToHistory(layoutedNodes, edges);
 
-      // Fit view after layout with slight delay to ensure positions are applied
+      // 4. ZOOM OUT TO FIT THE HUGE GRAPH
       setTimeout(() => {
         reactFlowInstance.fitView({
-          padding: 0.2,
-          duration: 400,
-          minZoom: 0.1,
+          padding: 0.5,
+          duration: 1000,
+          minZoom: 0.01, // Allow zooming way, way out
           maxZoom: 1,
         });
-      }, 50);
+      }, 100);
 
-      toast.success('Nodes arranged');
+      toast.success('Flow auto-arranged with spacious layout');
     } catch (error) {
       console.error('Failed to auto-arrange:', error);
       toast.error('Failed to arrange nodes');
@@ -429,6 +357,7 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
     }
   }, [nodes, edges, reactFlowInstance, saveToHistory]);
 
+  // Undo/Redo/Changes Logic ...
   const undo = useCallback(() => {
     if (currentIndex > 0) {
       isUndoRedoRef.current = true;
@@ -461,7 +390,6 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
     (changes: NodeChange[]) => {
       setNodes((nds) => {
         const newNodes = applyNodeChanges(changes, nds);
-
         if (changes.some((c) => c.type !== 'select')) {
           saveToHistory(newNodes, edgesRef.current);
         }
@@ -496,7 +424,6 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
 
       try {
         const backendType = node.data?.backendType || 'TEXT_INPUT';
-
         const response = await axiosInstance.post(
           `/workspaces/${currentWorkspaceId}/flows/${flowId}/canvas/pods`,
           {
@@ -509,7 +436,6 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
         );
 
         const createdPod = response.data.data || response.data;
-
         const newNode: Node = {
           id: createdPod.id,
           type: node.type!,
@@ -530,7 +456,6 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
           return newNodes;
         });
         toast.success('Pod created');
-
         return createdPod.id;
       } catch (error) {
         console.error('Failed to create pod:', error);
@@ -544,22 +469,18 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
   const deleteNode = useCallback(
     async (nodeId: string) => {
       if (!flowId || !currentWorkspaceId) return;
-
       const originalNodes = nodesRef.current;
       const originalEdges = edgesRef.current;
 
       try {
         const newNodes = originalNodes.filter((n) => n.id !== nodeId);
         const newEdges = originalEdges.filter((e) => e.source !== nodeId && e.target !== nodeId);
-
         setNodes(newNodes);
         setEdges(newEdges);
         saveToHistory(newNodes, newEdges);
-
         await axiosInstance.delete(
           `/workspaces/${currentWorkspaceId}/flows/${flowId}/canvas/pods/${nodeId}`
         );
-
         toast.success('Pod deleted');
       } catch (error) {
         console.error('Failed to delete pod:', error);
@@ -575,17 +496,16 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
     async (edge: Partial<Edge>) => {
       if (!flowId || !currentWorkspaceId || !edge.source || !edge.target) return;
 
-      // Check if edge already exists (prevent duplicates)
-      const existingEdge = edgesRef.current.find(
+      const connectionExists = edgesRef.current.some(
         (e) =>
           e.source === edge.source &&
           e.target === edge.target &&
-          e.sourceHandle === edge.sourceHandle &&
-          e.targetHandle === edge.targetHandle
+          (e.sourceHandle || null) === (edge.sourceHandle || null) &&
+          (e.targetHandle || null) === (edge.targetHandle || null)
       );
 
-      if (existingEdge) {
-        console.log('Edge already exists, skipping');
+      if (connectionExists) {
+        console.log('Edge connection already exists, skipping creation');
         return;
       }
 
@@ -600,9 +520,6 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
         animated: true,
       };
 
-      console.log('Adding temp edge:', tempId);
-
-      // Optimistically add temp edge to UI
       setEdges((prev) => [...prev, tempEdge]);
 
       try {
@@ -619,14 +536,18 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
         );
 
         const backendEdge = response.data.data || response.data;
-        console.log('Backend edge created:', backendEdge.id);
 
-        // Replace temp edge with real edge from backend
         setEdges((prev) => {
-          // Filter out the temp edge
-          const withoutTemp = prev.filter((e) => e.id !== tempId);
+          const cleanEdges = prev.filter((e) => {
+            const isTempId = e.id === tempId;
+            const isSameConnection =
+              e.source === backendEdge.sourcePodId &&
+              e.target === backendEdge.targetPodId &&
+              (e.sourceHandle || null) === (backendEdge.sourceHandle || null) &&
+              (e.targetHandle || null) === (backendEdge.targetHandle || null);
+            return !isTempId && !isSameConnection;
+          });
 
-          // Add the real edge
           const realEdge: Edge = {
             id: backendEdge.id,
             source: backendEdge.sourcePodId,
@@ -637,18 +558,12 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
             animated: true,
           };
 
-          const newEdges = [...withoutTemp, realEdge];
-
-          console.log('Final edges count:', newEdges.length);
-
-          // Only save to history AFTER backend confirms
+          const newEdges = [...cleanEdges, realEdge];
           saveToHistory(nodesRef.current, newEdges);
-
           return newEdges;
         });
       } catch (error) {
         console.error('Failed to create edge:', error);
-        // Remove temp edge on error
         setEdges((prev) => prev.filter((e) => e.id !== tempId));
         toast.error('Failed to create connection');
       }
@@ -659,14 +574,11 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
   const deleteEdge = useCallback(
     async (edgeId: string) => {
       if (!flowId || !currentWorkspaceId) return;
-
       const originalEdges = edgesRef.current;
-
       try {
         const newEdges = originalEdges.filter((e) => e.id !== edgeId);
         setEdges(newEdges);
         saveToHistory(nodesRef.current, newEdges);
-
         await axiosInstance.delete(
           `/workspaces/${currentWorkspaceId}/flows/${flowId}/canvas/edges/${edgeId}`
         );
@@ -682,7 +594,6 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
   const updateNodeData = useCallback(
     async (nodeId: string, data: any) => {
       const originalNodes = nodesRef.current;
-
       try {
         const newNodes = originalNodes.map((node) =>
           node.id === nodeId ? { ...node, data: { ...node.data, ...data } } : node
@@ -710,7 +621,6 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
         save();
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [undo, redo, save]);
@@ -751,7 +661,6 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
   return <CanvasContext.Provider value={value}>{children}</CanvasContext.Provider>;
 }
 
-// Wrapper that provides ReactFlow context first
 export function CanvasProvider({ children }: { children: ReactNode }) {
   return <CanvasProviderInner>{children}</CanvasProviderInner>;
 }

@@ -9,7 +9,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   constructor() {
     const connectionString = process.env.DATABASE_URL;
     const statementTimeoutMs = Number(process.env.PRISMA_STATEMENT_TIMEOUT_MS ?? '30000');
-    const idleInTransactionTimeoutMs = Number(process.env.PRISMA_IDLE_TRANSACTION_TIMEOUT_MS ?? '30000');
+    const idleInTransactionTimeoutMs = Number(
+      process.env.PRISMA_IDLE_TRANSACTION_TIMEOUT_MS ?? '30000',
+    );
     const queryTimeoutMs = Number(process.env.PRISMA_QUERY_TIMEOUT_MS ?? '30000');
 
     const adapter = new PrismaPg({
@@ -21,7 +23,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
     super({
       adapter,
-      log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+      // log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
     });
   }
 

@@ -179,9 +179,18 @@ export class V1ExecutionService {
       let systemPrompt = params.systemPrompt ?? this.DEFAULT_SYSTEM_PROMPTS.general;
 
       // Add upstream pod context FIRST (lower priority in context window)
-      if (Object.keys(contextChain.variables).length > 0) {
+      if (contextChain.variables['SYSTEM_CONTEXT_STRING']) {
+        // Use the new hierarchical format with priority markers
+        systemPrompt += '\n\n' + contextChain.variables['SYSTEM_CONTEXT_STRING'];
+
+        this.logger.debug(
+          `Added hierarchical context from ${Object.keys(contextChain.variables).length - 1} upstream pods to system prompt`,
+        );
+      } else if (Object.keys(contextChain.variables).length > 0) {
+        // Fallback to old format if SYSTEM_CONTEXT_STRING doesn't exist
         const upstreamContextSection = '\n\n## Context from Connected Upstream Pods:\n\n';
         const upstreamContextDetails = Object.entries(contextChain.variables)
+          .filter(([pid]) => pid !== 'SYSTEM_CONTEXT_STRING')
           .map(([pid, content]) => `**Upstream Pod ${pid}:**\n${content}`)
           .join('\n\n');
         systemPrompt += upstreamContextSection + upstreamContextDetails;

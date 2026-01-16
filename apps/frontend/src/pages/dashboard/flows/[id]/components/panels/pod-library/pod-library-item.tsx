@@ -43,7 +43,7 @@ export default memo(function PodLibraryItem({
         'cursor-grab p-3 active:cursor-grabbing',
         'transition-all duration-200',
         'hover:bg-card/80 hover:border-primary/30',
-        'hover:shadow-[0_0_20px_oklch(0.606_0.25_292.717_/_0.1)]'
+        'hover:shadow-[0_0_20px_oklch(0.606_0.25_292.717/0.1)]'
       )}
     >
       <div className="flex items-start gap-3">

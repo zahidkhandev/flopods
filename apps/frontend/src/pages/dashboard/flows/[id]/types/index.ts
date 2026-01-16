@@ -87,6 +87,9 @@ export interface PodData {
 
 export interface LLMPodData extends PodData {
   config: LLMPodConfig;
+  messages?: Message[];
+  streamingContent?: string;
+  isExecuting?: boolean;
 }
 
 export interface SourcePodData extends PodData {

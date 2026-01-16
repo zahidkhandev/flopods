@@ -1,5 +1,5 @@
 import { memo, useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Node, NodeProps } from 'reactflow';
+import { NodeProps } from 'reactflow';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import hljs from 'highlight.js';
@@ -75,12 +75,10 @@ function CodeBlock({ language, children }: { language?: string; children: string
   useEffect(() => {
     if (codeRef.current) {
       codeRef.current.removeAttribute('data-highlighted');
-
       const sanitized = DOMPurify.sanitize(children, {
         ALLOWED_TAGS: [],
         ALLOWED_ATTR: [],
       });
-
       codeRef.current.textContent = sanitized;
       hljs.highlightElement(codeRef.current);
     }
@@ -100,7 +98,7 @@ function CodeBlock({ language, children }: { language?: string; children: string
           {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
         </Button>
       </div>
-      <pre className="border-border/50 !m-0 w-full overflow-x-auto rounded-lg border bg-zinc-100 !p-4 dark:bg-zinc-900">
+      <pre className="border-border/50 m-0! w-full overflow-x-auto rounded-lg border bg-zinc-100 p-4! dark:bg-zinc-900">
         <code
           ref={codeRef}
           className={language ? `language-${language}` : ''}
@@ -141,13 +139,69 @@ export default memo(function LLMPodNode({
   const [maxTokens, setMaxTokens] = useState<number | undefined>(undefined);
 
   const [userPrompt, setUserPrompt] = useState('');
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(data.messages || []);
   const [isExecuting, setIsExecuting] = useState(false);
   const [selectedText, setSelectedText] = useState<string>('');
   const [selectionPosition, setSelectionPosition] = useState<{ x: number; y: number } | null>(null);
   const [streamingContent, setStreamingContent] = useState('');
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
+
+  // Track loaded executions to avoid duplicates
+  const loadedExecutionIds = useRef<Set<string>>(new Set());
+
+  // Refs for State Sync (To avoid dependency loops)
+  const messagesRef = useRef(messages);
+  const isExecutingRef = useRef(isExecuting);
+
+  // Keep refs updated
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+  useEffect(() => {
+    isExecutingRef.current = isExecuting;
+  }, [isExecuting]);
+
+  // --- SYNC 1: Local State -> Node Data (Push to Drawer) ---
+  useEffect(() => {
+    updateNodeData(nodeId, {
+      messages,
+      streamingContent,
+      isExecuting,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, streamingContent, isExecuting]);
+
+  // --- SYNC 2: Node Data -> Local State (Pull from Drawer) ---
+  useEffect(() => {
+    // 1. Sync Messages
+    if (data.messages && Array.isArray(data.messages)) {
+      const current = messagesRef.current;
+      // Simple equality check to prevent loops
+      if (JSON.stringify(data.messages) !== JSON.stringify(current)) {
+        setMessages(data.messages);
+
+        // [Diagram: State Synchronization Flow]
+        //
+
+        // Important: Update loaded IDs so we don't re-fetch history for these
+        data.messages.forEach((m: Message) => {
+          if (m.executionId) loadedExecutionIds.current.add(m.executionId);
+        });
+      }
+    }
+
+    // 2. Sync Execution Status
+    if (data.isExecuting !== undefined && data.isExecuting !== isExecutingRef.current) {
+      setIsExecuting(data.isExecuting);
+    }
+
+    // 3. Sync Stream
+    if (data.streamingContent !== undefined && data.streamingContent !== streamingContent) {
+      setStreamingContent(data.streamingContent);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.messages, data.isExecuting, data.streamingContent]);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -160,29 +214,49 @@ export default memo(function LLMPodNode({
     onToken: (token) => {
       setStreamingContent((prev) => prev + token);
     },
-    onStart: (_executionId) => {
+    // FIX 1: Lock the ID immediately when execution starts
+    onStart: (executionId) => {
       setStreamingContent('');
+      loadedExecutionIds.current.add(executionId);
+
+      // FIX 2: Attach the execution ID to the pending user message immediately
+      setMessages((prev) => {
+        const newHistory = [...prev];
+        for (let i = newHistory.length - 1; i >= 0; i--) {
+          if (newHistory[i].role === 'user' && !newHistory[i].executionId) {
+            newHistory[i] = { ...newHistory[i], executionId };
+            break;
+          }
+        }
+        return newHistory;
+      });
     },
     onComplete: ({ content, metadata, executionId }) => {
-      const assistantMessage: Message = {
-        role: 'assistant',
-        content,
-        timestamp: new Date(),
-        executionId,
-        metadata: {
-          runtime: metadata.runtime,
-          tokens: metadata.tokens,
-          cost: metadata.cost,
-          inputTokens: metadata.inputTokens,
-          outputTokens: metadata.outputTokens,
-        },
-      };
+      // FIX 3: Ensure we don't add duplicate assistant messages
+      setMessages((prev) => {
+        if (prev.some((m) => m.executionId === executionId && m.role === 'assistant')) {
+          return prev;
+        }
 
-      setMessages((prev) => [...prev, assistantMessage]);
+        const assistantMessage: Message = {
+          role: 'assistant',
+          content,
+          timestamp: new Date(),
+          executionId,
+          metadata: {
+            runtime: metadata.runtime,
+            tokens: metadata.tokens,
+            cost: metadata.cost,
+            inputTokens: metadata.inputTokens,
+            outputTokens: metadata.outputTokens,
+          },
+        };
+        return [...prev, assistantMessage];
+      });
+
       setStreamingContent('');
       setIsExecuting(false);
-
-      refetchExecutions().then(() => {});
+      refetchExecutions();
     },
     onError: (error) => {
       const errorMsg: Message = {
@@ -212,28 +286,37 @@ export default memo(function LLMPodNode({
     return messages;
   }, [messages, streamingContent]);
 
-  // Get the actual scrollable viewport inside ScrollArea
   const getScrollContainer = useCallback(() => {
     return chatContainerRef.current?.querySelector(
       '[data-radix-scroll-area-viewport]'
     ) as HTMLDivElement;
   }, []);
 
-  // Load ALL execution history into continuous conversation
-  const loadAllExecutionHistory = useCallback(async () => {
-    if (!executionHistory || executionHistory.length === 0 || !currentWorkspaceId) return;
+  // --- SYNC EXECUTION HISTORY (Optimized for Race Conditions) ---
+  useEffect(() => {
+    if (!executionHistory || !currentWorkspaceId) return;
 
-    setIsLoadingHistory(true);
+    // Only process executions we haven't touched yet
+    const newExecutions = executionHistory.filter(
+      (exec) => !loadedExecutionIds.current.has(exec.id) && exec.status === 'COMPLETED'
+    );
 
-    try {
-      const allMessages: Message[] = [];
+    if (newExecutions.length === 0) return;
 
-      for (const exec of [...executionHistory].reverse()) {
+    const fetchNewMessages = async () => {
+      const messagesToAdd: Message[] = [];
+
+      for (const exec of [...newExecutions].reverse()) {
         try {
+          // Double-check inside loop to handle race conditions
+          if (loadedExecutionIds.current.has(exec.id)) continue;
+
+          // Lock immediately
+          loadedExecutionIds.current.add(exec.id);
+
           const response = await axiosInstance.get(
             `/workspaces/${currentWorkspaceId}/executions/${exec.id}`
           );
-
           const execution = response.data.data || response.data;
 
           const assistantContent =
@@ -244,15 +327,16 @@ export default memo(function LLMPodNode({
           const userInput = execution.requestMetadata?.userInput || '';
 
           if (userInput) {
-            allMessages.push({
+            messagesToAdd.push({
               role: 'user',
               content: userInput,
               timestamp: execution.startedAt ? new Date(execution.startedAt) : new Date(),
+              executionId: exec.id,
             });
           }
 
           if (assistantContent) {
-            allMessages.push({
+            messagesToAdd.push({
               role: 'assistant',
               content: assistantContent,
               timestamp: execution.finishedAt ? new Date(execution.finishedAt) : new Date(),
@@ -267,47 +351,86 @@ export default memo(function LLMPodNode({
           }
         } catch (error) {
           console.error(`Failed to load execution ${exec.id}`, error);
+          loadedExecutionIds.current.delete(exec.id);
         }
       }
 
-      setMessages(allMessages);
-    } catch (error) {
-      console.error('Failed to load conversation history', error);
-      toast.error('Failed to load conversation history');
-    } finally {
-      setIsLoadingHistory(false);
-    }
+      if (messagesToAdd.length > 0) {
+        setMessages((prev) => {
+          // FIX 4: Aggressive filtering
+          // Filter out ANY message where the executionId already exists in our state
+          const uniqueIncoming = messagesToAdd.filter(
+            (newMsg) =>
+              !prev.some(
+                (existing) =>
+                  existing.executionId === newMsg.executionId && existing.role === newMsg.role
+              )
+          );
+
+          if (uniqueIncoming.length === 0) return prev;
+
+          // Merge logic to prevent double users
+          let mergedPrev = [...prev];
+          const lastMsg = mergedPrev[mergedPrev.length - 1];
+          const incomingUserMsg = uniqueIncoming.find((m) => m.role === 'user');
+
+          if (
+            lastMsg &&
+            lastMsg.role === 'user' &&
+            !lastMsg.executionId &&
+            incomingUserMsg &&
+            lastMsg.content === incomingUserMsg.content
+          ) {
+            mergedPrev.pop();
+          }
+
+          const combined = [...mergedPrev, ...uniqueIncoming].sort(
+            (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+          );
+
+          return combined;
+        });
+
+        setTimeout(scrollToBottom, 100);
+      }
+    };
+
+    fetchNewMessages();
   }, [executionHistory, currentWorkspaceId]);
 
-  // Auto-load ALL history on mount
+  // Initial load logic
   useEffect(() => {
-    if (executionHistory && executionHistory.length > 0 && messages.length === 0) {
-      loadAllExecutionHistory();
+    if (
+      executionHistory &&
+      executionHistory.length > 0 &&
+      messages.length === 0 &&
+      !isLoadingHistory
+    ) {
+      setIsLoadingHistory(true);
+      setTimeout(() => setIsLoadingHistory(false), 1000);
     }
-  }, [executionHistory, messages.length, loadAllExecutionHistory]);
+  }, [executionHistory?.length]);
 
-  // Auto-scroll to bottom + detect manual scroll (FIXED for ScrollArea)
   useEffect(() => {
     const viewport = getScrollContainer();
     if (!viewport) return;
 
-    // Force scroll to bottom
-    const scrollToBottom = () => {
-      viewport.scrollTop = viewport.scrollHeight;
-    };
+    const isAtBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 150;
 
-    // Small delay to ensure DOM is ready
-    setTimeout(scrollToBottom, 50);
+    if (isAtBottom || messages[messages.length - 1]?.role === 'user') {
+      setTimeout(() => {
+        viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
+      }, 100);
+    }
 
-    // Detect if user scrolled up
     const handleScroll = () => {
-      const isAtBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 100;
-      setShowScrollButton(!isAtBottom);
+      const atBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 100;
+      setShowScrollButton(!atBottom);
     };
 
     viewport.addEventListener('scroll', handleScroll);
     return () => viewport.removeEventListener('scroll', handleScroll);
-  }, [displayMessages, getScrollContainer]);
+  }, [messages.length, streamingContent, getScrollContainer]);
 
   useEffect(() => {
     const handleSelection = () => {
@@ -466,11 +589,11 @@ export default memo(function LLMPodNode({
       const newNodePosition = { x: xPos + 550, y: yPos };
 
       try {
-        const newNodeData: Partial<Node> = {
-          type: 'SOURCE', // CHANGED from 'SourceInput' to 'SOURCE' to match nodeTypes
+        const newNodeData: any = {
+          type: 'SOURCE',
           position: newNodePosition,
           data: {
-            label: 'Source', // Changed from 'Response Source' to just 'Source'
+            label: 'Source',
             config: {
               sourceType: 'text',
               content: content,
@@ -513,7 +636,7 @@ export default memo(function LLMPodNode({
     };
 
     try {
-      const newNodeData: Partial<Node> = {
+      const newNodeData: any = {
         type: 'LLM',
         position: newNodePosition,
         data: {
@@ -557,7 +680,7 @@ export default memo(function LLMPodNode({
     };
 
     try {
-      const newNodeData: Partial<Node> = {
+      const newNodeData: any = {
         type: 'LLM',
         position: newNodePosition,
         data: {
@@ -626,7 +749,7 @@ export default memo(function LLMPodNode({
     <>
       {selectedText && selectionPosition && (
         <div
-          className="pointer-events-none absolute z-[9999]"
+          className="pointer-events-none absolute z-9999"
           style={{
             left: `${selectionPosition.x}px`,
             top: `${selectionPosition.y}px`,
@@ -645,6 +768,7 @@ export default memo(function LLMPodNode({
       )}
 
       <BasePodNode
+        id={nodeId}
         title={customHeader}
         icon={<Sparkles className="h-5 w-5" />}
         status={data.executionStatus}
@@ -653,8 +777,8 @@ export default memo(function LLMPodNode({
       >
         <div className="border-border/50 -mx-4 -mb-4 flex min-w-0 flex-col border-t">
           <div className="relative" ref={chatContainerRef}>
-            <ScrollArea className="nodrag nowheel h-[500px] px-4 pt-4">
-              {isLoadingHistory ? (
+            <ScrollArea className="nodrag nowheel h-125 px-4 pt-4">
+              {isLoadingHistory && messages.length === 0 ? (
                 <div className="flex h-full items-center justify-center">
                   <div className="text-muted-foreground flex flex-col items-center gap-3">
                     <Loader2 className="h-8 w-8 animate-spin" />
@@ -690,7 +814,7 @@ export default memo(function LLMPodNode({
                         )}
                       >
                         <div
-                          className="prose prose-sm dark:prose-invert max-w-full min-w-0 select-text [&_code]:max-w-full [&_pre]:max-w-full [&>*]:max-w-full"
+                          className="prose prose-sm dark:prose-invert max-w-full min-w-0 select-text *:max-w-full"
                           style={{
                             fontSize: '15px',
                             lineHeight: '1.8',
@@ -704,7 +828,6 @@ export default memo(function LLMPodNode({
                               code({ inline, className, children, ...props }: any) {
                                 const match = /language-(\w+)/.exec(className || '');
                                 const codeString = String(children).replace(/\n$/, '');
-
                                 return !inline && match ? (
                                   <CodeBlock language={match[1]}>{codeString}</CodeBlock>
                                 ) : (
@@ -723,7 +846,7 @@ export default memo(function LLMPodNode({
                               },
                               p: ({ children }) => (
                                 <p
-                                  className="mb-4 max-w-full break-words last:mb-0"
+                                  className="mb-4 max-w-full wrap-break-word last:mb-0"
                                   style={{
                                     lineHeight: '1.8',
                                     wordBreak: 'break-word',
@@ -761,7 +884,6 @@ export default memo(function LLMPodNode({
                           (message.metadata || !message.content.includes('⚠️')) &&
                           !message.isStreaming && (
                             <div className="border-border/30 text-muted-foreground mt-3 flex items-center justify-between gap-3 border-t pt-2 text-xs">
-                              {/* LEFT SIDE: Token stats */}
                               <div className="flex items-center gap-3">
                                 {message.metadata?.runtime && (
                                   <div className="flex items-center gap-1.5">
@@ -786,55 +908,48 @@ export default memo(function LLMPodNode({
                                 )}
                               </div>
 
-                              {/* RIGHT SIDE: Always visible action icons */}
-                              {!message.content.includes('⚠️') && (
-                                <div className="flex items-center gap-1">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 p-0"
-                                    onClick={() => handleCopyResponse(message.content)}
-                                    title="Copy response"
-                                  >
-                                    <Copy className="h-3 w-3" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 w-6 p-0"
-                                    onClick={() => handleDownloadMarkdown(message.content, index)}
-                                    title="Download as Markdown"
-                                  >
-                                    <Download className="h-3 w-3" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-6 gap-1 px-1.5 text-[10px]"
-                                    onClick={() => handleCreateSource(message.content)}
-                                    title="Create source node"
-                                  >
-                                    <FileText className="h-3 w-3" />
-                                    <ArrowRight className="h-2.5 w-2.5" />
-                                  </Button>
-                                </div>
-                              )}
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                  onClick={() => handleCopyResponse(message.content)}
+                                  title="Copy response"
+                                >
+                                  <Copy className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                  onClick={() => handleDownloadMarkdown(message.content, index)}
+                                  title="Download as Markdown"
+                                >
+                                  <Download className="h-3 w-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 gap-1 px-1.5 text-[10px]"
+                                  onClick={() => handleCreateSource(message.content)}
+                                  title="Create source node"
+                                >
+                                  <FileText className="h-3 w-3" />
+                                  <ArrowRight className="h-2.5 w-2.5" />
+                                </Button>
+                              </div>
                             </div>
                           )}
                       </div>
-
                       <span className="text-muted-foreground text-xs">
                         {message.timestamp.toLocaleTimeString()}
                       </span>
                     </div>
                   ))}
-
                   <div ref={chatEndRef} />
                 </div>
               )}
             </ScrollArea>
-
-            {/* Scroll to bottom button */}
             {showScrollButton && (
               <Button
                 onClick={scrollToBottom}
@@ -856,12 +971,15 @@ export default memo(function LLMPodNode({
                   setUserPrompt(e.target.value);
                   if (textareaRef.current) {
                     textareaRef.current.style.height = 'auto';
-                    textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+                    textareaRef.current.style.height = `${Math.min(
+                      textareaRef.current.scrollHeight,
+                      200
+                    )}px`;
                   }
                 }}
                 onKeyDown={handleKeyDown}
                 placeholder="Ask anything... (⌘+Enter)"
-                className="max-h-[200px] min-h-[90px] resize-none overflow-y-auto text-sm"
+                className="max-h-50 min-h-22.5 resize-none overflow-y-auto text-sm"
                 disabled={isExecuting}
                 style={{ height: '90px' }}
               />
@@ -873,7 +991,7 @@ export default memo(function LLMPodNode({
                 onValueChange={handleProviderChange}
                 disabled={modelsLoading}
               >
-                <SelectTrigger className="h-7 w-[100px] text-[10px]">
+                <SelectTrigger className="h-7 w-25 text-[10px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

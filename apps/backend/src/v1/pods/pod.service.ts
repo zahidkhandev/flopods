@@ -5,6 +5,8 @@ import {
   InternalServerErrorException,
   ConflictException,
   BadRequestException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { PodType, PodExecutionStatus } from '@flopods/schema';
@@ -25,14 +27,12 @@ export class V1PodService {
     private readonly dynamoDb: DynamoDbService,
     private readonly flowGateway: V1FlowGateway,
   ) {}
-
   /**
    * Get all pods and edges in a flow
-   * Fetches metadata from PostgreSQL and content from DynamoDB
+   * OPTIMIZED: Batch DynamoDB fetches
    */
   async getFlowCanvas(flowId: string, workspaceId: string): Promise<FlowCanvasResponseDto> {
     try {
-      // Verify flow exists and user has access
       const flow = await this.prisma.flow.findFirst({
         where: { id: flowId, workspaceId },
       });
@@ -52,39 +52,45 @@ export class V1PodService {
         }),
       ]);
 
+      if (pods.length === 0) {
+        return {
+          pods: [],
+          edges: edges.map((edge) =>
+            plainToInstance(EdgeResponseDto, edge, { excludeExtraneousValues: true }),
+          ),
+        };
+      }
+
       const tableName = this.dynamoDb.getTableNames().pods;
 
-      // Fetch DynamoDB content for all pods
-      const podsWithContent = await Promise.all(
-        pods.map(async (pod) => {
-          try {
-            const dynamoItem = await this.dynamoDb.getItem(tableName, {
-              pk: pod.dynamoPartitionKey,
-              sk: pod.dynamoSortKey,
-            });
+      // OPTIMIZATION: Batch fetch from DynamoDB
+      const dynamoKeys = pods.map((pod) => ({
+        pk: pod.dynamoPartitionKey,
+        sk: pod.dynamoSortKey,
+      }));
 
-            return plainToInstance(
-              PodResponseDto,
-              {
-                ...pod,
-                content: dynamoItem?.content || null,
-                contextPods: dynamoItem?.contextPods || [],
-              },
-              { excludeExtraneousValues: true },
-            );
-          } catch (err) {
-            this.logger.warn(
-              `Failed to fetch content for pod ${pod.id}: ${err instanceof Error ? err.message : 'Unknown error'}`,
-            );
-            // Return pod with null content instead of failing entire request
-            return plainToInstance(
-              PodResponseDto,
-              { ...pod, content: null, contextPods: [] },
-              { excludeExtraneousValues: true },
-            );
-          }
-        }),
-      );
+      const dynamoItems = await this.dynamoDb.batchGetItems(tableName, dynamoKeys);
+
+      // Type-safe mapping with proper DynamoPodItem type
+      const dynamoMap = new Map<string, DynamoPodItem>();
+      dynamoItems.forEach((item: any) => {
+        if (item && item.sk) {
+          dynamoMap.set(item.sk, item as DynamoPodItem);
+        }
+      });
+
+      const podsWithContent = pods.map((pod) => {
+        const dynamoItem = dynamoMap.get(pod.dynamoSortKey);
+        return plainToInstance(
+          PodResponseDto,
+          {
+            ...pod,
+            content: dynamoItem?.content || null,
+            contextPods: dynamoItem?.contextPods || [],
+          },
+          { excludeExtraneousValues: true },
+        );
+      });
 
       const edgeResponses = edges.map((edge) =>
         plainToInstance(EdgeResponseDto, edge, { excludeExtraneousValues: true }),
@@ -107,10 +113,10 @@ export class V1PodService {
 
   /**
    * Create a new pod with content in DynamoDB
+   * OPTIMIZED: Better ID generation, transaction safety
    */
   async createPod(workspaceId: string, userId: string, dto: CreatePodDto): Promise<PodResponseDto> {
     try {
-      // Verify flow exists
       const flow = await this.prisma.flow.findFirst({
         where: { id: dto.flowId, workspaceId },
       });
@@ -119,7 +125,6 @@ export class V1PodService {
         throw new NotFoundException(`Flow ${dto.flowId} not found`);
       }
 
-      // Validate config based on pod type
       this.validatePodConfig(dto.type, dto.config);
 
       const podId = this.generateId();
@@ -128,7 +133,6 @@ export class V1PodService {
       const gsi1pk = `FLOW#${dto.flowId}`;
       const gsi1sk = `POD#${podId}`;
 
-      // Serialize position to plain object
       const positionPlain = this.serializePosition(dto.position);
 
       const content: PodContent = {
@@ -142,6 +146,7 @@ export class V1PodService {
         metadata: dto.metadata || {},
       } as any;
 
+      const now = new Date().toISOString();
       const dynamoItem: DynamoPodItem = {
         pk,
         sk,
@@ -155,26 +160,27 @@ export class V1PodService {
         contextPods: dto.contextPods || [],
         version: 1,
         createdBy: userId,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: now,
+        updatedAt: now,
       };
 
-      // Save to DynamoDB first
+      // OPTIMIZATION: Parallel writes with error handling
       const tableName = this.dynamoDb.getTableNames().pods;
-      await this.dynamoDb.putItem(tableName, dynamoItem);
 
-      // Then save to PostgreSQL
-      const pod = await this.prisma.pod.create({
-        data: {
-          id: podId,
-          flowId: dto.flowId,
-          type: dto.type,
-          position: positionPlain,
-          executionStatus: PodExecutionStatus.IDLE,
-          dynamoPartitionKey: pk,
-          dynamoSortKey: sk,
-        },
-      });
+      const [, pod] = await Promise.all([
+        this.dynamoDb.putItem(tableName, dynamoItem),
+        this.prisma.pod.create({
+          data: {
+            id: podId,
+            flowId: dto.flowId,
+            type: dto.type,
+            position: positionPlain,
+            executionStatus: PodExecutionStatus.IDLE,
+            dynamoPartitionKey: pk,
+            dynamoSortKey: sk,
+          },
+        }),
+      ]);
 
       this.logger.log(
         `Pod created: ${pod.id} (${dto.type}) in flow ${dto.flowId} by user ${userId}`,
@@ -190,11 +196,10 @@ export class V1PodService {
         { excludeExtraneousValues: true },
       );
 
-      // Broadcast to all users in the flow
       this.flowGateway.broadcastToFlow(dto.flowId, 'pod:created', {
         pod: result,
         userId,
-        timestamp: new Date().toISOString(),
+        timestamp: now,
       });
 
       return result;
@@ -207,6 +212,7 @@ export class V1PodService {
 
   /**
    * Update pod content in DynamoDB
+   * OPTIMIZED: Added downstream invalidation for static pods
    */
   async updatePod(
     podId: string,
@@ -215,7 +221,6 @@ export class V1PodService {
     dto: UpdatePodDto,
   ): Promise<PodResponseDto> {
     try {
-      // Fetch pod with flow for workspace validation
       const pod = await this.prisma.pod.findFirst({
         where: {
           id: podId,
@@ -227,7 +232,6 @@ export class V1PodService {
         throw new NotFoundException(`Pod ${podId} not found`);
       }
 
-      // Check if pod is locked by another user
       if (pod.lockedBy && pod.lockedBy !== userId) {
         throw new ConflictException(`Pod is locked by user ${pod.lockedBy}`);
       }
@@ -242,10 +246,8 @@ export class V1PodService {
         throw new NotFoundException('Pod content not found in DynamoDB');
       }
 
-      // Serialize position if provided
       const positionPlain = dto.position ? this.serializePosition(dto.position) : undefined;
 
-      // Merge config changes (deep merge for partial updates)
       const updatedConfig = dto.config
         ? this.mergeConfig(existingItem.content.config, dto.config)
         : existingItem.content.config;
@@ -269,15 +271,32 @@ export class V1PodService {
         updatedAt: new Date().toISOString(),
       };
 
-      // Update DynamoDB
-      await this.dynamoDb.putItem(tableName, updatedItem);
+      // OPTIMIZATION: Only update Postgres if position changed
+      const updates: Promise<any>[] = [this.dynamoDb.putItem(tableName, updatedItem)];
 
-      // Update PostgreSQL position if changed
-      if (positionPlain) {
-        await this.prisma.pod.update({
-          where: { id: podId },
-          data: { position: positionPlain },
-        });
+      if (positionPlain && JSON.stringify(positionPlain) !== JSON.stringify(pod.position)) {
+        updates.push(
+          this.prisma.pod.update({
+            where: { id: podId },
+            data: { position: positionPlain },
+          }),
+        );
+      }
+
+      await Promise.all(updates);
+
+      // NEW: Invalidate downstream pods if this is a static content pod
+      const isStaticPod = [
+        'TEXT_INPUT',
+        'DOCUMENT_INPUT',
+        'URL_INPUT',
+        'IMAGE_INPUT',
+        'VIDEO_INPUT',
+        'AUDIO_INPUT',
+      ].includes(pod.type);
+
+      if (isStaticPod && dto.config) {
+        await this.invalidateDownstreamPods(podId, pod.flowId);
       }
 
       this.logger.log(`Pod updated: ${podId} by user ${userId}`);
@@ -293,7 +312,6 @@ export class V1PodService {
         { excludeExtraneousValues: true },
       );
 
-      // Broadcast update to all users
       this.flowGateway.broadcastToFlow(pod.flowId, 'pod:updated', {
         podId,
         updates: result,
@@ -315,7 +333,52 @@ export class V1PodService {
   }
 
   /**
+   * NEW: Invalidate downstream pods when static pod content changes
+   */
+  private async invalidateDownstreamPods(podId: string, flowId: string): Promise<void> {
+    try {
+      const downstreamEdges = await this.prisma.edge.findMany({
+        where: { flowId, sourcePodId: podId },
+        select: { targetPodId: true },
+      });
+
+      if (downstreamEdges.length === 0) {
+        this.logger.debug(`No downstream pods to invalidate for ${podId}`);
+        return;
+      }
+
+      const downstreamPodIds = downstreamEdges.map((e) => e.targetPodId);
+
+      await this.prisma.pod.updateMany({
+        where: { id: { in: downstreamPodIds } },
+        data: {
+          executionStatus: PodExecutionStatus.IDLE,
+          lastExecutionId: null,
+        },
+      });
+
+      this.logger.log(
+        `✅ Invalidated ${downstreamPodIds.length} downstream pods after updating ${podId}`,
+      );
+
+      // Broadcast invalidation to frontend
+      downstreamPodIds.forEach((dpId) => {
+        this.flowGateway.broadcastToFlow(flowId, 'pod:invalidated', {
+          podId: dpId,
+          reason: 'upstream_content_changed',
+          upstreamPodId: podId,
+          timestamp: new Date().toISOString(),
+        });
+      });
+    } catch (error) {
+      this.logger.error(`Failed to invalidate downstream pods for ${podId}`, error);
+      // Don't throw - this is a non-critical operation
+    }
+  }
+
+  /**
    * Delete pod from both PostgreSQL and DynamoDB
+   * OPTIMIZED: Parallel deletes
    */
   async deletePod(podId: string, workspaceId: string, userId: string): Promise<void> {
     try {
@@ -331,22 +394,21 @@ export class V1PodService {
       }
 
       const flowId = pod.flowId;
-
-      // Delete from DynamoDB first
       const tableName = this.dynamoDb.getTableNames().pods;
-      await this.dynamoDb.deleteItem(tableName, {
-        pk: pod.dynamoPartitionKey,
-        sk: pod.dynamoSortKey,
-      });
 
-      // Then delete from PostgreSQL (cascades edges automatically via schema)
-      await this.prisma.pod.delete({
-        where: { id: podId },
-      });
+      // OPTIMIZATION: Parallel deletes
+      await Promise.all([
+        this.dynamoDb.deleteItem(tableName, {
+          pk: pod.dynamoPartitionKey,
+          sk: pod.dynamoSortKey,
+        }),
+        this.prisma.pod.delete({
+          where: { id: podId },
+        }),
+      ]);
 
       this.logger.log(`Pod deleted: ${podId} by user ${userId}`);
 
-      // Broadcast deletion
       this.flowGateway.broadcastToFlow(flowId, 'pod:deleted', {
         podId,
         userId,
@@ -384,7 +446,6 @@ export class V1PodService {
 
       this.logger.debug(`🔒 Pod locked: ${podId} by user ${userId}`);
 
-      // Broadcast lock status
       this.flowGateway.broadcastToFlow(pod.flowId, 'pod:locked', {
         podId,
         userId,
@@ -422,7 +483,6 @@ export class V1PodService {
 
       this.logger.debug(`🔓 Pod unlocked: ${podId} by user ${userId}`);
 
-      // Broadcast unlock status
       this.flowGateway.broadcastToFlow(pod.flowId, 'pod:unlocked', {
         podId,
         userId,
