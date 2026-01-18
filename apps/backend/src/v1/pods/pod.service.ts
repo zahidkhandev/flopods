@@ -17,6 +17,9 @@ import { PodResponseDto, EdgeResponseDto, FlowCanvasResponseDto } from './dto/po
 import { DynamoPodItem, PodContent } from './types/pod-content.types';
 import { DynamoDbService } from '../../common/aws/dynamodb/dynamodb.service';
 import { V1FlowGateway } from '../flow/flow.gateway';
+import { V1EdgeService } from './edge.service';
+import { MovePodDto } from './dto/move-pod.dto';
+import { MovePodResponseDto } from './dto/pod-response.dto';
 
 @Injectable()
 export class V1PodService {
@@ -26,6 +29,7 @@ export class V1PodService {
     private readonly prisma: PrismaService,
     private readonly dynamoDb: DynamoDbService,
     private readonly flowGateway: V1FlowGateway,
+    private readonly edgeService: V1EdgeService,
   ) {}
   /**
    * Get all pods and edges in a flow
@@ -495,6 +499,179 @@ export class V1PodService {
     }
   }
 
+  async movePod(
+    workspaceId: string,
+    currentFlowId: string,
+    podId: string,
+    userId: string,
+    dto: MovePodDto,
+  ): Promise<MovePodResponseDto> {
+    const targetFlowId = dto.targetFlowId;
+    const deleteSource = dto.deleteSourceFlow ?? false;
+
+    const pod = await this.prisma.pod.findFirst({
+      where: { id: podId, flow: { workspaceId } },
+      include: { flow: { include: { pods: { select: { id: true, position: true } } } } },
+    });
+
+    if (!pod) {
+      throw new NotFoundException(`Pod ${podId} not found in workspace ${workspaceId}`);
+    }
+
+    if (pod.flowId !== currentFlowId) {
+      throw new BadRequestException('Pod does not belong to the provided flow');
+    }
+
+    if (targetFlowId === currentFlowId) {
+      return {
+        success: true,
+        movedPodId: podId,
+        fromFlowId: currentFlowId,
+        toFlowId: targetFlowId,
+        autoLinkedTo: null,
+        sourceFlowDeleted: false,
+      };
+    }
+
+    const targetFlow = await this.prisma.flow.findFirst({
+      where: { id: targetFlowId, workspaceId },
+    });
+
+    if (!targetFlow) {
+      throw new NotFoundException(`Target flow ${targetFlowId} not found in workspace`);
+    }
+
+    const tableName = this.dynamoDb.getTableNames().pods;
+    const existingItem = (await this.dynamoDb.getItem(tableName, {
+      pk: pod.dynamoPartitionKey,
+      sk: pod.dynamoSortKey,
+    })) as DynamoPodItem | null;
+
+    if (!existingItem) {
+      throw new NotFoundException('Pod content not found in DynamoDB');
+    }
+
+    // Remove existing edges in the source flow for this pod (with Dynamo sync)
+    const connectedEdges = await this.prisma.edge.findMany({
+      where: {
+        flowId: pod.flowId,
+        OR: [{ sourcePodId: podId }, { targetPodId: podId }],
+      },
+    });
+    for (const edge of connectedEdges) {
+      await this.edgeService.deleteEdge(edge.id, workspaceId, userId);
+    }
+
+    // Move pod record
+    const newSk = `FLOW#${targetFlowId}#POD#${podId}`;
+    const newGsiPk = `FLOW#${targetFlowId}`;
+    const newGsiSk = `POD#${podId}`;
+
+    await this.prisma.pod.update({
+      where: { id: podId },
+      data: {
+        flowId: targetFlowId,
+        dynamoSortKey: newSk,
+      },
+    });
+
+    // Update Dynamo record (delete + put with new keys)
+    const updatedItem: DynamoPodItem = {
+      ...existingItem,
+      sk: newSk,
+      gsi1pk: newGsiPk,
+      gsi1sk: newGsiSk,
+      flowId: targetFlowId,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await this.dynamoDb.deleteItem(tableName, { pk: existingItem.pk, sk: existingItem.sk });
+    await this.dynamoDb.putItem(tableName, updatedItem);
+
+    // Auto-link to latest pod in target flow (by position x+y)
+    const targetPods = await this.prisma.pod.findMany({
+      where: { flowId: targetFlowId, id: { not: podId } },
+      select: { id: true, position: true },
+    });
+
+    let autoLinkedTo: string | null = null;
+    if (targetPods.length > 0) {
+      const latestPod = targetPods.reduce((latest, current) => {
+        const latestPos = this.sumPosition(latest.position);
+        const currentPos = this.sumPosition(current.position);
+        return currentPos > latestPos ? current : latest;
+      });
+
+      await this.edgeService.createEdge(workspaceId, userId, {
+        flowId: targetFlowId,
+        sourcePodId: latestPod.id,
+        targetPodId: podId,
+        animated: true,
+      });
+      autoLinkedTo = latestPod.id;
+    }
+
+    // Optionally delete source flow if empty
+    let sourceFlowDeleted = false;
+    if (deleteSource) {
+      const remaining = await this.prisma.pod.count({ where: { flowId: currentFlowId } });
+      if (remaining === 0) {
+        await this.prisma.flow.delete({ where: { id: currentFlowId } });
+        sourceFlowDeleted = true;
+      }
+    }
+
+    return {
+      success: true,
+      movedPodId: podId,
+      fromFlowId: currentFlowId,
+      toFlowId: targetFlowId,
+      autoLinkedTo,
+      sourceFlowDeleted,
+    };
+  }
+
+  async listPods(workspaceId: string, flowId: string): Promise<PodResponseDto[]> {
+    const flow = await this.prisma.flow.findFirst({ where: { id: flowId, workspaceId } });
+    if (!flow) {
+      throw new NotFoundException(`Flow ${flowId} not found in workspace ${workspaceId}`);
+    }
+
+    const pods = await this.prisma.pod.findMany({
+      where: { flowId },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (pods.length === 0) return [];
+
+    const tableName = this.dynamoDb.getTableNames().pods;
+    const dynamoKeys = pods.map((pod) => ({
+      pk: pod.dynamoPartitionKey,
+      sk: pod.dynamoSortKey,
+    }));
+
+    const dynamoItems = await this.dynamoDb.batchGetItems(tableName, dynamoKeys);
+    const dynamoMap = new Map<string, DynamoPodItem>();
+    dynamoItems.forEach((item: any) => {
+      if (item && item.sk) {
+        dynamoMap.set(item.sk, item as DynamoPodItem);
+      }
+    });
+
+    return pods.map((pod) => {
+      const dynamoItem = dynamoMap.get(pod.dynamoSortKey);
+      return plainToInstance(
+        PodResponseDto,
+        {
+          ...pod,
+          content: dynamoItem?.content || null,
+          contextPods: dynamoItem?.contextPods || [],
+        },
+        { excludeExtraneousValues: true },
+      );
+    });
+  }
+
   // ==================== PRIVATE HELPER METHODS ====================
 
   private validatePodConfig(type: PodType, config: any): void {
@@ -507,6 +684,14 @@ export class V1PodService {
 
   private serializePosition(position: any): { x: number; y: number } {
     return JSON.parse(JSON.stringify(position));
+  }
+
+  private sumPosition(position: any): number {
+    try {
+      return (position?.x || 0) + (position?.y || 0);
+    } catch {
+      return 0;
+    }
   }
 
   private mergeConfig(existing: any, updates: any): any {

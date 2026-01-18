@@ -36,6 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { useCanvas } from '../../../context/canvas-context';
 import { useModels } from '../../../context/models-context';
 import { useParams } from 'react-router-dom';
@@ -50,25 +51,9 @@ import DOMPurify from 'dompurify';
 import 'highlight.js/styles/github-dark.css';
 import 'highlight.js/styles/github.css';
 import { cn } from '@/lib/utils';
-import { LLMProvider, PodExecutionStatus } from '../../../types';
+import { LLMProvider, Message, PodExecutionStatus } from '../../../types';
 import { useStreamingExecution } from '../../../hooks/use-streaming-execution';
 import { Node } from 'reactflow';
-
-interface Message {
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  timestamp: Date;
-  executionId?: string;
-  metadata?: {
-    runtime?: number;
-    tokens?: number;
-    cost?: number;
-    inputTokens?: number;
-    outputTokens?: number;
-  };
-  isStreaming?: boolean;
-  isThinking?: boolean;
-}
 
 interface ConfigPanelProps {
   selectedPodId: string | null;
@@ -175,6 +160,9 @@ export default memo(function ConfigPanel({ selectedPodId }: ConfigPanelProps) {
     selectedNode?.data?.config?.provider || LLMProvider.OPENAI
   );
   const [model, setModel] = useState(selectedNode?.data?.config?.model || 'gpt-4o');
+  const [autoContextEnabled, setAutoContextEnabled] = useState<boolean>(
+    selectedNode?.data?.config?.autoContext ?? true
+  );
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [temperature, setTemperature] = useState(selectedNode?.data?.config?.temperature ?? 0.7);
   const [maxTokens, setMaxTokens] = useState<number | undefined>(undefined);
@@ -186,6 +174,7 @@ export default memo(function ConfigPanel({ selectedPodId }: ConfigPanelProps) {
   const [debouncedStreamingContent, setDebouncedStreamingContent] = useState('');
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [visibleMessageCount, setVisibleMessageCount] = useState(150);
 
   const [sourceType, setSourceType] = useState(selectedNode?.data?.config?.sourceType || 'text');
   const [sourceContent, setSourceContent] = useState(selectedNode?.data?.config?.content || '');
@@ -194,6 +183,14 @@ export default memo(function ConfigPanel({ selectedPodId }: ConfigPanelProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const streamDebounceRef = useRef<NodeJS.Timeout | null>(null);
+  const streamValueRef = useRef('');
+  const messagesRef = useRef<Message[]>([]);
+  const shouldAutoScrollRef = useRef(true);
+  const lastNodeSyncRef = useRef('');
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   const { data: executionHistory, refetch: refetchExecutions } = usePodExecutions(
     flowId!,
@@ -204,33 +201,47 @@ export default memo(function ConfigPanel({ selectedPodId }: ConfigPanelProps) {
     [provider, getModelsForProvider]
   );
 
-  // Debounce streaming updates to reduce renders
+  // Throttle streaming updates to keep UI responsive
   useEffect(() => {
-    if (streamingContent) {
+    streamValueRef.current = streamingContent;
+
+    if (!streamingContent) {
       if (streamDebounceRef.current) {
         clearTimeout(streamDebounceRef.current);
+        streamDebounceRef.current = null;
       }
-      streamDebounceRef.current = setTimeout(() => {
-        setDebouncedStreamingContent(streamingContent);
-      }, 50);
-    } else {
       setDebouncedStreamingContent('');
+      return;
     }
 
-    return () => {
-      if (streamDebounceRef.current) {
-        clearTimeout(streamDebounceRef.current);
-      }
-    };
+    if (!streamDebounceRef.current) {
+      streamDebounceRef.current = setTimeout(() => {
+        setDebouncedStreamingContent(streamValueRef.current);
+        streamDebounceRef.current = null;
+      }, 50);
+    }
   }, [streamingContent]);
 
   const { executeStreaming } = useStreamingExecution({
     onToken: (token) => {
       setStreamingContent((prev) => prev + token);
     },
-    onStart: (_executionId) => {
+    onStart: (executionId) => {
       setStreamingContent('');
       setDebouncedStreamingContent('');
+      setIsExecuting(true);
+      isCurrentlyExecutingRef.current = true;
+
+      setMessages((prev) => {
+        const next = [...prev];
+        for (let i = next.length - 1; i >= 0; i -= 1) {
+          if (next[i].role === 'user' && !next[i].executionId) {
+            next[i] = { ...next[i], executionId };
+            break;
+          }
+        }
+        return next;
+      });
     },
     onComplete: ({ content, metadata, executionId }) => {
       const assistantMessage: Message = {
@@ -244,6 +255,7 @@ export default memo(function ConfigPanel({ selectedPodId }: ConfigPanelProps) {
           cost: metadata.cost,
           inputTokens: metadata.inputTokens,
           outputTokens: metadata.outputTokens,
+          reasoningTokens: metadata.reasoningTokens,
         },
       };
 
@@ -251,6 +263,7 @@ export default memo(function ConfigPanel({ selectedPodId }: ConfigPanelProps) {
       setStreamingContent('');
       setDebouncedStreamingContent('');
       setIsExecuting(false);
+      isCurrentlyExecutingRef.current = false;
       refetchExecutions();
     },
     onError: (error) => {
@@ -263,6 +276,7 @@ export default memo(function ConfigPanel({ selectedPodId }: ConfigPanelProps) {
       setStreamingContent('');
       setDebouncedStreamingContent('');
       setIsExecuting(false);
+      isCurrentlyExecutingRef.current = false;
       toast.error('Execution failed');
     },
   });
@@ -294,6 +308,11 @@ export default memo(function ConfigPanel({ selectedPodId }: ConfigPanelProps) {
     }
     return messages;
   }, [messages, debouncedStreamingContent, isExecuting]);
+
+  const visibleMessages = useMemo(() => {
+    if (displayMessages.length <= visibleMessageCount) return displayMessages;
+    return displayMessages.slice(-visibleMessageCount);
+  }, [displayMessages, visibleMessageCount]);
 
   const loadAllExecutionHistory = useCallback(async () => {
     if (!executionHistory || executionHistory.length === 0 || !currentWorkspaceId) return;
@@ -337,6 +356,7 @@ export default memo(function ConfigPanel({ selectedPodId }: ConfigPanelProps) {
                 tokens: execution.inputTokens + execution.outputTokens,
                 inputTokens: execution.inputTokens,
                 outputTokens: execution.outputTokens,
+                reasoningTokens: execution.reasoningTokens,
               },
             });
           }
@@ -361,24 +381,82 @@ export default memo(function ConfigPanel({ selectedPodId }: ConfigPanelProps) {
   }, [executionHistory, messages.length, isLLMPod, loadAllExecutionHistory]);
 
   useEffect(() => {
+    if (!isLLMPod || !selectedNode) return;
+
+    const nodeMessages = selectedNode.data?.messages;
+    if (nodeMessages && JSON.stringify(nodeMessages) !== JSON.stringify(messagesRef.current)) {
+      setMessages(nodeMessages);
+    }
+
+    const nodeStreaming = selectedNode.data?.streamingContent;
+    if (typeof nodeStreaming === 'string' && nodeStreaming !== streamingContent) {
+      setStreamingContent(nodeStreaming);
+    }
+
+    const nodeExecuting = selectedNode.data?.isExecuting;
+    if (typeof nodeExecuting === 'boolean' && nodeExecuting !== isExecuting) {
+      setIsExecuting(nodeExecuting);
+    }
+  }, [
+    isLLMPod,
+    selectedNode,
+    streamingContent,
+    isExecuting,
+    selectedNode?.data?.messages,
+    selectedNode?.data?.streamingContent,
+    selectedNode?.data?.isExecuting,
+  ]);
+
+  useEffect(() => {
+    if (!selectedPodId || !isLLMPod) return;
+
+    const nodeMessages = selectedNode?.data?.messages ?? [];
+    const nodeStreaming = selectedNode?.data?.streamingContent ?? '';
+    const nodeExecuting = selectedNode?.data?.isExecuting ?? false;
+
+    const alreadySynced =
+      JSON.stringify(nodeMessages) === JSON.stringify(messages) &&
+      nodeStreaming === streamingContent &&
+      nodeExecuting === isExecuting;
+
+    const payload = JSON.stringify({ messages, streamingContent, isExecuting });
+    if (alreadySynced || payload === lastNodeSyncRef.current) return;
+
+    updateNodeData(selectedPodId, { messages, streamingContent, isExecuting });
+    lastNodeSyncRef.current = payload;
+  }, [
+    messages,
+    streamingContent,
+    isExecuting,
+    selectedPodId,
+    isLLMPod,
+    selectedNode,
+    updateNodeData,
+  ]);
+
+  useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    const scrollToBottom = () => {
-      container.scrollTop = container.scrollHeight;
-    };
-
-    setTimeout(scrollToBottom, 50);
-
     const handleScroll = () => {
       const isAtBottom =
-        container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+        container.scrollHeight - container.scrollTop - container.clientHeight < 120;
+      shouldAutoScrollRef.current = isAtBottom;
       setShowScrollButton(!isAtBottom);
     };
 
+    handleScroll();
     container.addEventListener('scroll', handleScroll);
     return () => container.removeEventListener('scroll', handleScroll);
-  }, [displayMessages]);
+  }, []);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    if (shouldAutoScrollRef.current || isExecuting) {
+      container.scrollTop = container.scrollHeight;
+    }
+  }, [visibleMessages.length, debouncedStreamingContent, isExecuting]);
 
   const scrollToBottom = useCallback(() => {
     const container = scrollContainerRef.current;
@@ -389,6 +467,22 @@ export default memo(function ConfigPanel({ selectedPodId }: ConfigPanelProps) {
       });
     }
   }, []);
+
+  const handleLoadEarlier = useCallback(() => {
+    const container = scrollContainerRef.current;
+    const previousHeight = container?.scrollHeight || 0;
+    setVisibleMessageCount((current) => {
+      const next = Math.min(displayMessages.length, current + 100);
+      return next;
+    });
+
+    if (container) {
+      setTimeout(() => {
+        const nextHeight = container.scrollHeight;
+        container.scrollTop += nextHeight - previousHeight;
+      }, 0);
+    }
+  }, [displayMessages.length]);
 
   // NEW: Only reset when switching to a DIFFERENT pod
   const previousPodIdRef = useRef<string | null>(null);
@@ -406,6 +500,7 @@ export default memo(function ConfigPanel({ selectedPodId }: ConfigPanelProps) {
       if (selectedNode) {
         setProvider(selectedNode.data?.config?.provider || LLMProvider.OPENAI);
         setModel(selectedNode.data?.config?.model || 'gpt-4o');
+        setAutoContextEnabled(selectedNode.data?.config?.autoContext ?? true);
         setTemperature(selectedNode.data?.config?.temperature ?? 0.7);
         setMaxTokens(undefined);
         setSourceType(selectedNode.data?.config?.sourceType || 'text');
@@ -429,16 +524,27 @@ export default memo(function ConfigPanel({ selectedPodId }: ConfigPanelProps) {
   }, [selectedPodId, onNodesChange]);
 
   const handleExecute = useCallback(async () => {
-    if (!userPrompt.trim() || !currentWorkspaceId || !flowId || isExecuting || !selectedPodId)
+    if (
+      !userPrompt.trim() ||
+      !currentWorkspaceId ||
+      !flowId ||
+      isExecuting ||
+      isCurrentlyExecutingRef.current ||
+      !selectedPodId
+    )
       return;
 
+    isCurrentlyExecutingRef.current = true;
     const newUserMessage: Message = {
       role: 'user',
       content: userPrompt,
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, newUserMessage]);
+    setMessages((prev) => {
+      const next = [...prev, newUserMessage];
+      return next;
+    });
     setUserPrompt('');
     setIsExecuting(true);
     setStreamingContent('');
@@ -455,6 +561,7 @@ export default memo(function ConfigPanel({ selectedPodId }: ConfigPanelProps) {
         provider,
         model,
         temperature,
+        autoContext: autoContextEnabled,
       };
 
       if (maxTokens !== undefined && maxTokens > 0) {
@@ -464,6 +571,7 @@ export default memo(function ConfigPanel({ selectedPodId }: ConfigPanelProps) {
       await executeStreaming(params);
     } catch (error: any) {
       console.error('[ConfigPanel] Execution error:', error);
+      isCurrentlyExecutingRef.current = false;
     }
   }, [
     userPrompt,
@@ -472,10 +580,12 @@ export default memo(function ConfigPanel({ selectedPodId }: ConfigPanelProps) {
     provider,
     model,
     temperature,
+    autoContextEnabled,
     maxTokens,
     currentWorkspaceId,
     isExecuting,
     executeStreaming,
+    updateNodeData,
   ]);
 
   const handleCopyResponse = useCallback((content: string) => {
@@ -616,7 +726,19 @@ export default memo(function ConfigPanel({ selectedPodId }: ConfigPanelProps) {
                       </div>
                     ) : (
                       <div className="space-y-6">
-                        {displayMessages.map((message, index) => (
+                        {displayMessages.length > visibleMessageCount && (
+                          <div className="flex justify-center">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-muted-foreground text-xs"
+                              onClick={handleLoadEarlier}
+                            >
+                              Load earlier messages
+                            </Button>
+                          </div>
+                        )}
+                        {visibleMessages.map((message, index) => (
                           <div
                             key={`${message.executionId || 'msg'}-${index}`}
                             className={cn(
@@ -746,6 +868,14 @@ export default memo(function ConfigPanel({ selectedPodId }: ConfigPanelProps) {
                                                 </span>
                                               </div>
                                             )}
+                                            {message.metadata.reasoningTokens !== undefined && (
+                                              <div className="flex items-center gap-1">
+                                                <Sparkles className="h-3.5 w-3.5" />
+                                                <span className="text-amber-600 dark:text-amber-400">
+                                                  {message.metadata.reasoningTokens} reasoning
+                                                </span>
+                                              </div>
+                                            )}
                                           </div>
                                         )}
 
@@ -814,6 +944,25 @@ export default memo(function ConfigPanel({ selectedPodId }: ConfigPanelProps) {
 
                 {/* Input area */}
                 <div className="border-border/50 bg-background shrink-0 space-y-3 border-t p-4">
+                  <div className="border-border/60 bg-card/60 flex items-center justify-between rounded-lg border px-3 py-2">
+                    <div className="flex items-center gap-2 text-xs font-semibold">
+                      <Sparkles className="h-3.5 w-3.5 text-primary" />
+                      <span>Auto context</span>
+                    </div>
+                    <Switch
+                      checked={autoContextEnabled}
+                      onCheckedChange={(checked) => {
+                        setAutoContextEnabled(checked);
+                        if (selectedPodId) {
+                          updateNodeData(selectedPodId, {
+                            config: { ...selectedNode?.data?.config, autoContext: checked },
+                          });
+                        }
+                      }}
+                      aria-label="Toggle automatic context injection"
+                    />
+                  </div>
+
                   <div className="relative">
                     <Textarea
                       ref={textareaRef}

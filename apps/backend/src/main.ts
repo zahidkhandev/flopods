@@ -69,7 +69,17 @@ async function bootstrap() {
   });
 
   app.use(helmet());
-  app.use(compression());
+  app.use(
+    compression({
+      filter: (req, res) => {
+        const accept = req.headers.accept || '';
+        if (accept.includes('text/event-stream')) {
+          return false;
+        }
+        return compression.filter(req, res);
+      },
+    }),
+  );
 
   app.setGlobalPrefix('api');
   app.enableShutdownHooks();

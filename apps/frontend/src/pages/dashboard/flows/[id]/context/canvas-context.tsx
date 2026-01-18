@@ -40,7 +40,7 @@ interface CanvasContextValue {
   deleteNode: (nodeId: string) => Promise<void>;
   addEdge: (edge: Partial<Edge>) => Promise<void>;
   deleteEdge: (edgeId: string) => Promise<void>;
-  updateNodeData: (nodeId: string, data: any) => Promise<void>;
+  updateNodeData: (nodeId: string, data: any) => void;
   setNodeStatus: (nodeId: string, status: PodExecutionStatus) => void;
   undo: () => void;
   redo: () => void;
@@ -60,8 +60,8 @@ const MAX_HISTORY = 50;
 const AUTO_SAVE_DELAY = 60000;
 
 // Constants for Layout
-const NODE_WIDTH = 800; // Includes buffer
-const DEFAULT_LLM_HEIGHT = 1200; // Tall buffer for chat history
+const NODE_WIDTH = 800;
+const DEFAULT_LLM_HEIGHT = 1200;
 const DEFAULT_SOURCE_HEIGHT = 600;
 
 const mapBackendTypeToFrontend = (backendType: string): string => {
@@ -104,15 +104,18 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
 
   const nodesRef = useRef(nodes);
   const edgesRef = useRef(edges);
+
   useEffect(() => {
     nodesRef.current = nodes;
   }, [nodes]);
+
   useEffect(() => {
     edgesRef.current = edges;
   }, [edges]);
 
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const isUndoRedoRef = useRef(false);
+  const updateBatchRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const loadCanvas = async () => {
@@ -150,7 +153,6 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
             type: 'animated',
             animated: true,
           }))
-          // Deduplicate edges
           .filter((edge: Edge, index: number, self: Edge[]) => {
             return (
               index ===
@@ -248,21 +250,28 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
     (newNodes: Node[], newEdges: Edge[]) => {
       if (isUndoRedoRef.current) return;
 
-      setHistory((prevHistory) => {
-        const currentIdx = currentIndex;
-        const newHistory = prevHistory.slice(0, currentIdx + 1);
-        newHistory.push({ nodes: newNodes, edges: newEdges });
-        return newHistory.slice(-MAX_HISTORY);
-      });
-      setCurrentIndex((prevIndex) => Math.min(prevIndex + 1, MAX_HISTORY - 1));
-      setHasUnsavedChanges(true);
-
-      if (autoSaveTimeoutRef.current) {
-        clearTimeout(autoSaveTimeoutRef.current);
+      // Debounce history updates
+      if (updateBatchRef.current) {
+        clearTimeout(updateBatchRef.current);
       }
-      autoSaveTimeoutRef.current = setTimeout(() => {
-        save();
-      }, AUTO_SAVE_DELAY);
+
+      updateBatchRef.current = setTimeout(() => {
+        setHistory((prevHistory) => {
+          const currentIdx = currentIndex;
+          const newHistory = prevHistory.slice(0, currentIdx + 1);
+          newHistory.push({ nodes: newNodes, edges: newEdges });
+          return newHistory.slice(-MAX_HISTORY);
+        });
+        setCurrentIndex((prevIndex) => Math.min(prevIndex + 1, MAX_HISTORY - 1));
+        setHasUnsavedChanges(true);
+
+        if (autoSaveTimeoutRef.current) {
+          clearTimeout(autoSaveTimeoutRef.current);
+        }
+        autoSaveTimeoutRef.current = setTimeout(() => {
+          save();
+        }, AUTO_SAVE_DELAY);
+      }, 100); // Batch rapid changes
     },
     [currentIndex, save]
   );
@@ -275,18 +284,10 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
     try {
       const g = new dagre.graphlib.Graph();
 
-      // 1. CONFIGURATION: MAXIMAL SPACING (Infinite Canvas)
       g.setGraph({
         rankdir: 'LR',
-
-        // Vertical gap between nodes in the same column.
-        // 500px ensures that even if a pod grows significantly, it won't hit the one below.
         nodesep: 500,
-
-        // Horizontal gap (Length of the edges).
-        // 1500px gives you a very clean, wide view where connections are obvious.
         ranksep: 1500,
-
         align: 'UL',
         marginx: 200,
         marginy: 200,
@@ -294,20 +295,17 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
 
       g.setDefaultEdgeLabel(() => ({}));
 
-      // 2. DIMENSION CALCULATION: AGGRESSIVE SAFETY BUFFERS
       nodes.forEach((node) => {
         const nodeElement = document.querySelector(`[data-id="${node.id}"]`);
 
-        // Default "Safety" Dimensions if DOM is missing
         let width = NODE_WIDTH;
         let height =
           node.data?.backendType === 'LLM_PROMPT' ? DEFAULT_LLM_HEIGHT : DEFAULT_SOURCE_HEIGHT;
 
         if (nodeElement) {
           const rect = nodeElement.getBoundingClientRect();
-          // If DOM is available, use it but ADD MASSIVE PADDING
           if (rect.width > 0) width = rect.width + 100;
-          if (rect.height > 0) height = rect.height + 300; // Extra vertical buffer
+          if (rect.height > 0) height = rect.height + 300;
         }
 
         g.setNode(node.id, { width, height });
@@ -319,13 +317,11 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
 
       dagre.layout(g);
 
-      // 3. APPLY POSITIONS
       const layoutedNodes = nodes.map((node) => {
         const nodeWithPosition = g.node(node.id);
 
         if (!nodeWithPosition) return node;
 
-        // Convert Center (Dagre) -> Top-Left (ReactFlow)
         return {
           ...node,
           position: {
@@ -338,12 +334,11 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
       setNodes(layoutedNodes);
       saveToHistory(layoutedNodes, edges);
 
-      // 4. ZOOM OUT TO FIT THE HUGE GRAPH
       setTimeout(() => {
         reactFlowInstance.fitView({
           padding: 0.5,
           duration: 1000,
-          minZoom: 0.01, // Allow zooming way, way out
+          minZoom: 0.01,
           maxZoom: 1,
         });
       }, 100);
@@ -357,7 +352,6 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
     }
   }, [nodes, edges, reactFlowInstance, saveToHistory]);
 
-  // Undo/Redo/Changes Logic ...
   const undo = useCallback(() => {
     if (currentIndex > 0) {
       isUndoRedoRef.current = true;
@@ -386,13 +380,24 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
     }
   }, [currentIndex, history]);
 
+  // **FIX: Only save history for meaningful changes**
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
       setNodes((nds) => {
         const newNodes = applyNodeChanges(changes, nds);
-        if (changes.some((c) => c.type !== 'select')) {
-          saveToHistory(newNodes, edgesRef.current);
+
+        // Only save history for position, add, remove - NOT select or drag
+        const hasSignificantChange = changes.some(
+          (c) => c.type === 'position' || c.type === 'add' || c.type === 'remove'
+        );
+
+        if (hasSignificantChange) {
+          // Use setTimeout to break out of render cycle
+          setTimeout(() => {
+            saveToHistory(newNodes, edgesRef.current);
+          }, 0);
         }
+
         return newNodes;
       });
     },
@@ -403,9 +408,13 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
     (changes: EdgeChange[]) => {
       setEdges((eds) => {
         const newEdges = applyEdgeChanges(changes, eds);
+
         if (changes.some((c) => c.type !== 'select')) {
-          saveToHistory(nodesRef.current, newEdges);
+          setTimeout(() => {
+            saveToHistory(nodesRef.current, newEdges);
+          }, 0);
         }
+
         return newEdges;
       });
     },
@@ -591,22 +600,16 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
     [flowId, currentWorkspaceId, saveToHistory]
   );
 
-  const updateNodeData = useCallback(
-    async (nodeId: string, data: any) => {
-      const originalNodes = nodesRef.current;
-      try {
-        const newNodes = originalNodes.map((node) =>
-          node.id === nodeId ? { ...node, data: { ...node.data, ...data } } : node
-        );
-        setNodes(newNodes);
-        saveToHistory(newNodes, edgesRef.current);
-      } catch (error) {
-        console.error('Failed to update pod data locally:', error);
-        setNodes(originalNodes);
-      }
-    },
-    [saveToHistory]
-  );
+  // **CRITICAL FIX: updateNodeData should NOT trigger saveToHistory**
+  // This was causing infinite loops when child components updated
+  const updateNodeData = useCallback((nodeId: string, data: any) => {
+    setNodes((nodes) =>
+      nodes.map((node) =>
+        node.id === nodeId ? { ...node, data: { ...node.data, ...data } } : node
+      )
+    );
+    // Don't call saveToHistory here - let onNodesChange handle it
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -629,6 +632,9 @@ function CanvasProviderInner({ children }: { children: ReactNode }) {
     return () => {
       if (autoSaveTimeoutRef.current) {
         clearTimeout(autoSaveTimeoutRef.current);
+      }
+      if (updateBatchRef.current) {
+        clearTimeout(updateBatchRef.current);
       }
     };
   }, []);

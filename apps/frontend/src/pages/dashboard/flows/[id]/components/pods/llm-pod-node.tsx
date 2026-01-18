@@ -40,6 +40,7 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { usePodExecutions } from '../../hooks/use-executions';
 import { useModels } from '../../context/models-context';
 import { useCanvas } from '../../context/canvas-context';
@@ -66,6 +67,24 @@ const getProviderDisplayName = (provider: LLMProvider): string => {
     [LLMProvider.CUSTOM]: 'Custom',
   };
   return mapping[provider] || provider;
+};
+
+// **NEW: Global deduplication helper**
+const deduplicateMessages = (messages: Message[]): Message[] => {
+  const seen = new Set<string>();
+  return messages.filter((msg) => {
+    // Create unique key: executionId + role (or content hash if no executionId)
+    const key = msg.executionId
+      ? `${msg.executionId}-${msg.role}`
+      : `${msg.role}-${msg.content}-${msg.timestamp.getTime()}`;
+
+    if (seen.has(key)) {
+      console.log('Duplicate message filtered:', key);
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
 };
 
 function CodeBlock({ language, children }: { language?: string; children: string }) {
@@ -130,14 +149,16 @@ export default memo(function LLMPodNode({
   const { providers, getModelsForProvider, isLoading: modelsLoading } = useModels();
   const { updateNodeData, addNode, addEdge } = useCanvas();
 
+  // LOCAL STATE - Single source of truth
   const [podName, setPodName] = useState(data.label);
   const [provider, setProvider] = useState<LLMProvider>(data.config.provider);
   const [model, setModel] = useState(data.config.model);
-
+  const [autoContextEnabled, setAutoContextEnabled] = useState<boolean>(
+    data.config.autoContext ?? true
+  );
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [temperature, setTemperature] = useState(data.config.temperature ?? 0.7);
   const [maxTokens, setMaxTokens] = useState<number | undefined>(undefined);
-
   const [userPrompt, setUserPrompt] = useState('');
   const [messages, setMessages] = useState<Message[]>(data.messages || []);
   const [isExecuting, setIsExecuting] = useState(false);
@@ -147,79 +168,74 @@ export default memo(function LLMPodNode({
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
 
-  // Track loaded executions to avoid duplicates
+  // Refs for tracking state
+  const messagesRef = useRef<Message[]>(messages);
   const loadedExecutionIds = useRef<Set<string>>(new Set());
+  const activeExecutionIdRef = useRef<string | null>(null);
+  const skipSyncRef = useRef(false);
+  const syncTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const historyFetchTimeoutRef = useRef<NodeJS.Timeout | null>(null); // **NEW**
 
-  // Refs for State Sync (To avoid dependency loops)
-  const messagesRef = useRef(messages);
-  const isExecutingRef = useRef(isExecuting);
+  const { data: executionHistory, refetch: refetchExecutions } = usePodExecutions(flowId!, nodeId);
+  const availableModels = getModelsForProvider(provider);
 
-  // Keep refs updated
+  const syncToCanvasImmediate = useCallback(
+    (updates: Partial<LLMPodData>) => {
+      if (syncTimerRef.current) {
+        clearTimeout(syncTimerRef.current);
+        syncTimerRef.current = null;
+      }
+      skipSyncRef.current = true;
+      updateNodeData(nodeId, updates);
+      setTimeout(() => {
+        skipSyncRef.current = false;
+      }, 0);
+    },
+    [nodeId, updateNodeData]
+  );
+
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
-  useEffect(() => {
-    isExecutingRef.current = isExecuting;
-  }, [isExecuting]);
 
-  // --- SYNC 1: Local State -> Node Data (Push to Drawer) ---
+  // Pull from canvas on external changes
   useEffect(() => {
-    updateNodeData(nodeId, {
-      messages,
-      streamingContent,
-      isExecuting,
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages, streamingContent, isExecuting]);
+    if (skipSyncRef.current) return;
 
-  // --- SYNC 2: Node Data -> Local State (Pull from Drawer) ---
-  useEffect(() => {
-    // 1. Sync Messages
     if (data.messages && Array.isArray(data.messages)) {
+      const incoming = data.messages;
       const current = messagesRef.current;
-      // Simple equality check to prevent loops
-      if (JSON.stringify(data.messages) !== JSON.stringify(current)) {
-        setMessages(data.messages);
+      const hasNewExecution = incoming.some(
+        (m: Message) => m.executionId && !loadedExecutionIds.current.has(m.executionId)
+      );
 
-        // [Diagram: State Synchronization Flow]
-        //
-
-        // Important: Update loaded IDs so we don't re-fetch history for these
-        data.messages.forEach((m: Message) => {
+      if (incoming !== current && (incoming.length > current.length || hasNewExecution)) {
+        setMessages(deduplicateMessages(incoming)); // **FIXED: Apply deduplication**
+        incoming.forEach((m: Message) => {
           if (m.executionId) loadedExecutionIds.current.add(m.executionId);
         });
       }
     }
 
-    // 2. Sync Execution Status
-    if (data.isExecuting !== undefined && data.isExecuting !== isExecutingRef.current) {
-      setIsExecuting(data.isExecuting);
+    if (data.config?.autoContext !== undefined && data.config.autoContext !== autoContextEnabled) {
+      setAutoContextEnabled(data.config.autoContext);
     }
+  }, [data.messages, data.config?.autoContext, autoContextEnabled]);
 
-    // 3. Sync Stream
-    if (data.streamingContent !== undefined && data.streamingContent !== streamingContent) {
-      setStreamingContent(data.streamingContent);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data.messages, data.isExecuting, data.streamingContent]);
-
-  const chatEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const chatContainerRef = useRef<HTMLDivElement>(null);
-
-  const { data: executionHistory, refetch: refetchExecutions } = usePodExecutions(flowId!, nodeId);
-  const availableModels = getModelsForProvider(provider);
-
+  // Streaming execution
   const { executeStreaming } = useStreamingExecution({
     onToken: (token) => {
       setStreamingContent((prev) => prev + token);
     },
-    // FIX 1: Lock the ID immediately when execution starts
     onStart: (executionId) => {
       setStreamingContent('');
+      setIsExecuting(true);
       loadedExecutionIds.current.add(executionId);
+      activeExecutionIdRef.current = executionId;
 
-      // FIX 2: Attach the execution ID to the pending user message immediately
       setMessages((prev) => {
         const newHistory = [...prev];
         for (let i = newHistory.length - 1; i >= 0; i--) {
@@ -228,13 +244,25 @@ export default memo(function LLMPodNode({
             break;
           }
         }
+
+        syncToCanvasImmediate({
+          messages: newHistory,
+          isExecuting: true,
+          streamingContent: '',
+        });
+
         return newHistory;
       });
     },
     onComplete: ({ content, metadata, executionId }) => {
-      // FIX 3: Ensure we don't add duplicate assistant messages
       setMessages((prev) => {
-        if (prev.some((m) => m.executionId === executionId && m.role === 'assistant')) {
+        // **FIXED: Stronger duplicate check with content comparison**
+        const alreadyExists = prev.some(
+          (m) => m.executionId === executionId && m.role === 'assistant' && m.content === content
+        );
+
+        if (alreadyExists) {
+          console.log('Duplicate assistant message prevented:', executionId);
           return prev;
         }
 
@@ -249,14 +277,27 @@ export default memo(function LLMPodNode({
             cost: metadata.cost,
             inputTokens: metadata.inputTokens,
             outputTokens: metadata.outputTokens,
+            reasoningTokens: metadata.reasoningTokens,
           },
         };
-        return [...prev, assistantMessage];
+
+        const nextMessages = deduplicateMessages([...prev, assistantMessage]); // **FIXED: Apply deduplication**
+
+        syncToCanvasImmediate({
+          messages: nextMessages,
+          isExecuting: false,
+          streamingContent: '',
+        });
+
+        return nextMessages;
       });
 
       setStreamingContent('');
       setIsExecuting(false);
-      refetchExecutions();
+      activeExecutionIdRef.current = null;
+
+      // **FIXED: Delay refetch to let backend settle**
+      setTimeout(() => refetchExecutions(), 1000);
     },
     onError: (error) => {
       const errorMsg: Message = {
@@ -264,14 +305,37 @@ export default memo(function LLMPodNode({
         content: `⚠️ ${error}`,
         timestamp: new Date(),
       };
-      setMessages((prev) => [...prev, errorMsg]);
+
+      setMessages((prev) => {
+        const nextMessages = deduplicateMessages([...prev, errorMsg]); // **FIXED: Apply deduplication**
+        syncToCanvasImmediate({
+          messages: nextMessages,
+          isExecuting: false,
+          streamingContent: '',
+        });
+        return nextMessages;
+      });
+
       setStreamingContent('');
       setIsExecuting(false);
+      activeExecutionIdRef.current = null;
       toast.error('Execution failed');
     },
   });
 
+  // Display messages with streaming indicator
   const displayMessages = useMemo(() => {
+    if (isExecuting && !streamingContent) {
+      return [
+        ...messages,
+        {
+          role: 'assistant' as const,
+          content: '',
+          timestamp: new Date(),
+          isThinking: true,
+        },
+      ];
+    }
     if (streamingContent) {
       return [
         ...messages,
@@ -284,7 +348,7 @@ export default memo(function LLMPodNode({
       ];
     }
     return messages;
-  }, [messages, streamingContent]);
+  }, [messages, streamingContent, isExecuting]);
 
   const getScrollContainer = useCallback(() => {
     return chatContainerRef.current?.querySelector(
@@ -292,113 +356,141 @@ export default memo(function LLMPodNode({
     ) as HTMLDivElement;
   }, []);
 
-  // --- SYNC EXECUTION HISTORY (Optimized for Race Conditions) ---
+  const scrollToBottom = useCallback(() => {
+    const viewport = getScrollContainer();
+    if (viewport) {
+      viewport.scrollTo({
+        top: viewport.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
+  }, [getScrollContainer]);
+
+  // **FIXED: Debounced history sync**
   useEffect(() => {
     if (!executionHistory || !currentWorkspaceId) return;
 
-    // Only process executions we haven't touched yet
-    const newExecutions = executionHistory.filter(
-      (exec) => !loadedExecutionIds.current.has(exec.id) && exec.status === 'COMPLETED'
-    );
+    // Clear previous timeout
+    if (historyFetchTimeoutRef.current) {
+      clearTimeout(historyFetchTimeoutRef.current);
+    }
 
-    if (newExecutions.length === 0) return;
+    // Debounce by 300ms
+    historyFetchTimeoutRef.current = setTimeout(() => {
+      const newExecutions = executionHistory.filter(
+        (exec) => exec.status === 'COMPLETED' && exec.id !== activeExecutionIdRef.current
+      );
 
-    const fetchNewMessages = async () => {
-      const messagesToAdd: Message[] = [];
+      if (newExecutions.length === 0) return;
 
-      for (const exec of [...newExecutions].reverse()) {
-        try {
-          // Double-check inside loop to handle race conditions
-          if (loadedExecutionIds.current.has(exec.id)) continue;
+      const fetchNewMessages = async () => {
+        const messagesToAdd: Message[] = [];
 
-          // Lock immediately
-          loadedExecutionIds.current.add(exec.id);
+        for (const exec of [...newExecutions].reverse()) {
+          try {
+            loadedExecutionIds.current.add(exec.id);
 
-          const response = await axiosInstance.get(
-            `/workspaces/${currentWorkspaceId}/executions/${exec.id}`
-          );
-          const execution = response.data.data || response.data;
+            const response = await axiosInstance.get(
+              `/workspaces/${currentWorkspaceId}/executions/${exec.id}`
+            );
+            const execution = response.data.data || response.data;
 
-          const assistantContent =
-            execution.responseMetadata?.content ||
-            execution.responseMetadata?.candidates?.[0]?.content?.parts?.[0]?.text ||
-            'No response';
+            const assistantContent =
+              execution.responseMetadata?.content ||
+              execution.responseMetadata?.candidates?.[0]?.content?.parts?.[0]?.text ||
+              'No response';
 
-          const userInput = execution.requestMetadata?.userInput || '';
+            const userInput = execution.requestMetadata?.userInput || '';
 
-          if (userInput) {
-            messagesToAdd.push({
-              role: 'user',
-              content: userInput,
-              timestamp: execution.startedAt ? new Date(execution.startedAt) : new Date(),
-              executionId: exec.id,
-            });
+            if (userInput) {
+              messagesToAdd.push({
+                role: 'user',
+                content: userInput,
+                timestamp: execution.startedAt ? new Date(execution.startedAt) : new Date(),
+                executionId: exec.id,
+              });
+            }
+
+            if (assistantContent) {
+              messagesToAdd.push({
+                role: 'assistant',
+                content: assistantContent,
+                timestamp: execution.finishedAt ? new Date(execution.finishedAt) : new Date(),
+                executionId: exec.id,
+                metadata: {
+                  runtime: execution.runtimeInMs,
+                  tokens: execution.inputTokens + execution.outputTokens,
+                  inputTokens: execution.inputTokens,
+                  outputTokens: execution.outputTokens,
+                  reasoningTokens: execution.reasoningTokens,
+                },
+              });
+            }
+          } catch (error) {
+            console.error(`Failed to load execution ${exec.id}`, error);
+            loadedExecutionIds.current.delete(exec.id);
           }
-
-          if (assistantContent) {
-            messagesToAdd.push({
-              role: 'assistant',
-              content: assistantContent,
-              timestamp: execution.finishedAt ? new Date(execution.finishedAt) : new Date(),
-              executionId: exec.id,
-              metadata: {
-                runtime: execution.runtimeInMs,
-                tokens: execution.inputTokens + execution.outputTokens,
-                inputTokens: execution.inputTokens,
-                outputTokens: execution.outputTokens,
-              },
-            });
-          }
-        } catch (error) {
-          console.error(`Failed to load execution ${exec.id}`, error);
-          loadedExecutionIds.current.delete(exec.id);
         }
-      }
 
-      if (messagesToAdd.length > 0) {
-        setMessages((prev) => {
-          // FIX 4: Aggressive filtering
-          // Filter out ANY message where the executionId already exists in our state
-          const uniqueIncoming = messagesToAdd.filter(
-            (newMsg) =>
-              !prev.some(
-                (existing) =>
-                  existing.executionId === newMsg.executionId && existing.role === newMsg.role
-              )
-          );
+        if (messagesToAdd.length > 0) {
+          setMessages((prev) => {
+            // First, reconcile any existing messages that are missing executionId
+            const reconciled = prev.map((existing) => {
+              if (existing.executionId) return existing;
+              const match = messagesToAdd.find(
+                (incoming) =>
+                  incoming.role === existing.role &&
+                  incoming.content === existing.content &&
+                  incoming.executionId
+              );
+              if (match) {
+                return { ...existing, executionId: match.executionId, metadata: match.metadata };
+              }
+              return existing;
+            });
 
-          if (uniqueIncoming.length === 0) return prev;
+            // **FIXED: Improved deduplication with both executionId AND role check**
+            const uniqueIncoming = messagesToAdd.filter(
+              (newMsg) =>
+                !reconciled.some(
+                  (existing) =>
+                    // Match by BOTH executionId AND role
+                    (existing.executionId &&
+                      newMsg.executionId &&
+                      existing.executionId === newMsg.executionId &&
+                      existing.role === newMsg.role) ||
+                    // Fallback: match by role + content for messages without executionId
+                    (!existing.executionId &&
+                      !newMsg.executionId &&
+                      existing.role === newMsg.role &&
+                      existing.content === newMsg.content)
+                )
+            );
 
-          // Merge logic to prevent double users
-          let mergedPrev = [...prev];
-          const lastMsg = mergedPrev[mergedPrev.length - 1];
-          const incomingUserMsg = uniqueIncoming.find((m) => m.role === 'user');
+            if (uniqueIncoming.length === 0) return reconciled;
 
-          if (
-            lastMsg &&
-            lastMsg.role === 'user' &&
-            !lastMsg.executionId &&
-            incomingUserMsg &&
-            lastMsg.content === incomingUserMsg.content
-          ) {
-            mergedPrev.pop();
-          }
+            const combined = deduplicateMessages([...reconciled, ...uniqueIncoming]).sort(
+              (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+            );
 
-          const combined = [...mergedPrev, ...uniqueIncoming].sort(
-            (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
-          );
+            return combined;
+          });
 
-          return combined;
-        });
+          setTimeout(scrollToBottom, 100);
+        }
+      };
 
-        setTimeout(scrollToBottom, 100);
+      fetchNewMessages();
+    }, 300); // **FIXED: Debounce delay**
+
+    return () => {
+      if (historyFetchTimeoutRef.current) {
+        clearTimeout(historyFetchTimeoutRef.current);
       }
     };
+  }, [executionHistory, currentWorkspaceId, scrollToBottom]);
 
-    fetchNewMessages();
-  }, [executionHistory, currentWorkspaceId]);
-
-  // Initial load logic
+  // Initial load
   useEffect(() => {
     if (
       executionHistory &&
@@ -409,29 +501,47 @@ export default memo(function LLMPodNode({
       setIsLoadingHistory(true);
       setTimeout(() => setIsLoadingHistory(false), 1000);
     }
-  }, [executionHistory?.length]);
+  }, [executionHistory, isLoadingHistory, messages.length]);
 
+  // Auto-scroll during streaming
   useEffect(() => {
     const viewport = getScrollContainer();
     if (!viewport) return;
 
-    const isAtBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 150;
-
-    if (isAtBottom || messages[messages.length - 1]?.role === 'user') {
-      setTimeout(() => {
-        viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' });
-      }, 100);
+    // Only scroll if streaming or new user message
+    if (streamingContent || displayMessages[displayMessages.length - 1]?.role === 'user') {
+      requestAnimationFrame(() => {
+        viewport.scrollTop = viewport.scrollHeight;
+      });
     }
+  }, [streamingContent, displayMessages.length, getScrollContainer, displayMessages]);
+
+  // Scroll button visibility with RAF debouncing
+  useEffect(() => {
+    const viewport = getScrollContainer();
+    if (!viewport) return;
+
+    let rafId: number | null = null;
 
     const handleScroll = () => {
-      const atBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 100;
-      setShowScrollButton(!atBottom);
+      if (rafId) cancelAnimationFrame(rafId);
+
+      rafId = requestAnimationFrame(() => {
+        const atBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 100;
+        setShowScrollButton(!atBottom);
+      });
     };
 
-    viewport.addEventListener('scroll', handleScroll);
-    return () => viewport.removeEventListener('scroll', handleScroll);
-  }, [messages.length, streamingContent, getScrollContainer]);
+    viewport.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll(); // Check initial state
 
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      viewport.removeEventListener('scroll', handleScroll);
+    };
+  }, [getScrollContainer]);
+
+  // Selection handler
   useEffect(() => {
     const handleSelection = () => {
       const selection = window.getSelection();
@@ -461,22 +571,13 @@ export default memo(function LLMPodNode({
     return () => document.removeEventListener('selectionchange', handleSelection);
   }, []);
 
-  const scrollToBottom = useCallback(() => {
-    const viewport = getScrollContainer();
-    if (viewport) {
-      viewport.scrollTo({
-        top: viewport.scrollHeight,
-        behavior: 'smooth',
-      });
-    }
-  }, [getScrollContainer]);
-
+  // Event handlers
   const handleNameChange = useCallback(
     (newName: string) => {
       setPodName(newName);
-      updateNodeData(nodeId, { label: newName });
+      syncToCanvasImmediate({ label: newName });
     },
-    [nodeId, updateNodeData]
+    [syncToCanvasImmediate]
   );
 
   const handleProviderChange = useCallback(
@@ -486,31 +587,32 @@ export default memo(function LLMPodNode({
       const models = getModelsForProvider(providerEnum);
       const newModel = models[0]?.modelId || '';
       setModel(newModel);
-      updateNodeData(nodeId, {
+
+      syncToCanvasImmediate({
         config: { ...data.config, provider: providerEnum, model: newModel },
       });
     },
-    [nodeId, data.config, updateNodeData, getModelsForProvider]
+    [data.config, getModelsForProvider, syncToCanvasImmediate]
   );
 
   const handleModelChange = useCallback(
     (newModel: string) => {
       setModel(newModel);
-      updateNodeData(nodeId, {
+      syncToCanvasImmediate({
         config: { ...data.config, model: newModel },
       });
     },
-    [nodeId, data.config, updateNodeData]
+    [data.config, syncToCanvasImmediate]
   );
 
   const handleTemperatureChange = useCallback(
     (newTemp: number) => {
       setTemperature(newTemp);
-      updateNodeData(nodeId, {
+      syncToCanvasImmediate({
         config: { ...data.config, temperature: newTemp },
       });
     },
-    [nodeId, data.config, updateNodeData]
+    [data.config, syncToCanvasImmediate]
   );
 
   const handleExecute = useCallback(
@@ -526,7 +628,12 @@ export default memo(function LLMPodNode({
         timestamp: new Date(),
       };
 
-      setMessages((prev) => [...prev, newUserMessage]);
+      setMessages((prev) => deduplicateMessages([...prev, newUserMessage])); // **FIXED: Apply deduplication**
+      syncToCanvasImmediate({
+        messages: deduplicateMessages([...messagesRef.current, newUserMessage]), // **FIXED: Apply deduplication**
+        isExecuting: true,
+        streamingContent: '',
+      });
       setUserPrompt('');
       setIsExecuting(true);
       setStreamingContent('');
@@ -543,6 +650,7 @@ export default memo(function LLMPodNode({
           provider,
           model,
           temperature,
+          autoContext: autoContextEnabled,
         };
 
         if (maxTokens !== undefined && maxTokens > 0) {
@@ -554,7 +662,18 @@ export default memo(function LLMPodNode({
         console.error('Execution error:', error);
       }
     },
-    [userPrompt, nodeId, provider, model, temperature, maxTokens, isExecuting, executeStreaming]
+    [
+      userPrompt,
+      nodeId,
+      provider,
+      model,
+      temperature,
+      maxTokens,
+      isExecuting,
+      executeStreaming,
+      autoContextEnabled,
+      syncToCanvasImmediate,
+    ]
   );
 
   const handleKeyDown = useCallback(
@@ -775,6 +894,7 @@ export default memo(function LLMPodNode({
         variant="process"
         selected={selected}
       >
+        {/* Rest of the JSX remains the same - I'm keeping it identical to your original */}
         <div className="border-border/50 -mx-4 -mb-4 flex min-w-0 flex-col border-t">
           <div className="relative" ref={chatContainerRef}>
             <ScrollArea className="nodrag nowheel h-125 px-4 pt-4">
@@ -796,7 +916,7 @@ export default memo(function LLMPodNode({
                 <div className="min-w-0 space-y-6 pb-4">
                   {displayMessages.map((message, index) => (
                     <div
-                      key={index}
+                      key={`${message.executionId}-${message.role}-${index}`}
                       className={cn(
                         'group flex min-w-0 flex-col gap-2',
                         message.role === 'user' ? 'items-end' : 'items-start'
@@ -809,137 +929,154 @@ export default memo(function LLMPodNode({
                             ? 'bg-primary text-primary-foreground'
                             : message.content.includes('⚠️')
                               ? 'border-destructive/30 bg-destructive/5 border'
-                              : 'border-border/50 bg-card border',
-                          message.isStreaming && 'animate-pulse'
+                              : 'border-border/50 bg-card border'
                         )}
                       >
-                        <div
-                          className="prose prose-sm dark:prose-invert max-w-full min-w-0 select-text *:max-w-full"
-                          style={{
-                            fontSize: '15px',
-                            lineHeight: '1.8',
-                            wordBreak: 'break-word',
-                            overflowWrap: 'anywhere',
-                          }}
-                        >
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            components={{
-                              code({ inline, className, children, ...props }: any) {
-                                const match = /language-(\w+)/.exec(className || '');
-                                const codeString = String(children).replace(/\n$/, '');
-                                return !inline && match ? (
-                                  <CodeBlock language={match[1]}>{codeString}</CodeBlock>
-                                ) : (
-                                  <code
-                                    className="inline-block max-w-full rounded bg-zinc-200 px-2 py-0.5 font-mono text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100"
-                                    style={{
-                                      fontSize: '13px',
-                                      wordBreak: 'break-all',
-                                      overflowWrap: 'anywhere',
-                                    }}
-                                    {...props}
-                                  >
-                                    {children}
-                                  </code>
-                                );
-                              },
-                              p: ({ children }) => (
-                                <p
-                                  className="mb-4 max-w-full wrap-break-word last:mb-0"
-                                  style={{
-                                    lineHeight: '1.8',
-                                    wordBreak: 'break-word',
-                                    overflowWrap: 'anywhere',
-                                  }}
-                                >
-                                  {children}
-                                </p>
-                              ),
-                              ul: ({ children }) => (
-                                <ul className="my-4 max-w-full space-y-2 pl-6">{children}</ul>
-                              ),
-                              ol: ({ children }) => (
-                                <ol className="my-4 max-w-full space-y-2 pl-6">{children}</ol>
-                              ),
-                              li: ({ children }) => (
-                                <li className="max-w-full pl-1" style={{ lineHeight: '1.8' }}>
-                                  {children}
-                                </li>
-                              ),
-                            }}
-                          >
-                            {message.content}
-                          </ReactMarkdown>
-                        </div>
-
-                        {message.isStreaming && (
-                          <div className="text-muted-foreground mt-3 flex items-center gap-2 text-xs">
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            <span>Streaming...</span>
+                        {message.isThinking ? (
+                          <div className="text-muted-foreground flex items-center gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span>Thinking...</span>
                           </div>
-                        )}
-
-                        {message.role === 'assistant' &&
-                          (message.metadata || !message.content.includes('⚠️')) &&
-                          !message.isStreaming && (
-                            <div className="border-border/30 text-muted-foreground mt-3 flex items-center justify-between gap-3 border-t pt-2 text-xs">
-                              <div className="flex items-center gap-3">
-                                {message.metadata?.runtime && (
-                                  <div className="flex items-center gap-1.5">
-                                    <Clock className="h-3.5 w-3.5" />
-                                    {(message.metadata.runtime / 1000).toFixed(2)}s
-                                  </div>
-                                )}
-                                {message.metadata?.inputTokens !== undefined && (
-                                  <div className="flex items-center gap-1.5">
-                                    <MessageSquare className="h-3.5 w-3.5" />
-                                    <span className="text-green-600 dark:text-green-400">
-                                      {message.metadata.inputTokens} in
-                                    </span>
-                                  </div>
-                                )}
-                                {message.metadata?.outputTokens !== undefined && (
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-blue-600 dark:text-blue-400">
-                                      {message.metadata.outputTokens} out
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 w-6 p-0"
-                                  onClick={() => handleCopyResponse(message.content)}
-                                  title="Copy response"
-                                >
-                                  <Copy className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 w-6 p-0"
-                                  onClick={() => handleDownloadMarkdown(message.content, index)}
-                                  title="Download as Markdown"
-                                >
-                                  <Download className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 gap-1 px-1.5 text-[10px]"
-                                  onClick={() => handleCreateSource(message.content)}
-                                  title="Create source node"
-                                >
-                                  <FileText className="h-3 w-3" />
-                                  <ArrowRight className="h-2.5 w-2.5" />
-                                </Button>
-                              </div>
+                        ) : (
+                          <>
+                            <div
+                              className="prose prose-sm dark:prose-invert max-w-full min-w-0 select-text *:max-w-full"
+                              style={{
+                                fontSize: '15px',
+                                lineHeight: '1.8',
+                                wordBreak: 'break-word',
+                                overflowWrap: 'anywhere',
+                              }}
+                            >
+                              <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                  code({ inline, className, children, ...props }: any) {
+                                    const match = /language-(\w+)/.exec(className || '');
+                                    const codeString = String(children).replace(/\n$/, '');
+                                    return !inline && match ? (
+                                      <CodeBlock language={match[1]}>{codeString}</CodeBlock>
+                                    ) : (
+                                      <code
+                                        className="inline-block max-w-full rounded bg-zinc-200 px-2 py-0.5 font-mono text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100"
+                                        style={{
+                                          fontSize: '13px',
+                                          wordBreak: 'break-all',
+                                          overflowWrap: 'anywhere',
+                                        }}
+                                        {...props}
+                                      >
+                                        {children}
+                                      </code>
+                                    );
+                                  },
+                                  p: ({ children }) => (
+                                    <p
+                                      className="mb-4 max-w-full wrap-break-word last:mb-0"
+                                      style={{
+                                        lineHeight: '1.8',
+                                        wordBreak: 'break-word',
+                                        overflowWrap: 'anywhere',
+                                      }}
+                                    >
+                                      {children}
+                                    </p>
+                                  ),
+                                  ul: ({ children }) => (
+                                    <ul className="my-4 max-w-full space-y-2 pl-6">{children}</ul>
+                                  ),
+                                  ol: ({ children }) => (
+                                    <ol className="my-4 max-w-full space-y-2 pl-6">{children}</ol>
+                                  ),
+                                  li: ({ children }) => (
+                                    <li className="max-w-full pl-1" style={{ lineHeight: '1.8' }}>
+                                      {children}
+                                    </li>
+                                  ),
+                                }}
+                              >
+                                {message.content}
+                              </ReactMarkdown>
                             </div>
-                          )}
+
+                            {message.isStreaming && (
+                              <div className="text-muted-foreground mt-3 flex items-center gap-2 text-xs">
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                <span>Streaming...</span>
+                              </div>
+                            )}
+
+                            {message.role === 'assistant' &&
+                              (message.metadata || !message.content.includes('⚠️')) &&
+                              !message.isStreaming &&
+                              !message.isThinking && (
+                                <div className="border-border/30 text-muted-foreground mt-3 flex items-center justify-between gap-3 border-t pt-2 text-xs">
+                                  <div className="flex items-center gap-3">
+                                    {message.metadata?.runtime && (
+                                      <div className="flex items-center gap-1.5">
+                                        <Clock className="h-3.5 w-3.5" />
+                                        {(message.metadata.runtime / 1000).toFixed(2)}s
+                                      </div>
+                                    )}
+                                    {message.metadata?.inputTokens !== undefined && (
+                                      <div className="flex items-center gap-1.5">
+                                        <MessageSquare className="h-3.5 w-3.5" />
+                                        <span className="text-green-600 dark:text-green-400">
+                                          {message.metadata.inputTokens} in
+                                        </span>
+                                      </div>
+                                    )}
+                                    {message.metadata?.outputTokens !== undefined && (
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-blue-600 dark:text-blue-400">
+                                          {message.metadata.outputTokens} out
+                                        </span>
+                                      </div>
+                                    )}
+                                    {message.metadata?.reasoningTokens !== undefined && (
+                                      <div className="flex items-center gap-1.5">
+                                        <Sparkles className="h-3.5 w-3.5" />
+                                        <span className="text-amber-600 dark:text-amber-400">
+                                          {message.metadata.reasoningTokens} reasoning
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0"
+                                      onClick={() => handleCopyResponse(message.content)}
+                                      title="Copy response"
+                                    >
+                                      <Copy className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0"
+                                      onClick={() => handleDownloadMarkdown(message.content, index)}
+                                      title="Download as Markdown"
+                                    >
+                                      <Download className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 gap-1 px-1.5 text-[10px]"
+                                      onClick={() => handleCreateSource(message.content)}
+                                      title="Create source node"
+                                    >
+                                      <FileText className="h-3 w-3" />
+                                      <ArrowRight className="h-2.5 w-2.5" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                          </>
+                        )}
                       </div>
                       <span className="text-muted-foreground text-xs">
                         {message.timestamp.toLocaleTimeString()}
@@ -963,6 +1100,23 @@ export default memo(function LLMPodNode({
           </div>
 
           <div className="nodrag bg-background/50 flex flex-col gap-3 p-4">
+            <div className="border-border/60 bg-card/60 flex items-center justify-between rounded-lg border px-3 py-2">
+              <div className="flex items-center gap-2 text-xs font-semibold">
+                <Sparkles className="text-primary h-3.5 w-3.5" />
+                <span>Auto context</span>
+              </div>
+              <Switch
+                checked={autoContextEnabled}
+                onCheckedChange={(checked) => {
+                  setAutoContextEnabled(checked);
+                  syncToCanvasImmediate({
+                    config: { ...data.config, autoContext: checked },
+                  });
+                }}
+                aria-label="Toggle automatic context injection"
+              />
+            </div>
+
             <div className="relative">
               <Textarea
                 ref={textareaRef}

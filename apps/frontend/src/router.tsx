@@ -19,6 +19,7 @@ import AcceptInvitationPage from './pages/workspace/invite';
 import FlowsPage from './pages/dashboard/flows';
 import FlowIdPage from './pages/dashboard/flows/[id]';
 import DocumentsPage from './pages/dashboard/documents';
+import ChatPage from './pages/dashboard/chats/[id]';
 
 export const router = createBrowserRouter([
   {
@@ -76,8 +77,8 @@ export const router = createBrowserRouter([
             element: <FlowIdPage />,
           },
           {
-            path: 'spaces',
-            element: <div>Spaces Page (Coming Soon)</div>,
+            path: 'chats/:id',
+            element: <ChatPage />,
           },
           {
             path: 'documents',
@@ -86,10 +87,6 @@ export const router = createBrowserRouter([
           {
             path: 'documents/folder/:folderId',
             element: <DocumentsPage />,
-          },
-          {
-            path: 'sources',
-            element: <div>Sources Page (Coming Soon)</div>,
           },
           {
             path: 'api-keys',

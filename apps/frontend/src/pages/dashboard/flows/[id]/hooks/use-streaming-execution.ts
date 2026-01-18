@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import { useWorkspaces } from '@/hooks/use-workspaces';
 import { getAuthTokens } from '@/utils/token-utils';
 
@@ -10,6 +10,9 @@ interface StreamingMessage {
     runtime?: number;
     tokens?: number;
     cost?: number;
+    reasoningTokens?: number;
+    inputTokens?: number;
+    outputTokens?: number;
   };
   error?: string;
   executionId?: string;
@@ -32,6 +35,29 @@ export function useStreamingExecution(options: UseStreamingExecutionOptions = {}
   const { currentWorkspaceId } = useWorkspaces();
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // **CRITICAL FIX: Store callbacks in refs to avoid stale closures**
+  const onTokenRef = useRef(options.onToken);
+  const onStartRef = useRef(options.onStart);
+  const onCompleteRef = useRef(options.onComplete);
+  const onErrorRef = useRef(options.onError);
+
+  // Update refs when callbacks change
+  useEffect(() => {
+    onTokenRef.current = options.onToken;
+  }, [options.onToken]);
+
+  useEffect(() => {
+    onStartRef.current = options.onStart;
+  }, [options.onStart]);
+
+  useEffect(() => {
+    onCompleteRef.current = options.onComplete;
+  }, [options.onComplete]);
+
+  useEffect(() => {
+    onErrorRef.current = options.onError;
+  }, [options.onError]);
+
   const executeStreaming = useCallback(
     async (params: {
       podId: string;
@@ -40,6 +66,7 @@ export function useStreamingExecution(options: UseStreamingExecutionOptions = {}
       model: string;
       temperature?: number;
       maxTokens?: number;
+      autoContext?: boolean;
     }) => {
       if (!currentWorkspaceId) {
         throw new Error('No workspace selected');
@@ -92,14 +119,15 @@ export function useStreamingExecution(options: UseStreamingExecutionOptions = {}
         let fullContent = '';
         let executionId = '';
         let startTime = Date.now();
+        let completed = false;
 
-        // Initialize metadata with proper structure
         let metadata = {
           runtime: 0,
           tokens: 0,
           cost: 0,
           inputTokens: 0,
           outputTokens: 0,
+          reasoningTokens: 0,
         };
 
         while (true) {
@@ -118,14 +146,10 @@ export function useStreamingExecution(options: UseStreamingExecutionOptions = {}
               const data = line.slice(6);
 
               if (data === '[DONE]') {
-                // Calculate runtime
                 metadata.runtime = Date.now() - startTime;
 
-                options.onComplete?.({
-                  content: fullContent,
-                  metadata,
-                  executionId,
-                });
+                completed = true;
+                onCompleteRef.current?.({ content: fullContent, metadata, executionId });
                 return { content: fullContent, metadata, executionId };
               }
 
@@ -136,42 +160,47 @@ export function useStreamingExecution(options: UseStreamingExecutionOptions = {}
                   case 'start':
                     executionId = parsed.executionId || '';
                     startTime = Date.now();
-                    options.onStart?.(executionId);
+                    console.log('[STREAM] Start:', executionId);
+                    onStartRef.current?.(executionId);
                     break;
 
                   case 'token': {
-                    // Handle BOTH `token` and `content` fields
                     const tokenText = parsed.token || parsed.content || '';
                     if (tokenText) {
                       fullContent += tokenText;
-                      options.onToken?.(tokenText);
+                      console.log('[STREAM] Token:', tokenText);
+                      // **USE REF TO CALL CURRENT CALLBACK**
+                      onTokenRef.current?.(tokenText);
                     }
                     break;
                   }
 
                   case 'done':
-                    // Capture token usage from Gemini's done event
                     if (parsed.usage) {
                       metadata = {
                         runtime: Date.now() - startTime,
                         tokens: parsed.usage.totalTokens || 0,
-                        cost: 0, // Will be calculated by backend
+                        cost: 0,
                         inputTokens: parsed.usage.promptTokens || 0,
                         outputTokens: parsed.usage.completionTokens || 0,
+                        reasoningTokens: metadata.reasoningTokens || 0,
                       };
                     }
+                    console.log('[STREAM] Done with usage:', parsed.usage);
                     break;
 
                   case 'metadata':
-                    // Override with backend metadata if provided
                     metadata = {
                       ...metadata,
                       ...parsed.metadata,
+                      reasoningTokens: parsed.metadata?.reasoningTokens ?? metadata.reasoningTokens,
                     };
                     break;
 
                   case 'complete':
-                    options.onComplete?.({
+                    console.log('[STREAM] Complete');
+                    completed = true;
+                    onCompleteRef.current?.({
                       content: parsed.content || fullContent,
                       metadata: parsed.metadata || metadata,
                       executionId: parsed.executionId || executionId,
@@ -196,19 +225,26 @@ export function useStreamingExecution(options: UseStreamingExecutionOptions = {}
           }
         }
 
+        // Fallback: if the stream ended without emitting a formal completion event
+        // ensure we still deliver the accumulated content so the UI doesn't drop it.
+        if (!completed && fullContent) {
+          metadata.runtime = Date.now() - startTime;
+          onCompleteRef.current?.({ content: fullContent, metadata, executionId });
+        }
+
         return { content: fullContent, metadata, executionId };
       } catch (error: any) {
         if (error.name === 'AbortError') {
-          options.onError?.('Execution cancelled');
+          onErrorRef.current?.('Execution cancelled');
           throw new Error('Execution cancelled');
         }
-        options.onError?.(error.message);
+        onErrorRef.current?.(error.message);
         throw error;
       } finally {
         abortControllerRef.current = null;
       }
     },
-    [currentWorkspaceId, options]
+    [currentWorkspaceId]
   );
 
   const cancel = useCallback(() => {

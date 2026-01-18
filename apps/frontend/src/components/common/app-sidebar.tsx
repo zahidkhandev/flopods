@@ -23,8 +23,6 @@ import { useWorkspaces } from '@/hooks/use-workspaces';
 import { useAuth } from '@/hooks/use-auth';
 import {
   FileText,
-  FolderOpen,
-  Database,
   User2,
   LogOut,
   Settings,
@@ -32,34 +30,17 @@ import {
   Workflow,
   LayoutDashboard,
   ChevronsUpDown,
+  MessagesSquare,
+  ChevronDown,
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
-
-const navData = [
-  {
-    title: 'Overview',
-    items: [
-      { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-      { title: 'Flows', url: '/dashboard/flows', icon: Workflow },
-    ],
-  },
-  {
-    title: 'Resources',
-    items: [
-      { title: 'Spaces', url: '/dashboard/spaces', icon: FolderOpen },
-      { title: 'Documents', url: '/dashboard/documents', icon: FileText },
-      { title: 'Sources', url: '/dashboard/sources', icon: Database },
-    ],
-  },
-  {
-    title: 'Workspace',
-    items: [{ title: 'Settings', url: '/dashboard/settings', icon: Settings }],
-  },
-];
+import { useFlows } from '@/pages/dashboard/flows/hooks/use-flows';
+import { usePods } from '@/pages/dashboard/flows/[id]/hooks/use-pods';
+import { useState } from 'react';
 
 export function AppSidebar() {
   const { workspaces, currentWorkspace, switchWorkspace, isLoading } = useWorkspaces();
@@ -68,6 +49,13 @@ export function AppSidebar() {
   const { state, isMobile } = useSidebar();
 
   const isCollapsedMode = !isMobile && state === 'collapsed';
+  const { flows, isLoading: flowsLoading } = useFlows({ limit: 50 });
+  const footerNav = [
+    { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
+    { title: 'Flows', url: '/dashboard/flows', icon: Workflow },
+    { title: 'Sources', url: '/dashboard/documents', icon: FileText },
+    { title: 'Settings', url: '/dashboard/settings', icon: Settings },
+  ];
 
   return (
     <Sidebar variant="floating" collapsible="icon">
@@ -143,7 +131,7 @@ export function AppSidebar() {
                           {workspace.name}
                         </div>
                         <div className="text-muted-foreground truncate text-xs">
-                          {workspace.type} • {workspace.memberCount} members
+                          {workspace.type} | {workspace.memberCount} members
                         </div>
                       </div>
                       {workspace.id === currentWorkspace?.id && (
@@ -173,32 +161,47 @@ export function AppSidebar() {
       </SidebarHeader>
 
       <SidebarContent className="overflow-y-auto">
-        {navData.map((section) => (
-          <SidebarGroup key={section.title}>
-            <SidebarGroupLabel className="text-xs">{section.title}</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu className="gap-0.5">
-                {section.items.map((item) => {
-                  const isActive = location.pathname === item.url;
-                  return (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
-                        <Link to={item.url} className="gap-2">
-                          <item.icon className="size-4 shrink-0" />
-                          <span className="truncate">{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        ))}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-xs">Chats</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu className="gap-0.5">
+              {flowsLoading && (
+                <div className="space-y-2 px-2">
+                  <Skeleton className="h-6 w-full" />
+                  <Skeleton className="h-6 w-3/4" />
+                </div>
+              )}
+              {flows.map((flow) => (
+                <FlowChatsNav
+                  key={flow.id}
+                  flowId={flow.id}
+                  name={flow.name}
+                  currentPath={location.pathname}
+                />
+              ))}
+              {!flowsLoading && flows.length === 0 && (
+                <div className="px-2 py-2 text-xs text-muted-foreground">No chats yet</div>
+              )}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter>
         <SidebarMenu>
+          {footerNav.map((item) => {
+            const isActive = location.pathname === item.url;
+            return (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton asChild isActive={isActive} tooltip={item.title}>
+                  <Link to={item.url} className="gap-2">
+                    <item.icon className="size-4 shrink-0" />
+                    <span className="truncate">{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -280,5 +283,71 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
+  );
+}
+
+function FlowChatsNav({
+  flowId,
+  name,
+  currentPath,
+}: {
+  flowId: string;
+  name: string;
+  currentPath: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const { data: pods = [], isLoading } = usePods(flowId);
+  const toggle = () => setOpen((v) => !v);
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton onClick={toggle} className="w-full gap-2 min-w-0">
+        <MessagesSquare className="size-4 shrink-0" />
+        <span className="truncate">{name}</span>
+        <ChevronDown
+          className={cn(
+            'ml-auto size-4 shrink-0 transition-transform',
+            open ? 'rotate-180' : ''
+          )}
+        />
+      </SidebarMenuButton>
+      {open && (
+        <SidebarMenu className="ml-6 mt-1 space-y-0.5">
+          {isLoading && (
+            <div className="space-y-2 px-1">
+              <Skeleton className="h-5 w-full" />
+              <Skeleton className="h-5 w-4/5" />
+            </div>
+          )}
+          {!isLoading && pods.length === 0 && (
+            <div className="px-2 py-1 text-[11px] text-muted-foreground">No pods</div>
+          )}
+          {pods.map((pod) => {
+            const href = `/dashboard/chats/${pod.id}`;
+            const to = { pathname: href, search: `?flowId=${flowId}` };
+            const isActive = currentPath === href;
+            return (
+              <SidebarMenuItem key={pod.id}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive}
+                  tooltip={pod.label || 'Chat'}
+                  className="w-full"
+                >
+                  <Link
+                    to={to}
+                    state={{ flowId }}
+                    className="flex min-w-0 items-center gap-2"
+                  >
+                    <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-muted-foreground/80" />
+                    <span className="truncate text-sm">{pod.label || 'Untitled pod'}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
+      )}
+    </SidebarMenuItem>
   );
 }

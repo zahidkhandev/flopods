@@ -11,8 +11,9 @@ export interface ResolvedContext {
   output: string;
   executionId?: string;
   timestamp: Date;
-  category: 'LIVE_DATA' | 'HISTORY';
+  category: 'LIVE_DATA' | 'HISTORY' | 'RAG';
   type: PodType;
+  score?: number;
 }
 
 export interface ContextChain {
@@ -22,6 +23,15 @@ export interface ContextChain {
   };
   context: ResolvedContext[];
   variables: Record<string, string>;
+}
+
+export interface ContextResolutionOptions {
+  workspaceId?: string;
+  userId?: string;
+  query?: string;
+  autoContextEnabled?: boolean;
+  ragThreshold?: number;
+  ragMaxResults?: number;
 }
 
 interface GeminiEmbeddingResponse {
@@ -51,7 +61,7 @@ export class V1ContextResolutionService {
     private readonly encryptionService: ApiKeyEncryptionService,
   ) {}
 
-  async invalidatePodContext(podId: string, flowId: string): Promise<void> {
+  async invalidatePodContext(podId: string, _flowId: string): Promise<void> {
     this.logger.debug(`Invalidating context cache for pod ${podId}`);
 
     await this.prisma.pod.update({
@@ -71,6 +81,7 @@ export class V1ContextResolutionService {
       pinnedExecutionId: string | null;
     }>,
     maxTokens: number = 100000,
+    options?: ContextResolutionOptions,
   ): Promise<ContextChain> {
     const pod = await this.prisma.pod.findUnique({
       where: { id: podId },
@@ -245,6 +256,42 @@ export class V1ContextResolutionService {
       }
     }
 
+    const autoContextEnabled = options?.autoContextEnabled ?? true;
+    const workspaceId = options?.workspaceId;
+    const userId = options?.userId;
+    const queryText = options?.query?.trim();
+
+    if (autoContextEnabled && workspaceId && userId && queryText && totalTokensUsed < maxTokens) {
+      const ragContexts = await this.fetchRagContexts({
+        workspaceId,
+        userId,
+        query: queryText,
+        threshold: options?.ragThreshold,
+        maxResults: options?.ragMaxResults,
+      });
+
+      for (const ctx of ragContexts) {
+        const tokens = this.estimateTokens(ctx.output);
+        if (tokens <= 0) continue;
+
+        if (totalTokensUsed + tokens > maxTokens) {
+          this.logger.warn(
+            `Reached token limit (${totalTokensUsed}/${maxTokens}) while adding RAG context. Stopping additional semantic results.`,
+          );
+          break;
+        }
+
+        contextResults.push(ctx);
+        totalTokensUsed += tokens;
+      }
+
+      if (ragContexts.length > 0) {
+        this.logger.log(
+          `Retrieved ${ragContexts.length} semantic (RAG) context items for pod ${podId} (tokens:${totalTokensUsed}/${maxTokens})`,
+        );
+      }
+    }
+
     const formattedContext = this.buildHierarchicalContextString(contextResults);
     const variables = {
       ...this.buildVariablesFromContext(contextResults),
@@ -260,6 +307,7 @@ export class V1ContextResolutionService {
 
   private buildHierarchicalContextString(contexts: ResolvedContext[]): string {
     const liveData = contexts.filter((c) => c.category === 'LIVE_DATA');
+    const ragContexts = contexts.filter((c) => c.category === 'RAG');
     const history = contexts.filter((c) => c.category === 'HISTORY');
 
     history.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
@@ -276,6 +324,19 @@ export class V1ContextResolutionService {
       prompt += `---\\n\\n`;
     }
 
+    if (ragContexts.length > 0) {
+      prompt += `### RAG SEMANTIC RETRIEVAL\\n`;
+      prompt += `The following snippets were retrieved because they closely match the current request. Use them for grounding, but prioritize more recent live data if there is a conflict.\\n\\n`;
+
+      for (const ctx of ragContexts) {
+        prompt += `**Retrieved from Pod ${ctx.podId}${ctx.executionId ? ` (Exec ${ctx.executionId})` : ''}${
+          ctx.score ? ` | Similarity: ${ctx.score.toFixed(4)}` : ''
+        }:**\\n`;
+        prompt += `${ctx.output}\\n\\n`;
+      }
+      prompt += `---\\n\\n`;
+    }
+
     if (history.length > 0) {
       prompt += `### 🟡 PREVIOUS CONVERSATION HISTORY (Context Only)\\n`;
       prompt += `The following is a log of previous interactions. Note that this history might contain outdated conclusions. If this history contradicts the "Current Input Data" above, IGNORE the history and use the Input Data.\\n\\n`;
@@ -287,7 +348,7 @@ export class V1ContextResolutionService {
           if (json.user) prompt += `User: ${json.user}\\n`;
           if (json.assistant) prompt += `Assistant: ${json.assistant}\\n`;
           prompt += `\\n`;
-        } catch (e) {
+        } catch {
           prompt += `**Output:** ${ctx.output}\\n\\n`;
         }
       }
@@ -393,6 +454,30 @@ export class V1ContextResolutionService {
     }
 
     return results;
+  }
+
+  private async fetchRagContexts(params: {
+    workspaceId: string;
+    userId: string;
+    query: string;
+    threshold?: number;
+    maxResults?: number;
+  }): Promise<ResolvedContext[]> {
+    const { workspaceId, userId, query, threshold = 0.72, maxResults = 6 } = params;
+    if (!query) return [];
+
+    try {
+      const embedding = await this.generateTextEmbedding(query, workspaceId);
+      if (!embedding.length) {
+        this.logger.debug('[Context] RAG embedding was empty; skipping semantic search');
+        return [];
+      }
+      return this.semanticSearchUserContext(workspaceId, userId, embedding, threshold, maxResults);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`[Context] Failed to fetch RAG context: ${errorMessage}`);
+      return [];
+    }
   }
 
   private async getRecursiveUpstreamPodsWithTypes(
@@ -593,8 +678,8 @@ export class V1ContextResolutionService {
         return textBlocks.map((block: any) => block.text).join('\\n');
       }
       return null;
-    } catch (err) {
-      this.logger.error('Failed to extract output from response', err);
+    } catch (error) {
+      this.logger.error('Failed to extract output from response', error);
       return null;
     }
   }
@@ -678,7 +763,7 @@ export class V1ContextResolutionService {
       if (keyRecord) {
         try {
           return this.encryptionService.decrypt(keyRecord.keyHash);
-        } catch (error) {
+        } catch {
           throw new ForbiddenException('Failed to decrypt workspace API key');
         }
       }
@@ -708,7 +793,7 @@ export class V1ContextResolutionService {
       );
       const embedding = response.data.embedding?.values;
       if (embedding && Array.isArray(embedding)) return embedding;
-    } catch (err) {
+    } catch {
       // Fallback
     }
 
@@ -727,7 +812,7 @@ export class V1ContextResolutionService {
           return hfResponse.data[0];
         }
       }
-    } catch (e) {
+    } catch {
       this.logger.error('All embedding providers failed');
     }
     return [];
@@ -747,7 +832,7 @@ export class V1ContextResolutionService {
 
     try {
       await this.prisma.$executeRaw`
-        INSERT INTO documents."ChatEmbedding"
+        INSERT INTO canvas."ChatEmbedding"
         (id, "workspaceId", "userId", "podId", "executionId", "chunkText",
           vector, "vectorDimension", model, metadata, "createdAt")
         VALUES (
@@ -774,14 +859,15 @@ export class V1ContextResolutionService {
   }
 
   async semanticSearchUserContext(
+    workspaceId: string,
     userId: string,
-    query: string,
-    threshold: number = 0.75,
+    queryEmbedding: number[],
+    threshold: number = 0.72,
     maxResults: number = 10,
   ): Promise<ResolvedContext[]> {
-    const queryEmbedding = await this.generateTextEmbedding(query);
     if (!queryEmbedding.length) return [];
 
+    const vectorString = `[${queryEmbedding.join(',')}]`;
     const results = await this.prisma.$queryRaw<
       {
         id: string;
@@ -793,9 +879,10 @@ export class V1ContextResolutionService {
       }[]
     >`
     SELECT id, "podId", "executionId", "chunkText", "createdAt",
-    1 - (vector <=> ${queryEmbedding}::vector) AS similarity
-    FROM documents."ChatEmbedding"
-    WHERE "userId" = ${userId} AND 1 - (vector <=> ${queryEmbedding}::vector) > ${threshold}
+    1 - (vector <=> ${vectorString}::vector) AS similarity
+    FROM canvas."ChatEmbedding"
+    WHERE "workspaceId" = ${workspaceId} AND "userId" = ${userId}
+      AND 1 - (vector <=> ${vectorString}::vector) > ${threshold}
     ORDER BY similarity DESC
     LIMIT ${maxResults}
   `;
@@ -804,8 +891,9 @@ export class V1ContextResolutionService {
       output: r.chunkText,
       executionId: r.executionId,
       timestamp: r.createdAt,
-      category: 'HISTORY',
+      category: 'RAG',
       type: 'LLM_PROMPT',
+      score: Number(r.similarity),
     }));
   }
 }

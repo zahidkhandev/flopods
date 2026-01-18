@@ -20,7 +20,6 @@ import {
   formatCostBreakdown,
   formatProfitBreakdown,
 } from '../../common/utils/profit-and-credits';
-import { QueueFactory } from '../../common/queue/queue.factory';
 
 type LLMMessage = {
   role: 'system' | 'user' | 'assistant';
@@ -30,8 +29,6 @@ type LLMMessage = {
 @Injectable()
 export class V1ExecutionService {
   private readonly logger = new Logger(V1ExecutionService.name);
-  private backgroundQueue: any;
-
   private readonly DEFAULT_SYSTEM_PROMPTS = {
     general: 'You are a helpful AI assistant. Provide clear, accurate, and concise responses.',
     analyst: 'You are a data analyst. Analyze information objectively and provide insights.',
@@ -45,10 +42,7 @@ export class V1ExecutionService {
     private readonly providerFactory: ProviderFactory,
     private readonly contextResolution: V1ContextResolutionService,
     private readonly flowGateway: V1FlowGateway,
-    private readonly queueFactory: QueueFactory,
-  ) {
-    this.backgroundQueue = this.queueFactory.createQueue('background-tasks');
-  }
+  ) {}
 
   /**
    * INSTANT STREAMING with CONVERSATION HISTORY + PROFIT/CREDITS TRACKING
@@ -68,6 +62,7 @@ export class V1ExecutionService {
     frequencyPenalty?: number;
     thinkingBudget?: number;
     responseFormat?: 'text' | 'json_object' | 'json';
+    autoContext?: boolean;
     contextMappings?: PodContextMapping[];
   }): AsyncGenerator<LLMStreamChunk, void, unknown> {
     const { podId, workspaceId, userId, messages } = params;
@@ -113,6 +108,7 @@ export class V1ExecutionService {
       const finalFrequencyPenalty = params.frequencyPenalty ?? llmConfig.frequencyPenalty;
       const finalThinkingBudget = params.thinkingBudget ?? llmConfig.thinkingBudget;
       const finalResponseFormat = params.responseFormat ?? llmConfig.responseFormat;
+      const autoContextEnabled = params.autoContext ?? llmConfig.autoContext ?? true;
 
       const userMessage = messages.find((m) => m.role === 'user');
       const userInput = userMessage?.content || '';
@@ -136,6 +132,7 @@ export class V1ExecutionService {
             maxTokens: finalMaxTokens,
             provider: finalProvider,
             model: finalModel,
+            autoContextEnabled,
           },
         },
       });
@@ -161,27 +158,42 @@ export class V1ExecutionService {
       );
 
       // PRIORITY 2: Upstream pod context (RECURSIVE with token limit)
-      const contextChain = await this.contextResolution.resolveFullContext(
-        podId,
-        pod.flowId,
-        undefined,
-        safeContextLimit,
-      );
+      // Always resolve upstream + RAG when autoContextEnabled is true.
+      const contextChain = autoContextEnabled
+        ? await this.contextResolution.resolveFullContext(
+            podId,
+            pod.flowId,
+            params.contextMappings,
+            safeContextLimit,
+            {
+              workspaceId,
+              userId,
+              query: userInput,
+              autoContextEnabled: true,
+              ragThreshold: 0.72,
+              ragMaxResults: 6,
+            },
+          )
+        : { context: [], variables: {} };
+      const ragContextCount = contextChain.context.filter((c) => c.category === 'RAG').length;
 
       this.logger.debug(
         `Conversation history loaded: ${conversationHistory.length} messages from SAME pod`,
       );
       this.logger.debug(
-        `Context resolved: ${contextChain.context.length} history items from ${Object.keys(contextChain.variables).length} UPSTREAM pods`,
+        `Context resolved: ${contextChain.context.length} history items from ${Object.keys(
+          contextChain.variables,
+        ).length} UPSTREAM pods | RAG vectors retrieved: ${ragContextCount} | autoContext=${autoContextEnabled}`,
       );
 
       // Build system prompt with PRIORITY ordering
       let systemPrompt = params.systemPrompt ?? this.DEFAULT_SYSTEM_PROMPTS.general;
 
       // Add upstream pod context FIRST (lower priority in context window)
-      if (contextChain.variables['SYSTEM_CONTEXT_STRING']) {
+      const contextVars = contextChain.variables as Record<string, string>;
+      if (contextVars['SYSTEM_CONTEXT_STRING']) {
         // Use the new hierarchical format with priority markers
-        systemPrompt += '\n\n' + contextChain.variables['SYSTEM_CONTEXT_STRING'];
+        systemPrompt += '\n\n' + contextVars['SYSTEM_CONTEXT_STRING'];
 
         this.logger.debug(
           `Added hierarchical context from ${Object.keys(contextChain.variables).length - 1} upstream pods to system prompt`,
@@ -189,14 +201,14 @@ export class V1ExecutionService {
       } else if (Object.keys(contextChain.variables).length > 0) {
         // Fallback to old format if SYSTEM_CONTEXT_STRING doesn't exist
         const upstreamContextSection = '\n\n## Context from Connected Upstream Pods:\n\n';
-        const upstreamContextDetails = Object.entries(contextChain.variables)
+        const upstreamContextDetails = Object.entries(contextVars)
           .filter(([pid]) => pid !== 'SYSTEM_CONTEXT_STRING')
           .map(([pid, content]) => `**Upstream Pod ${pid}:**\n${content}`)
           .join('\n\n');
         systemPrompt += upstreamContextSection + upstreamContextDetails;
 
         this.logger.debug(
-          `Added context from ${Object.keys(contextChain.variables).length} upstream pods to system prompt`,
+          `Added context from ${Object.keys(contextVars).length} upstream pods to system prompt`,
         );
       } else if (upstreamEdgesCount > 0) {
         this.logger.warn(
@@ -205,7 +217,9 @@ export class V1ExecutionService {
       }
 
       this.logger.log(
-        `[DEBUG CONTEXT] Upstream: ${upstreamEdgesCount} | Same Pod History: ${conversationHistory.length} msgs | Upstream Variables: ${Object.keys(contextChain.variables).length}`,
+        `[DEBUG CONTEXT] Upstream: ${upstreamEdgesCount} | Same Pod History: ${conversationHistory.length} msgs | Upstream Variables: ${Object.keys(
+          contextChain.variables,
+        ).length} | RAG items: ${ragContextCount}`,
       );
 
       // Add user profile & workspace info
@@ -427,29 +441,24 @@ export class V1ExecutionService {
         });
       }
 
-      // Generate embedding
-      try {
-        const combinedTextForEmbedding = `User: ${userInput}\nAssistant: ${fullContent}`;
-
-        this.backgroundQueue
-          .add('generate-embedding', {
+      if (userInput || fullContent) {
+        const chatRecord = JSON.stringify({ user: userInput, assistant: fullContent });
+        try {
+          const embedding = await this.contextResolution.generateTextEmbedding(chatRecord, workspaceId);
+          await this.contextResolution.saveChatEmbedding(
             workspaceId,
             userId,
             podId,
             executionId,
-            text: combinedTextForEmbedding,
-          })
-          .catch((err: any) => {
-            this.logger.error('Failed to enqueue embedding job', err);
-          });
-
-        this.logger.debug(`[Execution] Enqueued embedding generation for ${executionId}`);
-      } catch (embeddingError) {
-        this.logger.warn(
-          `[Execution] Embedding generation/saving failed: ${
-            embeddingError instanceof Error ? embeddingError.message : embeddingError
-          }`,
-        );
+            chatRecord,
+            embedding,
+          );
+          this.logger.debug(`[Execution] Saved chat embedding for ${executionId}`);
+        } catch (embeddingError) {
+          const errorMessage =
+            embeddingError instanceof Error ? embeddingError.message : String(embeddingError);
+          this.logger.warn(`[Execution] Chat embedding failed for ${executionId}: ${errorMessage}`);
+        }
       }
 
       // Update pod final status
