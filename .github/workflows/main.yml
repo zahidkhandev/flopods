@@ -1,0 +1,37 @@
+name: Rust CI
+
+# Triggers the workflow on push or pull request to the main branch
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build-and-test:
+    name: Format, Lint, and Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Installs the stable Rust toolchain and the rustfmt/clippy components
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      # Caches dependencies to speed up subsequent workflow runs
+      - name: Set up Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check formatting
+        run: cargo fmt --check
+
+      # Runs clippy. The '-D warnings' flag turns warnings into errors, failing the build.
+      - name: Run Clippy
+        run: cargo clippy -- -D warnings
+
+      - name: Run tests
+        run: cargo test
