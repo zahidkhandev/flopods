@@ -19,6 +19,7 @@ import {
   ApiBadRequestResponse,
   ApiUnauthorizedResponse,
   ApiNotFoundResponse,
+  ApiBody,
 } from '@nestjs/swagger';
 import { V1PodService } from './pod.service';
 import { V1EdgeService } from './edge.service';
@@ -26,7 +27,13 @@ import { GetCurrentUserId } from '../../common/decorators/user';
 import { CreatePodDto } from './dto/create-pod.dto';
 import { UpdatePodDto } from './dto/update-pod.dto';
 import { CreateEdgeDto } from './dto/create-edge.dto';
-import { PodResponseDto, EdgeResponseDto, FlowCanvasResponseDto } from './dto/pod-response.dto';
+import {
+  PodResponseDto,
+  EdgeResponseDto,
+  FlowCanvasResponseDto,
+  MovePodResponseDto,
+} from './dto/pod-response.dto';
+import { MovePodDto } from './dto/move-pod.dto';
 
 @ApiTags('Pods & Edges')
 @ApiBearerAuth('JWT')
@@ -114,6 +121,39 @@ export class V1PodController {
   ): Promise<{ message: string }> {
     await this.podService.lockPod(podId, userId);
     return { message: 'Pod locked successfully' };
+  }
+
+  @Post('pods/:podId/move')
+  @ApiOperation({
+    summary: 'Move a pod to another flow',
+    description:
+      'Moves a pod to a different flow within the same workspace, optionally deleting the source flow if it becomes empty. Automatically links to the latest pod (by position) in the target flow.',
+  })
+  @ApiParam({ name: 'workspaceId', description: 'Workspace ID' })
+  @ApiParam({ name: 'flowId', description: 'Current flow ID' })
+  @ApiParam({ name: 'podId', description: 'Pod ID' })
+  @ApiBody({ type: MovePodDto })
+  @ApiResponse({ status: 200, type: MovePodResponseDto })
+  async movePod(
+    @Param('workspaceId') workspaceId: string,
+    @Param('flowId') flowId: string,
+    @Param('podId') podId: string,
+    @GetCurrentUserId() userId: string,
+    @Body(ValidationPipe) dto: MovePodDto,
+  ): Promise<MovePodResponseDto> {
+    return this.podService.movePod(workspaceId, flowId, podId, userId, dto);
+  }
+
+  @Get('pods')
+  @ApiOperation({ summary: 'List pods in a flow' })
+  @ApiParam({ name: 'workspaceId', description: 'Workspace ID' })
+  @ApiParam({ name: 'flowId', description: 'Flow ID' })
+  @ApiResponse({ status: 200, type: [PodResponseDto] })
+  async listPods(
+    @Param('workspaceId') workspaceId: string,
+    @Param('flowId') flowId: string,
+  ): Promise<PodResponseDto[]> {
+    return this.podService.listPods(workspaceId, flowId);
   }
 
   @Post('pods/:podId/unlock')

@@ -7,6 +7,7 @@ import {
   IsArray,
   IsOptional,
   IsNumber,
+  IsBoolean,
   ValidateNested,
   IsIn,
   Min,
@@ -156,4 +157,12 @@ export class ExecutePodDto {
   @IsOptional()
   @IsIn(['text', 'json_object', 'json'])
   responseFormat?: 'text' | 'json_object' | 'json';
+
+  @ApiPropertyOptional({
+    description: 'Toggle automatic context resolution (RAG + upstream pods)',
+    example: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  autoContext?: boolean;
 }

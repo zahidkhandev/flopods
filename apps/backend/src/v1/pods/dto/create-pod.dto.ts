@@ -10,6 +10,7 @@ import {
   IsArray,
   Min,
   Max,
+  IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
@@ -109,6 +110,15 @@ export class LLMConfigDto {
   @ApiPropertyOptional({ default: false })
   @IsOptional()
   streamEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'When enabled, upstream pods and semantic (RAG) context will be automatically injected into executions.',
+    default: true,
+  })
+  @IsOptional()
+  @IsBoolean()
+  autoContext?: boolean;
 }
 
 export class CreatePodDto {

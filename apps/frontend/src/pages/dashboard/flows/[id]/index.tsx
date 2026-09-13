@@ -61,7 +61,10 @@ const edgeTypes: EdgeTypes = {
 function FlowEditor() {
   const { id: flowId } = useParams<{ id: string }>();
   const { currentWorkspaceId } = useWorkspaces();
-  const { screenToFlowPosition, fitView } = useReactFlow();
+
+  // FIX: Destructure zoomTo instead of zoomBy
+  const { screenToFlowPosition, fitView, zoomTo, getZoom } = useReactFlow();
+
   const nodesInitialized = useNodesInitialized();
 
   const {
@@ -77,7 +80,6 @@ function FlowEditor() {
     setNodeStatus,
     setNodes,
     setEdges,
-
     save,
     hasUnsavedChanges,
     isSaving,
@@ -86,7 +88,6 @@ function FlowEditor() {
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // Don't trigger if user is typing in an input/textarea
       const target = event.target as HTMLElement;
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
         return;
@@ -95,7 +96,6 @@ function FlowEditor() {
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
       const isCtrlOrCmd = isMac ? event.metaKey : event.ctrlKey;
 
-      // Ctrl/Cmd + S: Save
       if (isCtrlOrCmd && event.key === 's') {
         event.preventDefault();
         if (hasUnsavedChanges && !isSaving) {
@@ -107,6 +107,7 @@ function FlowEditor() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [save, hasUnsavedChanges, isSaving]);
+
   const [flowDetails, setFlowDetails] = useState<FlowDetails | null>(null);
   const [isLoadingFlow, setIsLoadingFlow] = useState(true);
   const [selectedPodId, setSelectedPodId] = useState<string | null>(null);
@@ -115,15 +116,12 @@ function FlowEditor() {
   );
   const [hasInitialFitView, setHasInitialFitView] = useState(false);
 
-  // Handle double-click to open config panel
   const handleNodeDoubleClick = useCallback((_event: React.MouseEvent, node: Node) => {
     setSelectedPodId(node.id);
   }, []);
 
-  // Track selection without opening panel (only close if deselected)
   useEffect(() => {
     const selectedNode = nodes.find((n) => n.selected);
-    // Only close panel if no node is selected
     if (selectedPodId && !selectedNode) {
       setSelectedPodId(null);
     }
@@ -346,6 +344,41 @@ function FlowEditor() {
     });
   }, []);
 
+  // === CUSTOM ZOOM HANDLER (FIXED) ===
+  const handleWheel = useCallback(
+    (event: React.WheelEvent) => {
+      // If event propagates from a scrollable area inside a node (like textarea), stop zoom
+      const target = event.target as HTMLElement;
+      if (target.closest('.nodrag') || target.closest('.nowheel')) {
+        return;
+      }
+
+      // Check current zoom level
+      const currentZoom = getZoom();
+
+      if (event.deltaY !== 0) {
+        let zoomFactor = 0.0015; // Standard speed
+
+        // Dynamic Speed Curve
+        if (currentZoom < 0.5) {
+          zoomFactor = 0.003; // Fast zoom when far out
+        } else if (currentZoom > 1.2) {
+          zoomFactor = 0.0005; // Precision zoom when close in
+        }
+
+        // Calculate smooth factor
+        const smoothFactor = Math.exp(-event.deltaY * zoomFactor);
+
+        // Calculate new absolute zoom
+        const newZoom = currentZoom * smoothFactor;
+
+        // Use zoomTo instead of zoomBy
+        zoomTo(newZoom);
+      }
+    },
+    [zoomTo, getZoom]
+  );
+
   if (!flowId || isLoadingFlow || isInitializing || !currentWorkspaceId) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -372,7 +405,7 @@ function FlowEditor() {
 
   return (
     <div className="flex h-full w-full overflow-hidden">
-      <div className="relative flex-1 overflow-hidden">
+      <div className="relative flex-1 overflow-hidden" onWheel={handleWheel}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -387,8 +420,8 @@ function FlowEditor() {
             type: 'animated',
             animated: true,
           }}
-          minZoom={0.1}
-          maxZoom={2}
+          minZoom={0.01}
+          maxZoom={3}
           fitViewOptions={{
             padding: 0.5,
             includeHiddenNodes: false,
@@ -396,9 +429,10 @@ function FlowEditor() {
             maxZoom: 0.5,
           }}
           proOptions={{ hideAttribution: true }}
-          zoomOnScroll={true}
+          // Disable default zoom to use our custom logic
+          zoomOnScroll={false}
           zoomOnPinch={true}
-          panOnScroll={false}
+          panOnScroll={true}
           panOnDrag={true}
           preventScrolling={true}
           zoomActivationKeyCode={null}

@@ -63,6 +63,7 @@ export default memo(function SourcePodNode({
 
   return (
     <BasePodNode
+      id={nodeId} // PASSING ID HERE
       title={data.label}
       icon={<Upload className="h-5 w-5" />}
       status={data.executionStatus}
@@ -122,7 +123,7 @@ export default memo(function SourcePodNode({
       {sourceType === 'text' && (
         <Textarea
           placeholder="Enter your text here..."
-          className="nodrag nowheel min-h-[100px]"
+          className="nodrag nowheel min-h-25"
           defaultValue={data.config.content}
           onChange={(e) => handleContentChange(e.target.value)}
         />

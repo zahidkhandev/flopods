@@ -7,6 +7,7 @@ import PodHeader from '../pod-components/pod-header';
 import { PodExecutionStatus } from '../../types';
 
 interface BasePodNodeProps {
+  id: string; // Passed from parent
   title: string | ReactNode;
   icon: ReactNode;
   status: PodExecutionStatus;
@@ -47,6 +48,7 @@ const statusGlow = {
 };
 
 export default memo(function BasePodNode({
+  id,
   title,
   icon,
   status,
@@ -64,7 +66,7 @@ export default memo(function BasePodNode({
       exit={{ scale: 0.95, opacity: 0 }}
       transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
       className={cn(
-        'group relative w-[700px]',
+        'group relative w-175',
         'rounded-2xl border-2',
         'backdrop-blur-xl',
         'bg-card/90',
@@ -83,15 +85,16 @@ export default memo(function BasePodNode({
         <div
           className={cn(
             'absolute -inset-0.5 rounded-2xl opacity-30 blur-xl',
-            'bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500',
+            'bg-linear-to-r from-blue-500 via-purple-500 to-pink-500',
             'animate-pulse'
           )}
         />
       )}
 
       <div className="relative overflow-hidden rounded-2xl">
-        <div className="drag-handle cursor-move rounded-t-2xl bg-black/[0.03] dark:bg-white/[0.02]">
-          <PodHeader title={title} icon={icon} status={status} onConfigure={onConfigure} />
+        <div className="drag-handle cursor-move rounded-t-2xl bg-black/3 dark:bg-white/2">
+          {/* PASS ID DOWN */}
+          <PodHeader id={id} title={title} icon={icon} status={status} onConfigure={onConfigure} />
         </div>
 
         <div className="nodrag nowheel max-w-full space-y-3 overflow-hidden p-4">{children}</div>

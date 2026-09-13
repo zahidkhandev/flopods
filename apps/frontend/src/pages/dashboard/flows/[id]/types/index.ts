@@ -61,6 +61,9 @@ export interface LLMPodConfig {
   model: string;
   temperature?: number;
   maxTokens?: number;
+  autoContext?: boolean;
+  ragThreshold?: number;
+  ragMaxResults?: number;
   systemPrompt?: string;
   userPrompt?: string;
   topP?: number;
@@ -87,6 +90,9 @@ export interface PodData {
 
 export interface LLMPodData extends PodData {
   config: LLMPodConfig;
+  messages?: Message[];
+  streamingContent?: string;
+  isExecuting?: boolean;
 }
 
 export interface SourcePodData extends PodData {
@@ -110,6 +116,7 @@ export interface Message {
     cost?: string;
     inputTokens?: number;
     outputTokens?: number;
+    reasoningTokens?: number;
   };
 }
 

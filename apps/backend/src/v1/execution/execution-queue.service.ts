@@ -109,6 +109,8 @@ export class V1ExecutionService {
       const finalFrequencyPenalty = params.frequencyPenalty ?? llmConfig.frequencyPenalty;
       const finalThinkingBudget = params.thinkingBudget ?? llmConfig.thinkingBudget;
       const finalResponseFormat = params.responseFormat ?? llmConfig.responseFormat;
+      const modelMaxTokens = finalMaxTokens || 8192;
+      const safeContextLimit = Math.floor(modelMaxTokens * 0.6);
 
       // Extract user input for history
       const userMessage = messages.find((m) => m.role === 'user');
@@ -153,7 +155,13 @@ export class V1ExecutionService {
       );
 
       // Resolve upstream context
-      const contextChain = await this.contextResolution.resolveFullContext(podId, pod.flowId);
+      const contextChain = await this.contextResolution.resolveFullContext(
+        podId,
+        pod.flowId,
+        params.contextMappings,
+        safeContextLimit,
+        undefined,
+      );
 
       this.logger.debug(
         `[Execution] 🔗 Resolved context from ${Object.keys(contextChain.variables).length} upstream pods (${Object.values(contextChain.variables).reduce((sum, v) => sum + (typeof v === 'string' ? v.split('\n').length : 0), 0)} messages)`,

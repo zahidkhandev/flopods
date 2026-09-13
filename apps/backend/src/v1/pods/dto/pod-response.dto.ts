@@ -89,3 +89,23 @@ export class FlowCanvasResponseDto {
   @ApiProperty({ type: [EdgeResponseDto] })
   edges!: EdgeResponseDto[];
 }
+
+export class MovePodResponseDto {
+  @ApiProperty()
+  success!: boolean;
+
+  @ApiProperty()
+  movedPodId!: string;
+
+  @ApiProperty()
+  fromFlowId!: string;
+
+  @ApiProperty()
+  toFlowId!: string;
+
+  @ApiProperty({ required: false, nullable: true })
+  autoLinkedTo?: string | null;
+
+  @ApiProperty({ required: false })
+  sourceFlowDeleted?: boolean;
+}

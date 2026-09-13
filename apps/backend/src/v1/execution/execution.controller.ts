@@ -92,13 +92,20 @@ export class V1ExecutionController {
         frequencyPenalty: dto.frequencyPenalty,
         thinkingBudget: dto.thinkingBudget,
         responseFormat: dto.responseFormat,
+        autoContext: dto.autoContext,
       });
 
       for await (const chunk of stream) {
         res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+        if (typeof (res as Response & { flush?: () => void }).flush === 'function') {
+          (res as Response & { flush?: () => void }).flush?.();
+        }
       }
 
       res.write('data: [DONE]\n\n');
+      if (typeof (res as Response & { flush?: () => void }).flush === 'function') {
+        (res as Response & { flush?: () => void }).flush?.();
+      }
       res.end();
     } catch (error) {
       res.write(

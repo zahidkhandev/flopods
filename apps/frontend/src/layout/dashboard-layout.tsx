@@ -42,6 +42,8 @@ export function DashboardLayout() {
 
   const breadcrumbs = customBreadcrumbs || generateBreadcrumbs();
   const isFlowEditor = location.pathname.match(/^\/dashboard\/flows\/[^/]+$/);
+  const isChatPage = location.pathname.match(/^\/dashboard\/chats\/[^/]+$/);
+  const isFullScreen = isFlowEditor || isChatPage;
 
   return (
     <SidebarProvider>
@@ -68,7 +70,6 @@ export function DashboardLayout() {
             </BreadcrumbList>
           </Breadcrumb>
           <div className="ml-auto flex items-center gap-2">
-            {/* Only show Users button on flow editor */}
             {isFlowEditor && (
               <Button variant="ghost" size="icon">
                 <Users className="h-4 w-4" />
@@ -80,7 +81,7 @@ export function DashboardLayout() {
         </header>
         <main
           className={
-            isFlowEditor
+            isFullScreen
               ? 'relative flex-1 overflow-hidden'
               : 'flex flex-1 flex-col gap-4 p-4 md:p-6'
           }

@@ -43,6 +43,7 @@ export type LLMConfig = {
   frequencyPenalty?: number;
   responseFormat?: 'text' | 'json' | 'json_object';
   streamEnabled?: boolean;
+  autoContext?: boolean;
 };
 
 export type TextInputConfig = {

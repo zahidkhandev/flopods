@@ -12,6 +12,8 @@ import { Server, Socket } from 'socket.io';
 import { Logger, UseFilters } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { createAdapter } from '@socket.io/redis-adapter';
+import { createClient, type RedisClientType } from 'redis';
 import { WsExceptionFilter } from '../../common/filters/ws-exception.filter';
 
 interface FlowSession {
@@ -52,10 +54,12 @@ export class V1FlowGateway implements OnGatewayInit, OnGatewayConnection, OnGate
 
   private readonly logger = new Logger(V1FlowGateway.name);
   private flowSessions = new Map<string, Map<string, FlowSession>>();
+  private redisPubClient?: RedisClientType;
+  private redisSubClient?: RedisClientType;
 
   // Rate limiting: max events per second per client
   private readonly rateLimitMap = new Map<string, { count: number; resetTime: number }>();
-  private readonly RATE_LIMIT = 100; // 100 events per second
+  private readonly RATE_LIMIT = 20; // 20 events per second (tuned for scale)
   private readonly RATE_LIMIT_WINDOW = 1000; // 1 second
 
   constructor(
@@ -63,8 +67,9 @@ export class V1FlowGateway implements OnGatewayInit, OnGatewayConnection, OnGate
     private readonly configService: ConfigService,
   ) {}
 
-  afterInit(): void {
+  async afterInit(): Promise<void> {
     this.logger.log('🔌 Flow WebSocket Gateway initialized');
+    await this.setupRedisAdapter();
 
     // Cleanup stale sessions every 5 minutes
     setInterval(() => this.cleanupStaleSessions(), 5 * 60 * 1000);
@@ -556,6 +561,44 @@ export class V1FlowGateway implements OnGatewayInit, OnGatewayConnection, OnGate
 
     if (cleaned > 0) {
       this.logger.log(`🧹 Cleaned up ${cleaned} stale sessions`);
+    }
+  }
+
+  private async setupRedisAdapter(): Promise<void> {
+    try {
+      const redisHost = this.configService.get<string>('REDIS_HOST', 'localhost');
+      const redisPort = this.configService.get<number>('REDIS_PORT', 6379);
+      const redisPassword = this.configService.get<string>('REDIS_PASSWORD');
+      const redisTlsEnabled = this.configService.get<string>('REDIS_TLS_ENABLED') === 'true';
+
+      this.redisPubClient = createClient({
+        password: redisPassword,
+        socket: {
+          host: redisHost,
+          port: redisPort,
+          tls: redisTlsEnabled ? true : undefined,
+        },
+      });
+
+      this.redisSubClient = this.redisPubClient.duplicate();
+
+      this.redisPubClient.on('error', (err) =>
+        this.logger.error('Redis pub client error', err),
+      );
+      this.redisSubClient.on('error', (err) =>
+        this.logger.error('Redis sub client error', err),
+      );
+
+      await Promise.all([this.redisPubClient.connect(), this.redisSubClient.connect()]);
+      this.server.adapter(
+        createAdapter(this.redisPubClient, this.redisSubClient) as unknown as Parameters<
+          Server['adapter']
+        >[0],
+      );
+
+      this.logger.log('WebSocket Redis adapter configured for horizontal scaling');
+    } catch (error) {
+      this.logger.error('Failed to set up Redis adapter for WebSocket gateway', error);
     }
   }
 
